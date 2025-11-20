@@ -12,6 +12,24 @@ type PublicCandidateResponse = {
   photo_url?: string
 }
 
+type PublicCandidateDetailResponse = PublicCandidateResponse & {
+  short_bio?: string
+  long_bio?: string
+  tagline?: string
+  vision?: string
+  missions?: string[]
+  main_programs?: {
+    title: string
+    description: string
+    category?: string
+  }[]
+  media?: {
+    video_url?: string | null
+    gallery_photos?: string[]
+    document_manifesto_url?: string | null
+  }
+}
+
 const mapCandidate = (item: PublicCandidateResponse): Candidate => ({
   id: item.id,
   nomorUrut: item.number,
@@ -42,6 +60,29 @@ export const fetchPublicCandidates = async (options?: { signal?: AbortSignal; to
       const items = parseItems(fallBackResponse)
       if (!items) throw new Error('Invalid admin candidates response')
       return (items as PublicCandidateResponse[]).map(mapCandidate)
+    }
+    throw err
+  }
+}
+
+export const fetchPublicCandidateDetail = async (
+  candidateId: number,
+  options?: { signal?: AbortSignal; token?: string },
+): Promise<PublicCandidateDetailResponse> => {
+  const { signal, token } = options ?? {}
+  const parseDetail = (response: any) => response?.data ?? response
+
+  try {
+    const response = await apiRequest<any>(`/elections/${ACTIVE_ELECTION_ID}/candidates/${candidateId}`, { signal })
+    const detail = parseDetail(response)
+    if (!detail) throw new Error('Invalid candidate detail response')
+    return detail as PublicCandidateDetailResponse
+  } catch (err) {
+    if (token) {
+      const fallback = await apiRequest<any>(`/admin/candidates/${candidateId}?election_id=${ACTIVE_ELECTION_ID}`, { signal, token })
+      const detail = parseDetail(fallback)
+      if (!detail) throw new Error('Invalid admin candidate detail response')
+      return detail as PublicCandidateDetailResponse
     }
     throw err
   }
