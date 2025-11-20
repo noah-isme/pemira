@@ -4,6 +4,7 @@ export type TPSType = 'umum' | 'fakultas'
 
 export type TPSPanitia = {
   id: string
+  userId?: number
   nama: string
   peran: string
 }
@@ -26,4 +27,6 @@ export type TPSAdmin = {
   status: TPSStatus
   panitia: TPSPanitia[]
   totalSuara: number
+  totalCheckins?: number
+  qrCreatedAt?: string
 }

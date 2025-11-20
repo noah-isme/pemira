@@ -1,5 +1,7 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { candidateAdminList } from '../data/candidateAdmin'
+import { createAdminCandidate, fetchAdminCandidates, updateAdminCandidate } from '../services/adminCandidates'
+import { useAdminAuth } from './useAdminAuth'
 import type { CandidateAdmin, CandidateProgramAdmin, CandidateStatus } from '../types/candidateAdmin'
 
 const generateId = (prefix: string) => `${prefix}-${Math.random().toString(36).slice(2, 9)}`
@@ -13,6 +15,9 @@ const defaultCandidate: CandidateAdmin = {
   angkatan: '',
   status: 'draft',
   photoUrl: '',
+  tagline: '',
+  shortBio: '',
+  longBio: '',
   visionTitle: '',
   visionDescription: '',
   missions: [],
@@ -29,20 +34,73 @@ const CandidateAdminContext = createContext<{
   archiveCandidate: (id: string) => void
   createEmptyCandidate: () => CandidateAdmin
   isNumberAvailable: (number: number, excludeId?: string) => boolean
+  refresh: () => Promise<void>
+  loading: boolean
+  error?: string
 } | null>(null)
 
 export const CandidateAdminProvider = ({ children }: { children: ReactNode }) => {
-  const [candidates, setCandidates] = useState<CandidateAdmin[]>(candidateAdminList)
+  const { token } = useAdminAuth()
+  const [candidates, setCandidates] = useState<CandidateAdmin[]>(token ? [] : candidateAdminList)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | undefined>(undefined)
+
+  const refresh = useCallback(async () => {
+    if (!token) return
+    setLoading(true)
+    setError(undefined)
+    try {
+      const items = await fetchAdminCandidates(token)
+      setCandidates(items)
+    } catch (err) {
+      console.error('Failed to fetch candidates', err)
+      setError((err as { message?: string })?.message ?? 'Gagal memuat kandidat')
+      setCandidates((prev) => (prev.length ? prev : candidateAdminList))
+    } finally {
+      setLoading(false)
+    }
+  }, [token])
+
+  useEffect(() => {
+    if (token) {
+      setCandidates([])
+    } else {
+      setCandidates(candidateAdminList)
+    }
+  }, [token])
+
+  useEffect(() => {
+    void refresh()
+  }, [refresh])
 
   const getCandidateById = useCallback((id: string) => candidates.find((candidate) => candidate.id === id), [candidates])
 
-  const addCandidate = useCallback((payload: CandidateAdmin) => {
-    setCandidates((prev) => [{ ...payload, id: generateId('cand') }, ...prev])
-  }, [])
+  const createEmptyCandidate = useCallback(() => ({ ...defaultCandidate, id: generateId('cand') }), [])
 
-  const updateCandidate = useCallback((id: string, payload: Partial<CandidateAdmin>) => {
-    setCandidates((prev) => prev.map((candidate) => (candidate.id === id ? { ...candidate, ...payload } : candidate)))
-  }, [])
+  const addCandidate = useCallback(
+    async (payload: CandidateAdmin) => {
+      if (token) {
+        const created = await createAdminCandidate(token, payload)
+        setCandidates((prev) => [created, ...prev])
+      } else {
+        setCandidates((prev) => [{ ...payload, id: generateId('cand') }, ...prev])
+      }
+    },
+    [token],
+  )
+
+  const updateCandidate = useCallback(
+    async (id: string, payload: Partial<CandidateAdmin>) => {
+      const baseCandidate = getCandidateById(id) ?? { ...createEmptyCandidate(), id }
+      if (token) {
+        const updated = await updateAdminCandidate(token, id, { ...baseCandidate, ...payload } as CandidateAdmin)
+        setCandidates((prev) => prev.map((candidate) => (candidate.id === id ? updated : candidate)))
+      } else {
+        setCandidates((prev) => prev.map((candidate) => (candidate.id === id ? { ...candidate, ...baseCandidate, ...payload } : candidate)))
+      }
+    },
+    [createEmptyCandidate, getCandidateById, token],
+  )
 
   const archiveCandidate = useCallback(
     (id: string) => {
@@ -52,8 +110,6 @@ export const CandidateAdminProvider = ({ children }: { children: ReactNode }) =>
     },
     [],
   )
-
-  const createEmptyCandidate = useCallback(() => ({ ...defaultCandidate, id: generateId('cand') }), [])
 
   const isNumberAvailable = useCallback(
     (number: number, excludeId?: string) => {
@@ -71,8 +127,11 @@ export const CandidateAdminProvider = ({ children }: { children: ReactNode }) =>
       archiveCandidate,
       createEmptyCandidate,
       isNumberAvailable,
+      refresh,
+      loading,
+      error,
     }),
-    [archiveCandidate, candidates, getCandidateById, isNumberAvailable, updateCandidate, addCandidate, createEmptyCandidate],
+    [archiveCandidate, candidates, createEmptyCandidate, error, getCandidateById, isNumberAvailable, loading, refresh, updateCandidate, addCandidate],
   )
 
   return <CandidateAdminContext.Provider value={value}>{children}</CandidateAdminContext.Provider>

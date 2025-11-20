@@ -1,5 +1,7 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { dptListMock, importErrorsMock } from '../data/dptAdmin'
+import { fetchAdminDpt } from '../services/adminDpt'
+import { useAdminAuth } from './useAdminAuth'
 import type { AcademicStatus, DPTEntry, ImportMapping, ImportPreviewError, ImportStep, VoterStatus } from '../types/dptAdmin'
 
 const defaultMapping: ImportMapping = {
@@ -34,16 +36,55 @@ const DPTAdminContext = createContext<{
   setMapping: React.Dispatch<React.SetStateAction<ImportMapping>>
   importErrors: ImportPreviewError[]
   resetImport: () => void
+  refresh: () => Promise<void>
+  loading: boolean
+  error?: string
 } | null>(null)
 
 export const DPTAdminProvider = ({ children }: { children: ReactNode }) => {
-  const [voters] = useState<DPTEntry[]>(dptListMock)
+  const { token } = useAdminAuth()
+  const [voters, setVoters] = useState<DPTEntry[]>(token ? [] : dptListMock)
   const [filters, setFilters] = useState({ search: '', fakultas: 'all', angkatan: 'all', statusSuara: 'all' as VoterStatus | 'all', akademik: 'all' as AcademicStatus | 'all' })
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [importStep, setImportStep] = useState<ImportStep>(1)
   const [importFileName, setImportFileName] = useState<string | undefined>(undefined)
   const [mapping, setMapping] = useState<ImportMapping>(defaultMapping)
   const [importErrors] = useState(importErrorsMock)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | undefined>(undefined)
+
+  const refresh = useCallback(async () => {
+    if (!token) return
+    setLoading(true)
+    setError(undefined)
+    try {
+      const params = new URLSearchParams()
+      if (filters.fakultas !== 'all') params.append('faculty', filters.fakultas)
+      if (filters.angkatan !== 'all') params.append('cohort_year', filters.angkatan)
+      if (filters.statusSuara !== 'all') params.append('has_voted', filters.statusSuara === 'sudah' ? 'true' : 'false')
+      if (filters.search) params.append('search', filters.search)
+      const { items } = await fetchAdminDpt(token, params)
+      setVoters(items)
+    } catch (err) {
+      console.error('Failed to load DPT', err)
+      setError((err as { message?: string })?.message ?? 'Gagal memuat DPT')
+      setVoters((prev) => (prev.length ? prev : dptListMock))
+    } finally {
+      setLoading(false)
+    }
+  }, [filters.angkatan, filters.fakultas, filters.search, filters.statusSuara, token])
+
+  useEffect(() => {
+    if (token) {
+      setVoters([])
+    } else {
+      setVoters(dptListMock)
+    }
+  }, [token])
+
+  useEffect(() => {
+    void refresh()
+  }, [refresh])
 
   const toggleSelect = useCallback((id: string) => {
     setSelected((prev) => {
@@ -83,8 +124,11 @@ export const DPTAdminProvider = ({ children }: { children: ReactNode }) => {
       setMapping,
       importErrors,
       resetImport,
+      refresh,
+      loading,
+      error,
     }),
-    [clearSelection, filters, importErrors, importFileName, importStep, mapping, resetImport, selectAll, selected, toggleSelect, voters],
+    [clearSelection, error, filters, importErrors, importFileName, importStep, loading, mapping, refresh, resetImport, selectAll, selected, toggleSelect, voters],
   )
 
   return <DPTAdminContext.Provider value={value}>{children}</DPTAdminContext.Provider>

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import AdminLayout from '../components/admin/AdminLayout'
 import { useCandidateAdminStore } from '../hooks/useCandidateAdminStore'
 import type { CandidateStatus } from '../types/candidateAdmin'
 import '../styles/AdminCandidates.css'
@@ -9,11 +10,12 @@ const statusOptions: { value: CandidateStatus | 'all'; label: string }[] = [
   { value: 'active', label: 'Aktif' },
   { value: 'draft', label: 'Draft' },
   { value: 'hidden', label: 'Disembunyikan' },
+  { value: 'archived', label: 'Arsip' },
 ]
 
 const AdminCandidatesList = (): JSX.Element => {
   const navigate = useNavigate()
-  const { candidates, archiveCandidate } = useCandidateAdminStore()
+  const { candidates, archiveCandidate, refresh, loading, error } = useCandidateAdminStore()
   const [search, setSearch] = useState('')
   const [facultyFilter, setFacultyFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState<CandidateStatus | 'all'>('all')
@@ -38,106 +40,117 @@ const AdminCandidatesList = (): JSX.Element => {
   }
 
   return (
-    <div className="admin-candidates-page">
-      <div className="page-header">
-        <div>
-          <h1>Manajemen Kandidat</h1>
-          <p>Kelola seluruh calon ketua BEM, termasuk foto, profil, visi-misi, dan program kerja.</p>
+    <AdminLayout title="Manajemen Kandidat">
+      <div className="admin-candidates-page">
+        <div className="page-header">
+          <div>
+            <h1>Manajemen Kandidat</h1>
+            <p>Kelola seluruh calon ketua BEM, termasuk foto, profil, visi-misi, dan program kerja.</p>
+          </div>
+          <button className="btn-primary" type="button" onClick={() => navigate('/admin/kandidat/tambah')}>
+            + Tambah Kandidat
+          </button>
         </div>
-        <button className="btn-primary" type="button" onClick={() => navigate('/admin/kandidat/tambah')}>
-          + Tambah Kandidat
-        </button>
-      </div>
 
       <div className="filters">
+        <div className="status-row">
+          {loading && <span>Memuat kandidat...</span>}
+          {error && <span className="error-text">{error}</span>}
+          <button className="btn-outline" type="button" onClick={() => void refresh()}>
+            Muat ulang
+          </button>
+        </div>
         <input
           type="search"
           placeholder="Cari nama kandidat"
           value={search}
-          onChange={(event) => setSearch(event.target.value)}
-        />
-        <select value={facultyFilter} onChange={(event) => setFacultyFilter(event.target.value)}>
-          {facultyOptions.map((option) => (
-            <option key={option} value={option}>
-              {option === 'all' ? 'Semua Fakultas' : option}
-            </option>
-          ))}
-        </select>
-        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as CandidateStatus | 'all')}>
-          {statusOptions.map((statusOption) => (
-            <option key={statusOption.value} value={statusOption.value}>
-              {statusOption.label}
-            </option>
-          ))}
-        </select>
-      </div>
+            onChange={(event) => setSearch(event.target.value)}
+          />
+          <select value={facultyFilter} onChange={(event) => setFacultyFilter(event.target.value)}>
+            {facultyOptions.map((option) => (
+              <option key={option} value={option}>
+                {option === 'all' ? 'Semua Fakultas' : option}
+              </option>
+            ))}
+          </select>
+          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as CandidateStatus | 'all')}>
+            {statusOptions.map((statusOption) => (
+              <option key={statusOption.value} value={statusOption.value}>
+                {statusOption.label}
+              </option>
+            ))}
+          </select>
+        </div>
 
-      <div className="table-wrapper">
-        <table className="candidates-table">
-          <thead>
-            <tr>
-              <th>Foto</th>
-              <th>No</th>
-              <th>Nama</th>
-              <th>Fakultas</th>
-              <th>Status</th>
-              <th>Konten</th>
-              <th>Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredCandidates.length === 0 && (
+        <div className="table-wrapper">
+          <table className="candidates-table">
+            <thead>
               <tr>
-                <td colSpan={7} className="empty-state">
-                  Belum ada kandidat yang cocok.
-                </td>
+                <th>Foto</th>
+                <th>No</th>
+                <th>Nama</th>
+                <th>Fakultas</th>
+                <th>Status</th>
+                <th>Konten</th>
+                <th>Aksi</th>
               </tr>
-            )}
-            {filteredCandidates.map((candidate) => {
-              const contentCount = candidate.missions.length + candidate.programs.length + (candidate.visionTitle ? 1 : 0)
-              return (
-                <tr key={candidate.id}>
-                  <td>
-                    <img src={candidate.photoUrl} alt={candidate.name} className="candidate-thumb" />
+            </thead>
+            <tbody>
+              {filteredCandidates.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="empty-state">
+                    Belum ada kandidat yang cocok.
                   </td>
-                  <td>{candidate.number.toString().padStart(2, '0')}</td>
-                  <td>
-                    <div className="candidate-name">
-                      <strong>{candidate.name}</strong>
-                      <span>{candidate.programStudi}</span>
-                    </div>
-                  </td>
-                  <td>{candidate.faculty}</td>
-                  <td>
+                </tr>
+              )}
+              {filteredCandidates.map((candidate) => {
+                const contentCount = candidate.missions.length + candidate.programs.length + (candidate.visionTitle ? 1 : 0)
+                return (
+                  <tr key={candidate.id}>
+                    <td>
+                      <img src={candidate.photoUrl} alt={candidate.name} className="candidate-thumb" />
+                    </td>
+                    <td>{candidate.number.toString().padStart(2, '0')}</td>
+                    <td>
+                      <div className="candidate-name">
+                        <strong>{candidate.name}</strong>
+                        <span>{candidate.programStudi}</span>
+                      </div>
+                    </td>
+                    <td>{candidate.faculty}</td>
+                    <td>
                     <span className={`status-chip ${candidate.status}`}>
                       {candidate.status === 'active'
                         ? 'Aktif'
                         : candidate.status === 'draft'
                           ? 'Draft'
-                          : 'Disembunyikan'}
+                          : candidate.status === 'hidden'
+                            ? 'Disembunyikan'
+                            : 'Arsip'}
                     </span>
-                  </td>
-                  <td>{contentCount} item</td>
-                  <td>
-                    <div className="table-actions">
-                      <button className="btn-table" type="button" onClick={() => navigate(`/admin/kandidat/${candidate.id}/edit`)}>
-                        Edit
-                      </button>
-                      <button className="btn-table" type="button" onClick={() => navigate(`/admin/kandidat/${candidate.id}/preview`)}>
-                        Preview
-                      </button>
-                      <button className="btn-table danger" type="button" onClick={() => handleArchive(candidate.id)}>
-                        Arsipkan
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+                    </td>
+                    <td>{contentCount} item</td>
+                    <td>
+                      <div className="table-actions">
+                        <button className="btn-table" type="button" onClick={() => navigate(`/admin/kandidat/${candidate.id}/edit`)}>
+                          Edit
+                        </button>
+                        <button className="btn-table" type="button" onClick={() => navigate(`/admin/kandidat/${candidate.id}/preview`)}>
+                          Preview
+                        </button>
+                        <button className="btn-table danger" type="button" onClick={() => handleArchive(candidate.id)}>
+                          Arsipkan
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
+    </AdminLayout>
   )
 }
 

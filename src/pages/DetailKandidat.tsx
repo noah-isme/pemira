@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import EmptyState from '../components/shared/EmptyState'
 import PageHeader from '../components/shared/PageHeader'
-import { getCandidateById } from '../data/mockCandidates'
+import { fetchPublicCandidateDetail, fetchPublicCandidates } from '../services/publicCandidates'
 import { useVotingSession } from '../hooks/useVotingSession'
 import type { CandidateDetail } from '../types/voting'
 import '../styles/DetailKandidat.css'
@@ -25,10 +25,84 @@ const DetailKandidat = (): JSX.Element => {
   const [activeTab, setActiveTab] = useState<TabId>('visi')
   const [showStickyButton, setShowStickyButton] = useState(false)
 
-  const kandidat: CandidateDetail | null = useMemo(() => {
-    if (Number.isNaN(candidateId)) return null
-    return getCandidateById(candidateId)
-  }, [candidateId])
+  const [kandidat, setKandidat] = useState<CandidateDetail | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (Number.isNaN(candidateId)) {
+      setError('ID kandidat tidak valid')
+      setLoading(false)
+      return
+    }
+    const controller = new AbortController()
+    setLoading(true)
+    setError(null)
+    fetchPublicCandidateDetail(candidateId, { signal: controller.signal, token: session?.accessToken })
+      .then((detail) => {
+        const mapped: CandidateDetail = {
+          id: detail.id,
+          nomorUrut: detail.number,
+          nama: detail.name,
+          fakultas: detail.faculty_name ?? 'Fakultas',
+          prodi: detail.study_program_name ?? '',
+          angkatan: detail.cohort_year?.toString() ?? '',
+          foto: detail.photo_url ?? '',
+          tagline: detail.tagline ?? '',
+          verified: true,
+          visi: detail.vision ?? '',
+          misi: detail.missions ?? [],
+          programKerja: (detail.main_programs ?? []).map((prog, index) => ({
+            id: `${prog.title}-${index}`,
+            title: prog.title,
+            description: prog.description,
+          })),
+          pengalaman: [],
+          kampanye: {
+            videoUrl: detail.media?.video_url ?? '',
+            posterUrl: detail.media?.gallery_photos?.[0] ?? '',
+            pdfUrl: detail.media?.document_manifesto_url ?? '',
+          },
+        }
+        setKandidat(mapped)
+      })
+      .catch((err) => {
+        if ((err as Error).name === 'AbortError') return
+        // fallback: coba ambil dari list publik/admin
+        fetchPublicCandidates({ signal: controller.signal, token: session?.accessToken })
+          .then((list) => {
+            const fallback = list.find((item) => item.id === candidateId)
+            if (fallback) {
+              setKandidat({
+                id: fallback.id,
+                nomorUrut: fallback.nomorUrut,
+                nama: fallback.nama,
+                fakultas: fallback.fakultas,
+                prodi: fallback.prodi,
+                angkatan: fallback.angkatan,
+                foto: fallback.foto,
+                tagline: '',
+                verified: false,
+                visi: '',
+                misi: [],
+                programKerja: [],
+                pengalaman: [],
+                kampanye: { videoUrl: '', posterUrl: '', pdfUrl: '' },
+              })
+              setError('Detail lengkap tidak tersedia, menampilkan data dasar.')
+            } else {
+              setError('Kandidat tidak ditemukan')
+              setKandidat(null)
+            }
+          })
+          .catch(() => {
+            setError('Kandidat tidak ditemukan')
+            setKandidat(null)
+          })
+      })
+      .finally(() => setLoading(false))
+    return () => controller.abort()
+  }, [candidateId, session?.accessToken])
 
   useEffect(() => {
     const handleScroll = () => {
@@ -50,6 +124,19 @@ const DetailKandidat = (): JSX.Element => {
     }
   }
 
+  if (loading) {
+    return (
+      <div className="detail-kandidat-page">
+        <PageHeader title="Daftar Kandidat" user={mahasiswa} />
+        <main className="detail-main">
+          <div className="detail-container">
+            <p>Memuat kandidat...</p>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
   if (!kandidat) {
     return (
       <div className="detail-kandidat-page">
@@ -58,7 +145,7 @@ const DetailKandidat = (): JSX.Element => {
           <div className="detail-container">
             <EmptyState
               title="Kandidat tidak ditemukan"
-              description="Kandidat yang Anda cari tidak tersedia atau sudah dihapus."
+              description={error ?? 'Kandidat yang Anda cari tidak tersedia atau sudah dihapus.'}
               action={{ label: 'Kembali ke Daftar Kandidat', onClick: () => navigate('/kandidat') }}
             />
           </div>

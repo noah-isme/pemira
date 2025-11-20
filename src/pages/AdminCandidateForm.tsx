@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import AdminLayout from '../components/admin/AdminLayout'
 import { useCandidateAdminStore } from '../hooks/useCandidateAdminStore'
 import type { CandidateAdmin, CandidateProgramAdmin, CandidateStatus } from '../types/candidateAdmin'
 import '../styles/AdminCandidates.css'
@@ -30,6 +31,7 @@ const AdminCandidateForm = (): JSX.Element => {
   }, [existingCandidate])
 
   const numberAvailable = useMemo(() => isNumberAvailable(formData.number, editing ? formData.id : undefined), [formData.number, editing, formData.id, isNumberAvailable])
+  const pageTitle = editing ? 'Edit Kandidat' : 'Tambah Kandidat'
 
   const updateField = <K extends keyof CandidateAdmin>(field: K, value: CandidateAdmin[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -51,9 +53,10 @@ const AdminCandidateForm = (): JSX.Element => {
       id: newProgram.id || `program-${Date.now()}`,
       title: newProgram.title.trim(),
       description: newProgram.description.trim(),
+      category: newProgram.category?.trim(),
     }
     updateField('programs', [...formData.programs, payload])
-    setNewProgram({ id: '', title: '', description: '' })
+    setNewProgram({ id: '', title: '', description: '', category: '' })
   }
 
   const removeProgram = (programId: string) => {
@@ -100,7 +103,8 @@ const AdminCandidateForm = (): JSX.Element => {
   }
 
   return (
-    <div className="admin-candidates-page">
+    <AdminLayout title={pageTitle}>
+      <div className="admin-candidates-page">
       <div className="page-header">
         <div>
           <h1>{editing ? `Edit Kandidat – ${formData.name || ''}` : 'Tambah Kandidat Baru'}</h1>
@@ -120,6 +124,10 @@ const AdminCandidateForm = (): JSX.Element => {
             <label>
               Nama Kandidat
               <input type="text" value={formData.name} onChange={(event) => updateField('name', event.target.value)} required />
+            </label>
+            <label>
+              Tagline
+              <input type="text" value={formData.tagline ?? ''} onChange={(event) => updateField('tagline', event.target.value)} />
             </label>
             <label>
               Nomor Urut
@@ -149,7 +157,22 @@ const AdminCandidateForm = (): JSX.Element => {
                 <option value="draft">Draft</option>
                 <option value="active">Aktif</option>
                 <option value="hidden">Disembunyikan</option>
+                <option value="archived">Diarsipkan</option>
               </select>
+            </label>
+          </div>
+        </section>
+
+        <section>
+          <h2>Profil Singkat</h2>
+          <div className="form-grid">
+            <label>
+              Short Bio (max 500 karakter)
+              <textarea value={formData.shortBio ?? ''} onChange={(event) => updateField('shortBio', event.target.value)} maxLength={500} />
+            </label>
+            <label>
+              Long Bio / Deskripsi Lengkap
+              <textarea value={formData.longBio ?? ''} onChange={(event) => updateField('longBio', event.target.value)} rows={5} />
             </label>
           </div>
         </section>
@@ -248,28 +271,41 @@ const AdminCandidateForm = (): JSX.Element => {
         </section>
 
         <section>
-          <h2>Program Kerja Utama</h2>
-          <div className="programs">
-            {formData.programs.map((program) => (
-              <div key={program.id} className="program-item">
-                <label>
-                  Judul Program
-                  <input
-                    type="text"
-                    value={program.title}
-                    onChange={(event) =>
-                      updateField(
-                        'programs',
-                        formData.programs.map((entry) => (entry.id === program.id ? { ...entry, title: event.target.value } : entry)),
-                      )
-                    }
-                  />
-                </label>
-                <label>
-                  Deskripsi Singkat
-                  <textarea
-                    value={program.description}
-                    onChange={(event) =>
+            <h2>Program Kerja Utama</h2>
+            <div className="programs">
+              {formData.programs.map((program) => (
+                <div key={program.id} className="program-item">
+                  <label>
+                    Judul Program
+                    <input
+                      type="text"
+                      value={program.title}
+                      onChange={(event) =>
+                        updateField(
+                          'programs',
+                          formData.programs.map((entry) => (entry.id === program.id ? { ...entry, title: event.target.value } : entry)),
+                        )
+                      }
+                    />
+                  </label>
+                  <label>
+                    Kategori (opsional)
+                    <input
+                      type="text"
+                      value={program.category ?? ''}
+                      onChange={(event) =>
+                        updateField(
+                          'programs',
+                          formData.programs.map((entry) => (entry.id === program.id ? { ...entry, category: event.target.value } : entry)),
+                        )
+                      }
+                    />
+                  </label>
+                  <label>
+                    Deskripsi Singkat
+                    <textarea
+                      value={program.description}
+                      onChange={(event) =>
                       updateField(
                         'programs',
                         formData.programs.map((entry) => (entry.id === program.id ? { ...entry, description: event.target.value } : entry)),
@@ -290,6 +326,10 @@ const AdminCandidateForm = (): JSX.Element => {
                   value={newProgram.title}
                   onChange={(event) => setNewProgram((prev) => ({ ...prev, title: event.target.value }))}
                 />
+              </label>
+              <label>
+                Kategori (opsional)
+                <input type="text" value={newProgram.category ?? ''} onChange={(event) => setNewProgram((prev) => ({ ...prev, category: event.target.value }))} />
               </label>
               <label>
                 Deskripsi Singkat
@@ -335,6 +375,7 @@ const AdminCandidateForm = (): JSX.Element => {
         </div>
       </form>
     </div>
+    </AdminLayout>
   )
 }
 

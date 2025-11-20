@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import AdminLayout from '../components/admin/AdminLayout'
 import { useDPTAdminStore } from '../hooks/useDPTAdminStore'
 import '../styles/AdminDPT.css'
 
@@ -25,16 +26,17 @@ const AdminDPTImport = (): JSX.Element => {
   }
 
   return (
-    <div className="admin-dpt-page">
-      <div className="page-header">
-        <div>
-          <h1>Import DPT</h1>
-          <p>Impor data pemilih dari file eksternal.</p>
+    <AdminLayout title="Import DPT">
+      <div className="admin-dpt-page">
+        <div className="page-header">
+          <div>
+            <h1>Import DPT</h1>
+            <p>Impor data pemilih dari file eksternal.</p>
+          </div>
+          <button className="btn-link" type="button" onClick={() => navigate('/admin/dpt')}>
+            × Tutup
+          </button>
         </div>
-        <button className="btn-link" type="button" onClick={() => navigate('/admin/dpt')}>
-          × Tutup
-        </button>
-      </div>
 
       <div className="import-steps">
         {[1, 2, 3, 4].map((step) => (
@@ -138,24 +140,25 @@ const AdminDPTImport = (): JSX.Element => {
         </section>
       )}
 
-      {importStep === 4 && (
-        <section className="card">
-          <h2>Step 4 – Hasil Import</h2>
-          <p>Impor berhasil.</p>
-          <p>
-            Berhasil: {previewValid.valid} pemilih · Gagal: {previewValid.errors} pemilih
-          </p>
-          <div className="form-actions">
-            <button className="btn-outline" type="button" onClick={() => alert('Download log error')}>
-              Download Log Error
-            </button>
-            <button className="btn-primary" type="button" onClick={handleImport}>
-              Tutup
-            </button>
-          </div>
-        </section>
-      )}
-    </div>
+        {importStep === 4 && (
+          <section className="card">
+            <h2>Step 4 – Hasil Import</h2>
+            <p>Impor berhasil.</p>
+            <p>
+              Berhasil: {previewValid.valid} pemilih · Gagal: {previewValid.errors} pemilih
+            </p>
+            <div className="form-actions">
+              <button className="btn-outline" type="button" onClick={() => alert('Download log error')}>
+                Download Log Error
+              </button>
+              <button className="btn-primary" type="button" onClick={handleImport}>
+                Tutup
+              </button>
+            </div>
+          </section>
+        )}
+      </div>
+    </AdminLayout>
   )
 }
 

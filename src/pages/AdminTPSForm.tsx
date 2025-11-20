@@ -1,27 +1,35 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import AdminLayout from '../components/admin/AdminLayout'
 import { useTPSAdminStore } from '../hooks/useTPSAdminStore'
 import type { TPSAdmin, TPSPanitia, TPSStatus } from '../types/tpsAdmin'
 import '../styles/AdminTPS.css'
 
-const roleOptions = ['Ketua TPS', 'Sekretaris', 'Anggota TPS', 'Operator Panel', 'Pengawas']
+const roleOptions = ['KETUA_TPS', 'SEKRETARIS_TPS', 'ANGGOTA_TPS', 'OPERATOR_PANEL', 'PENGAWAS']
 
 const AdminTPSForm = (): JSX.Element => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { getById, createEmpty, saveTPS, isKodeAvailable } = useTPSAdminStore()
+  const { getById, createEmpty, saveTPS, isKodeAvailable, loadDetail, updatePanitia } = useTPSAdminStore()
   const editing = Boolean(id)
   const existing = id ? getById(id) : undefined
 
   const [formData, setFormData] = useState<TPSAdmin>(existing ?? createEmpty())
-  const [panitiaInput, setPanitiaInput] = useState({ nama: '', peran: roleOptions[0] })
+  const [panitiaInput, setPanitiaInput] = useState({ nama: '', peran: roleOptions[0], userId: '' })
   const kodeAvailable = useMemo(() => isKodeAvailable(formData.kode, editing ? formData.id : undefined), [formData.kode, editing, formData.id, isKodeAvailable])
+  const pageTitle = editing ? 'Edit TPS' : 'Tambah TPS'
 
   useEffect(() => {
     if (existing) {
       setFormData(existing)
     }
-  }, [existing])
+    if (id) {
+      void (async () => {
+        const detail = await loadDetail(id)
+        if (detail) setFormData(detail)
+      })()
+    }
+  }, [existing, id, loadDetail])
 
   const updateField = <K extends keyof TPSAdmin>(field: K, value: TPSAdmin[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -39,18 +47,21 @@ const AdminTPSForm = (): JSX.Element => {
   }
 
   const addPanitia = () => {
-    if (!panitiaInput.nama.trim()) return
-    updateField('panitia', [...formData.panitia, { id: `panitia-${Date.now()}`, nama: panitiaInput.nama.trim(), peran: panitiaInput.peran }])
-    setPanitiaInput({ nama: '', peran: roleOptions[0] })
+    if (!panitiaInput.nama.trim() || !panitiaInput.userId) return
+    updateField('panitia', [
+      ...formData.panitia,
+      { id: `panitia-${Date.now()}`, nama: panitiaInput.nama.trim(), peran: panitiaInput.peran, userId: Number(panitiaInput.userId) },
+    ])
+    setPanitiaInput({ nama: '', peran: roleOptions[0], userId: '' })
   }
 
   const removePanitia = (panitiaId: string) => {
     updateField('panitia', formData.panitia.filter((item) => item.id !== panitiaId))
   }
 
-  const canActivate = formData.panitia.some((p) => p.peran === 'Ketua TPS') && Boolean(formData.nama) && kodeAvailable
+  const canActivate = formData.panitia.some((p) => p.peran === 'KETUA_TPS') && Boolean(formData.nama) && kodeAvailable
 
-  const handleSubmit = (status: TPSStatus) => {
+  const handleSubmit = async (status: TPSStatus) => {
     if (!formData.nama || !formData.kode) {
       alert('Nama TPS dan Kode wajib diisi.')
       return
@@ -67,23 +78,25 @@ const AdminTPSForm = (): JSX.Element => {
       alert('Minimal harus ada panitia dengan peran Ketua TPS untuk mengaktifkan TPS.')
       return
     }
-    saveTPS(formData, status === 'draft' ? 'draft' : 'active')
+    const saved = await saveTPS(formData, status)
+    await updatePanitia(saved.id, formData.panitia)
     navigate('/admin/tps')
   }
 
   return (
-    <div className="admin-tps-page">
-      <div className="page-header">
-        <div>
-          <h1>{editing ? `Edit TPS – ${formData.nama}` : 'Tambah TPS Baru'}</h1>
-          <p>Atur informasi, QR, dan panitia untuk TPS ini.</p>
+    <AdminLayout title={pageTitle}>
+      <div className="admin-tps-page">
+        <div className="page-header">
+          <div>
+            <h1>{editing ? `Edit TPS – ${formData.nama}` : 'Tambah TPS Baru'}</h1>
+            <p>Atur informasi, QR, dan panitia untuk TPS ini.</p>
+          </div>
+          <button className="btn-link" type="button" onClick={() => navigate('/admin/tps')}>
+            ← Kembali ke daftar
+          </button>
         </div>
-        <button className="btn-link" type="button" onClick={() => navigate('/admin/tps')}>
-          ← Kembali ke daftar
-        </button>
-      </div>
 
-      <form className="tps-form" onSubmit={(event) => event.preventDefault()}>
+        <form className="tps-form" onSubmit={(event) => event.preventDefault()}>
         <section>
           <h2>Informasi Dasar</h2>
           <div className="form-grid">
@@ -199,6 +212,12 @@ const AdminTPSForm = (): JSX.Element => {
           <h2>Panitia TPS</h2>
           <div className="panitia-input">
             <input type="text" placeholder="Nama panitia" value={panitiaInput.nama} onChange={(event) => setPanitiaInput((prev) => ({ ...prev, nama: event.target.value }))} />
+            <input
+              type="number"
+              placeholder="User ID"
+              value={panitiaInput.userId}
+              onChange={(event) => setPanitiaInput((prev) => ({ ...prev, userId: event.target.value }))}
+            />
             <select value={panitiaInput.peran} onChange={(event) => setPanitiaInput((prev) => ({ ...prev, peran: event.target.value }))}>
               {roleOptions.map((role) => (
                 <option key={role} value={role}>
@@ -266,12 +285,13 @@ const AdminTPSForm = (): JSX.Element => {
           <button className="btn-primary" type="button" onClick={() => handleSubmit('active')}>
             Simpan & Aktifkan TPS
           </button>
-          <button className="btn-link" type="button" onClick={() => navigate('/admin/tps')}>
-            Batal
-          </button>
-        </div>
+      <button className="btn-link" type="button" onClick={() => navigate('/admin/tps')}>
+        Batal
+      </button>
+    </div>
       </form>
     </div>
+    </AdminLayout>
   )
 }
 

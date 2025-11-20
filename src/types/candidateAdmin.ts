@@ -1,4 +1,4 @@
-export type CandidateStatus = 'draft' | 'active' | 'hidden'
+export type CandidateStatus = 'draft' | 'active' | 'hidden' | 'archived'
 
 export type CandidateMedia = {
   id: string
@@ -11,6 +11,7 @@ export type CandidateProgramAdmin = {
   id: string
   title: string
   description: string
+  category?: string
 }
 
 export type CandidateAdmin = {
@@ -22,6 +23,9 @@ export type CandidateAdmin = {
   angkatan: string
   status: CandidateStatus
   photoUrl: string
+  tagline?: string
+  shortBio?: string
+  longBio?: string
   visionTitle: string
   visionDescription: string
   missions: string[]

@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import KandidatCard from '../components/shared/KandidatCard'
 import PageHeader from '../components/shared/PageHeader'
-import { mockCandidates } from '../data/mockCandidates'
+import { fetchPublicCandidates } from '../services/publicCandidates'
 import { useVotingSession } from '../hooks/useVotingSession'
 import type { Candidate } from '../types/voting'
 import '../styles/DaftarKandidat.css'
@@ -19,13 +19,31 @@ const fakultasList = [
 
 const DaftarKandidat = (): JSX.Element => {
   const navigate = useNavigate()
-  const { mahasiswa, clearSession } = useVotingSession()
+  const { mahasiswa, clearSession, session } = useVotingSession()
   const [searchQuery, setSearchQuery] = useState('')
   const [filterFakultas, setFilterFakultas] = useState<string>('Semua')
   const [sortBy, setSortBy] = useState<SortBy>('nomor_urut')
+  const [candidates, setCandidates] = useState<Candidate[]>([])
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    setError(null)
+    fetchPublicCandidates({ signal: controller.signal, token: session?.accessToken })
+      .then((items) => {
+        setCandidates(items)
+        setError(null)
+      })
+      .catch((err) => {
+        console.error('Gagal memuat kandidat', err)
+        setError('Menampilkan data sementara.')
+        setCandidates([])
+      })
+    return () => controller.abort()
+  }, [session?.accessToken])
 
   const filteredCandidates = useMemo(() => {
-    let filtered: Candidate[] = [...mockCandidates]
+    let filtered: Candidate[] = [...candidates]
 
     if (searchQuery) {
       const keyword = searchQuery.toLowerCase()
@@ -49,12 +67,12 @@ const DaftarKandidat = (): JSX.Element => {
     })
 
     return filtered
-  }, [filterFakultas, searchQuery, sortBy])
+  }, [candidates, filterFakultas, searchQuery, sortBy])
 
   const pemiraStatus = {
     periode: '2024',
     status: 'Kampanye',
-    totalKandidat: mockCandidates.length,
+    totalKandidat: candidates.length,
   }
 
   const handleLogout = () => {
@@ -127,11 +145,8 @@ const DaftarKandidat = (): JSX.Element => {
 
           {(searchQuery || filterFakultas !== 'Semua') && (
             <div className="results-info">
-              {filteredCandidates.length > 0 ? (
-                <p>Menampilkan {filteredCandidates.length} kandidat</p>
-              ) : (
-                <p>Tidak ada kandidat yang cocok dengan kriteria.</p>
-              )}
+              {error && <p className="error-text">{error}</p>}
+              {filteredCandidates.length > 0 ? <p>Menampilkan {filteredCandidates.length} kandidat</p> : <p>Tidak ada kandidat yang cocok dengan kriteria.</p>}
             </div>
           )}
 

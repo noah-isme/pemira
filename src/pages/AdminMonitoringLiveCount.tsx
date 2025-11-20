@@ -1,3 +1,4 @@
+import AdminLayout from '../components/admin/AdminLayout'
 import { useMonitoringLive } from '../hooks/useMonitoringLive'
 import '../styles/AdminMonitoring.css'
 
@@ -20,23 +21,24 @@ const AdminMonitoringLiveCount = (): JSX.Element => {
   } = useMonitoringLive()
 
   return (
-    <div className="monitoring-page">
-      <header className="monitoring-header">
-        <div>
-          <p className="label">PEMIRA UNIWA</p>
-          <h1>Monitoring Voting & Live Count</h1>
-          <div className={`status-pill ${summary.statusType}`}>{summary.statusLabel}</div>
-          <p>Periode 12–15 Juni 202X · Update terakhir {summary.lastUpdated}</p>
-        </div>
-        <div className="header-actions">
-          <button className="btn-outline" type="button" onClick={refreshNow}>
-            Refresh Sekarang
-          </button>
-          <button className="btn-primary" type="button" onClick={exportSnapshot}>
-            Export Data
-          </button>
-        </div>
-      </header>
+    <AdminLayout title="Monitoring Voting">
+      <div className="monitoring-page">
+        <header className="monitoring-header">
+          <div>
+            <p className="label">PEMIRA UNIWA</p>
+            <h1>Monitoring Voting & Live Count</h1>
+            <div className={`status-pill ${summary.statusType}`}>{summary.statusLabel}</div>
+            <p>Periode 12–15 Juni 202X · Update terakhir {summary.lastUpdated}</p>
+          </div>
+          <div className="header-actions">
+            <button className="btn-outline" type="button" onClick={refreshNow}>
+              Refresh Sekarang
+            </button>
+            <button className="btn-primary" type="button" onClick={exportSnapshot}>
+              Export Data
+            </button>
+          </div>
+        </header>
 
       <section className="summary-grid">
         <article>
@@ -178,38 +180,39 @@ const AdminMonitoringLiveCount = (): JSX.Element => {
         </table>
       </section>
 
-      <section className="card info-grid">
-        <div>
-          <h3>Tahap Saat Ini</h3>
-          <p>Voting Berlangsung</p>
-          <p>Live Count Publik: {publicLiveEnabled ? 'Aktif (Sementara)' : 'Dimatikan'}</p>
-          <button className="btn-outline" type="button" onClick={() => setPublicLiveEnabled((prev) => !prev)}>
-            {publicLiveEnabled ? 'Matikan Live Count Publik' : 'Aktifkan Live Count Publik'}
-          </button>
-        </div>
-        <div>
-          <h3>Log Aktivitas Terbaru</h3>
-          <ul>
-            {logs.slice(0, 3).map((log) => (
-              <li key={log.id}>
-                <strong>{log.timestamp}</strong> – {log.message}
-              </li>
-            ))}
-          </ul>
-          <button className="btn-link" type="button">
-            Lihat Log Lengkap
-          </button>
-        </div>
-        <div>
-          <h3>Kontrol Hasil Final</h3>
-          <p>Voting Ditutup: {summary.statusType === 'running' ? 'Belum' : 'Sudah'}</p>
-          <p>Suara Terkunci: {publicLiveEnabled ? 'Belum' : 'Sudah'}</p>
-          <button className="btn-danger" type="button" disabled={summary.statusType === 'running'}>
-            Kunci Hasil Akhir
-          </button>
-        </div>
-      </section>
-    </div>
+        <section className="card info-grid">
+          <div>
+            <h3>Tahap Saat Ini</h3>
+            <p>Voting Berlangsung</p>
+            <p>Live Count Publik: {publicLiveEnabled ? 'Aktif (Sementara)' : 'Dimatikan'}</p>
+            <button className="btn-outline" type="button" onClick={() => setPublicLiveEnabled((prev) => !prev)}>
+              {publicLiveEnabled ? 'Matikan Live Count Publik' : 'Aktifkan Live Count Publik'}
+            </button>
+          </div>
+          <div>
+            <h3>Log Aktivitas Terbaru</h3>
+            <ul>
+              {logs.slice(0, 3).map((log) => (
+                <li key={log.id}>
+                  <strong>{log.timestamp}</strong> – {log.message}
+                </li>
+              ))}
+            </ul>
+            <button className="btn-link" type="button">
+              Lihat Log Lengkap
+            </button>
+          </div>
+          <div>
+            <h3>Kontrol Hasil Final</h3>
+            <p>Voting Ditutup: {summary.statusType === 'running' ? 'Belum' : 'Sudah'}</p>
+            <p>Suara Terkunci: {publicLiveEnabled ? 'Belum' : 'Sudah'}</p>
+            <button className="btn-danger" type="button" disabled={summary.statusType === 'running'}>
+              Kunci Hasil Akhir
+            </button>
+          </div>
+        </section>
+      </div>
+    </AdminLayout>
   )
 }
 

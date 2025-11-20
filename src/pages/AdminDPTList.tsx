@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import AdminLayout from '../components/admin/AdminLayout'
 import { useDPTAdminStore } from '../hooks/useDPTAdminStore'
 import type { AcademicStatus, VoterStatus } from '../types/dptAdmin'
 import '../styles/AdminDPT.css'
@@ -17,7 +18,7 @@ const akademikLabels: Record<AcademicStatus, string> = {
 
 const AdminDPTList = (): JSX.Element => {
   const navigate = useNavigate()
-  const { voters, filters, setFilters, selected, toggleSelect, selectAll, clearSelection } = useDPTAdminStore()
+  const { voters, filters, setFilters, selected, toggleSelect, selectAll, clearSelection, refresh, loading, error } = useDPTAdminStore()
 
   const fakultasOptions = useMemo(() => ['all', ...new Set(voters.map((voter) => voter.fakultas))], [voters])
   const angkatanOptions = useMemo(() => ['all', ...new Set(voters.map((voter) => voter.angkatan))], [voters])
@@ -42,8 +43,9 @@ const AdminDPTList = (): JSX.Element => {
   }
 
   return (
-    <div className="admin-dpt-page">
-      <div className="page-header">
+    <AdminLayout title="Daftar Pemilih">
+      <div className="admin-dpt-page">
+        <div className="page-header">
         <div>
           <h1>Daftar Pemilih (DPT)</h1>
           <p>Kelola data pemilih sah PEMIRA UNIWA, termasuk status hak suara.</p>
@@ -55,7 +57,15 @@ const AdminDPTList = (): JSX.Element => {
           <button className="btn-primary" type="button" onClick={() => alert('Export data (simulasi)')}>
             Export Data
           </button>
+          </div>
         </div>
+
+      <div className="status-row">
+        {loading && <span>Memuat data DPT...</span>}
+        {error && <span className="error-text">{error}</span>}
+        <button className="btn-outline" type="button" onClick={() => void refresh()}>
+          Muat ulang
+        </button>
       </div>
 
       <div className="filters">
@@ -118,12 +128,13 @@ const AdminDPTList = (): JSX.Element => {
               <th>Status Suara</th>
               <th>Metode</th>
               <th>Aksi</th>
+              <th>Terakhir Vote</th>
             </tr>
           </thead>
           <tbody>
             {filteredVoters.length === 0 && (
               <tr>
-                <td colSpan={9} className="empty-state">
+                <td colSpan={10} className="empty-state">
                   Tidak ada data pemilih.
                 </td>
               </tr>
@@ -152,12 +163,17 @@ const AdminDPTList = (): JSX.Element => {
                     Detail
                   </button>
                 </td>
+                <td>
+                  {voter.waktuVoting ? new Date(voter.waktuVoting).toLocaleString('id-ID') : '-'}
+                  {voter.metodeVoting && voter.metodeVoting !== '-' && <small>{voter.metodeVoting.toUpperCase()}</small>}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-    </div>
+      </div>
+    </AdminLayout>
   )
 }
 

@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import AdminLayout from '../components/admin/AdminLayout'
 import { useTPSAdminStore } from '../hooks/useTPSAdminStore'
 import type { TPSStatus } from '../types/tpsAdmin'
 import '../styles/AdminTPS.css'
 
 const AdminTPSList = (): JSX.Element => {
   const navigate = useNavigate()
-  const { tpsList } = useTPSAdminStore()
+  const { tpsList, refresh, loading, error } = useTPSAdminStore()
   const [search, setSearch] = useState('')
   const [areaFilter, setAreaFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState<TPSStatus | 'all'>('all')
@@ -23,18 +24,26 @@ const AdminTPSList = (): JSX.Element => {
   }, [areaFilter, search, statusFilter, tpsList])
 
   return (
-    <div className="admin-tps-page">
-      <div className="page-header">
-        <div>
-          <h1>Manajemen TPS</h1>
-          <p>Kelola seluruh Tempat Pemungutan Suara (TPS) untuk PEMIRA UNIWA.</p>
+    <AdminLayout title="TPS Management">
+      <div className="admin-tps-page">
+        <div className="page-header">
+          <div>
+            <h1>Manajemen TPS</h1>
+            <p>Kelola seluruh Tempat Pemungutan Suara (TPS) untuk PEMIRA UNIWA.</p>
+          </div>
+          <button className="btn-primary" type="button" onClick={() => navigate('/admin/tps/tambah')}>
+            + Tambah TPS
+          </button>
         </div>
-        <button className="btn-primary" type="button" onClick={() => navigate('/admin/tps/tambah')}>
-          + Tambah TPS
-        </button>
-      </div>
 
       <div className="filters">
+        <div className="status-row">
+          {loading && <span>Memuat data TPS...</span>}
+          {error && <span className="error-text">{error}</span>}
+          <button className="btn-outline" type="button" onClick={() => void refresh()}>
+            Muat ulang
+          </button>
+        </div>
         <input type="search" placeholder="Cari nama TPS / lokasi / kode" value={search} onChange={(event) => setSearch(event.target.value)} />
         <select value={areaFilter} onChange={(event) => setAreaFilter(event.target.value)}>
           {areaOptions.map((option) => (
@@ -51,60 +60,61 @@ const AdminTPSList = (): JSX.Element => {
         </select>
       </div>
 
-      <div className="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Nama TPS</th>
-              <th>Kode</th>
-              <th>Lokasi</th>
-              <th>Jam</th>
-              <th>Status</th>
-              <th>Suara</th>
-              <th>Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredList.length === 0 && (
+        <div className="table-wrapper">
+          <table>
+            <thead>
               <tr>
-                <td colSpan={7} className="empty-state">
-                  Belum ada TPS yang cocok.
-                </td>
+                <th>Nama TPS</th>
+                <th>Kode</th>
+                <th>Lokasi</th>
+                <th>Jam</th>
+                <th>Status</th>
+                <th>Suara</th>
+                <th>Aksi</th>
               </tr>
-            )}
-            {filteredList.map((tps) => (
-              <tr key={tps.id}>
-                <td>
-                  <strong>{tps.nama}</strong>
-                  <p>{tps.fakultasArea}</p>
-                </td>
-                <td>{tps.kode}</td>
-                <td>{tps.lokasi}</td>
-                <td>
-                  {tps.jamBuka} – {tps.jamTutup}
-                </td>
-                <td>
-                  <span className={`status-chip ${tps.status}`}>
-                    {tps.status === 'active' ? 'Aktif' : tps.status === 'draft' ? 'Draft' : 'Ditutup'}
-                  </span>
-                </td>
-                <td>{tps.totalSuara.toLocaleString('id-ID')}</td>
-                <td>
-                  <div className="table-actions">
-                    <button className="btn-table" type="button" onClick={() => navigate(`/admin/tps/${tps.id}`)}>
-                      Detail
-                    </button>
-                    <button className="btn-table" type="button" onClick={() => navigate(`/admin/tps/${tps.id}/edit`)}>
-                      Edit
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filteredList.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="empty-state">
+                    Belum ada TPS yang cocok.
+                  </td>
+                </tr>
+              )}
+              {filteredList.map((tps) => (
+                <tr key={tps.id}>
+                  <td>
+                    <strong>{tps.nama}</strong>
+                    <p>{tps.fakultasArea}</p>
+                  </td>
+                  <td>{tps.kode}</td>
+                  <td>{tps.lokasi}</td>
+                  <td>
+                    {tps.jamBuka} – {tps.jamTutup}
+                  </td>
+                  <td>
+                    <span className={`status-chip ${tps.status}`}>
+                      {tps.status === 'active' ? 'Aktif' : tps.status === 'draft' ? 'Draft' : 'Ditutup'}
+                    </span>
+                  </td>
+                  <td>{tps.totalSuara.toLocaleString('id-ID')}</td>
+                  <td>
+                    <div className="table-actions">
+                      <button className="btn-table" type="button" onClick={() => navigate(`/admin/tps/${tps.id}`)}>
+                        Detail
+                      </button>
+                      <button className="btn-table" type="button" onClick={() => navigate(`/admin/tps/${tps.id}/edit`)}>
+                        Edit
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
+    </AdminLayout>
   )
 }
 

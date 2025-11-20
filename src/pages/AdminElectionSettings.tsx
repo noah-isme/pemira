@@ -1,3 +1,4 @@
+import AdminLayout from '../components/admin/AdminLayout'
 import { electionStatusOptions } from '../data/electionSettings'
 import { useElectionSettings } from '../hooks/useElectionSettings'
 import type { ElectionRules, VotingMode } from '../types/electionSettings'
@@ -70,7 +71,8 @@ const AdminElectionSettings = (): JSX.Element => {
   }
 
   return (
-    <div className="admin-settings-page">
+    <AdminLayout title="Pengaturan Pemilu">
+      <div className="admin-settings-page">
       <header className="settings-header">
         <div>
           <p className="label">PEMIRA UNIWA</p>
@@ -283,6 +285,7 @@ const AdminElectionSettings = (): JSX.Element => {
         </div>
       </section>
     </div>
+    </AdminLayout>
   )
 }
 

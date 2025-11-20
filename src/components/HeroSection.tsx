@@ -1,7 +1,20 @@
+import { useEffect, useState } from 'react'
 import '../styles/HeroSection.css'
 
+type HeroData = {
+  statusLabel: string
+  period: string
+  totalVoters: string
+  mode: string
+}
+
 const HeroSection = (): JSX.Element => {
-  const currentStatus = 'Voting Dibuka 12–15 Juni 2024'
+  const [heroData] = useState<HeroData>({
+    statusLabel: 'Voting Aktif',
+    period: '12–15 Juni',
+    totalVoters: '—',
+    mode: 'Online & TPS',
+  })
 
   return (
     <section className="hero">
@@ -18,21 +31,21 @@ const HeroSection = (): JSX.Element => {
           </p>
 
           <div className="hero-badge">
-            <span className="badge-status">Status: {currentStatus}</span>
+            <span className="badge-status">Status: {heroData.statusLabel}</span>
           </div>
 
           <div className="hero-info">
             <div className="info-item">
               <span className="info-label">Periode Voting:</span>
-              <span className="info-value">12–15 Juni 2024</span>
+              <span className="info-value">{heroData.period}</span>
             </div>
             <div className="info-item">
               <span className="info-label">Total Pemilih Terdaftar:</span>
-              <span className="info-value">8.432 Mahasiswa</span>
+              <span className="info-value">{heroData.totalVoters} Mahasiswa</span>
             </div>
             <div className="info-item">
               <span className="info-label">Mode:</span>
-              <span className="info-value">Online & TPS Offline</span>
+              <span className="info-value">{heroData.mode}</span>
             </div>
           </div>
 

@@ -18,9 +18,9 @@ export const tpsAdminList: TPSAdmin[] = [
     qrStatus: 'aktif',
     status: 'active',
     panitia: [
-      { id: 'panitia-1', nama: 'Budi Santosa', peran: 'Ketua TPS' },
-      { id: 'panitia-2', nama: 'Rani Pramudita', peran: 'Anggota TPS' },
-      { id: 'panitia-3', nama: 'Ahmad Fauzan', peran: 'Operator Panel' },
+      { id: 'panitia-1', nama: 'Budi Santosa', peran: 'KETUA_TPS', userId: 101 },
+      { id: 'panitia-2', nama: 'Rani Pramudita', peran: 'ANGGOTA_TPS', userId: 102 },
+      { id: 'panitia-3', nama: 'Ahmad Fauzan', peran: 'OPERATOR_PANEL', userId: 103 },
     ],
     totalSuara: 832,
   },
@@ -40,7 +40,7 @@ export const tpsAdminList: TPSAdmin[] = [
     qrStatus: 'aktif',
     status: 'active',
     panitia: [
-      { id: 'panitia-4', nama: 'Dwi Rahma', peran: 'Ketua TPS' },
+      { id: 'panitia-4', nama: 'Dwi Rahma', peran: 'KETUA_TPS', userId: 104 },
     ],
     totalSuara: 613,
   },
