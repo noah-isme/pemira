@@ -37,9 +37,9 @@ const VotingModeSection = ({ onlineEnabled, tpsEnabled, loading = false, error }
             <h3 className="mode-title">Voting Offline (TPS)</h3>
             <div className={`mode-badge ${tpsEnabled ? 'active' : 'inactive'}`}>{tpsStatus}</div>
             <ul className="mode-list">
-              <li>Generate QR Hak Suara</li>
-              <li>Datang ke lokasi TPS</li>
-              <li>Panitia scan QR</li>
+              <li>Panitia menyiapkan QR hak suara</li>
+              <li>Pemilih cukup scan QR dari panitia</li>
+              <li>Konfirmasi pilihan di bilik TPS</li>
             </ul>
             <button className="btn-outline" disabled={!tpsEnabled}>
               Lokasi TPS
