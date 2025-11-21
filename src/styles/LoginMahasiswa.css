@@ -188,6 +188,132 @@
   gap: 1.5rem;
 }
 
+.info-note {
+  color: #2b6cb0;
+  background: #ebf8ff;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.mode-fieldset {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.mode-fieldset legend {
+  font-weight: 700;
+  color: #1a1a1a;
+  padding: 0 0.5rem;
+}
+
+.radio-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.75rem 0;
+}
+
+.radio-title {
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.radio-desc {
+  color: #4a5568;
+  font-size: 0.95rem;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  color: #4a5568;
+}
+
+.big-check {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: #48bb78;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  margin: 0 auto 1rem auto;
+}
+
+.success-box {
+  background: #f0fff4;
+  border: 1px solid #c6f6d5;
+  border-radius: 12px;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.credential {
+  margin: 0.25rem 0;
+  color: #1a1a1a;
+}
+
+.qr-box {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: #f7fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.qr-box img {
+  max-width: 260px;
+  width: 100%;
+  height: auto;
+  margin: 0 auto;
+  display: block;
+}
+
+.qr-placeholder {
+  width: 260px;
+  height: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: repeating-linear-gradient(45deg, #e2e8f0, #e2e8f0 10px, #cbd5e0 10px, #cbd5e0 20px);
+  margin: 0 auto 0.5rem auto;
+  border-radius: 8px;
+  color: #1a1a1a;
+  font-weight: 700;
+  text-align: center;
+}
+
+.qr-id {
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0.25rem 0;
+}
+
+.small-note {
+  color: #4a5568;
+  font-size: 0.95rem;
+  margin: 0.5rem 0 1rem 0;
+}
+
+.actions-row {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.warning-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
 .form-group {
   display: flex;
   flex-direction: column;
