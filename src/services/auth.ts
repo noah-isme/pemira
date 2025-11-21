@@ -24,26 +24,52 @@ export type AuthTokens = {
 
 export type AuthResponse = AuthTokens & { user: AuthUser }
 
-export const loginUser = (username: string, password: string) => {
-  return apiRequest<AuthResponse>('/auth/login', {
-    method: 'POST',
-    body: { username, password },
-  })
-}
+export type RegisterResponse = { user: AuthUser; message: string; voting_mode?: 'ONLINE' | 'TPS' }
 
-export const registerStudent = (payload: { nim: string; name: string; email: string; password: string }) => {
-  return apiRequest<AuthResponse>('/auth/register/student', {
+export const loginUser = (username: string, password: string) =>
+  apiRequest<AuthResponse>('/auth/login', { method: 'POST', body: { username, password } })
+
+export const registerStudent = (payload: {
+  nim: string
+  name: string
+  email?: string
+  password: string
+  faculty_name?: string
+  study_program_name?: string
+  cohort_year?: number
+  voting_mode?: 'ONLINE' | 'TPS'
+}) =>
+  apiRequest<RegisterResponse>('/auth/register/student', {
     method: 'POST',
     body: payload,
   })
-}
 
-export const registerLecturerOrStaff = (payload: { username: string; name: string; email: string; password: string; type: 'LECTURER' | 'STAFF' }) => {
-  return apiRequest<AuthResponse>('/auth/register/lecturer-staff', {
+export const registerLecturerOrStaff = (payload: {
+  username: string
+  name: string
+  email?: string
+  password: string
+  type: 'LECTURER' | 'STAFF'
+  faculty_name?: string
+  department_name?: string
+  unit_name?: string
+  voting_mode?: 'ONLINE' | 'TPS'
+}) =>
+  apiRequest<RegisterResponse>('/auth/register/lecturer-staff', {
     method: 'POST',
-    body: payload,
+    body: {
+      type: payload.type,
+      nidn: payload.type === 'LECTURER' ? payload.username : undefined,
+      nip: payload.type === 'STAFF' ? payload.username : undefined,
+      name: payload.name,
+      email: payload.email,
+      faculty_name: payload.faculty_name,
+      department_name: payload.department_name,
+      unit_name: payload.unit_name,
+      password: payload.password,
+      voting_mode: payload.voting_mode,
+    },
   })
-}
 
 export const refreshToken = (refreshTokenValue: string) => {
   return apiRequest<AuthTokens>('/auth/refresh', { method: 'POST', body: { refresh_token: refreshTokenValue } })

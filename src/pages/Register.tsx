@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BrowserQRCodeSvgWriter } from '@zxing/library'
-import { registerLecturerOrStaff, registerStudent } from '../services/auth'
+import { loginUser, registerLecturerOrStaff, registerStudent, type RegisterResponse } from '../services/auth'
+import { getVoterQr, rotateVoterQr } from '../services/voterQr'
+import { useVotingSession } from '../hooks/useVotingSession'
+import { ACTIVE_ELECTION_ID } from '../config/env'
 import type { ApiError } from '../utils/apiClient'
 import '../styles/LoginMahasiswa.css'
 
 type Role = 'student' | 'lecturer' | 'staff'
 type Mode = 'online' | 'tps'
-type Step = 'form' | 'success-online' | 'success-tps' | 'duplicate'
+type Step = 'form' | 'success-online' | 'success-tps' | 'duplicate' | 'fallback-tps'
 
 const generateQrDataUri = (value: string): string => {
   const writer = new BrowserQRCodeSvgWriter()
@@ -19,6 +22,8 @@ const generateQrDataUri = (value: string): string => {
 
 const Register = (): JSX.Element => {
   const navigate = useNavigate()
+  const { setSession } = useVotingSession()
+
   const [step, setStep] = useState<Step>('form')
   const [role, setRole] = useState<Role>('student')
   const [mode, setMode] = useState<Mode>('online')
@@ -26,24 +31,63 @@ const Register = (): JSX.Element => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const [studentForm, setStudentForm] = useState({ nim: '', name: '', email: '', password: '', program: '', angkatan: '' })
-  const [staffForm, setStaffForm] = useState({ username: '', name: '', email: '', password: '', program: '', angkatan: '' })
+  const [studentForm, setStudentForm] = useState({ nim: '', name: '', email: '', password: '', program: '', angkatan: '', faculty: '' })
+  const [staffForm, setStaffForm] = useState({ username: '', name: '', email: '', password: '', program: '', angkatan: '', faculty: '' })
 
-  const [qrValue, setQrValue] = useState<string | null>(null)
+  const [qrToken, setQrToken] = useState<string | null>(null)
   const [qrDataUri, setQrDataUri] = useState<string | null>(null)
-  const [lastIdentity, setLastIdentity] = useState<{ username: string; mode: Mode }>({ username: '', mode: 'online' })
+  const [lastIdentity, setLastIdentity] = useState<{ username: string; mode: Mode; voterId?: number | null }>({ username: '', mode: 'online' })
 
   useEffect(() => {
-    if (!qrValue) return
+    if (!qrToken) return
     try {
-      setQrDataUri(generateQrDataUri(qrValue))
+      setQrDataUri(generateQrDataUri(qrToken))
     } catch (err) {
       console.warn('Failed to generate QR', err)
       setQrDataUri(null)
     }
-  }, [qrValue])
+  }, [qrToken])
 
   const canSubmit = agree && !loading
+
+  const handleRegisterSuccess = async (resp: RegisterResponse, username: string, password: string) => {
+    setLastIdentity({ username, mode, voterId: resp.user.voter_id ?? undefined })
+    // auto login to fetch QR / set session
+    try {
+      const login = await loginUser(username, password)
+      setSession({
+        accessToken: login.access_token,
+        refreshToken: login.refresh_token,
+        user: {
+          id: login.user.id,
+          username: login.user.username,
+          role: login.user.role,
+          voterId: login.user.voter_id,
+          profile: login.user.profile,
+        },
+        hasVoted: false,
+        votingStatus: 'not_started',
+      })
+
+      if (mode === 'tps' && login.user.voter_id) {
+        try {
+          const qr = await rotateVoterQr(login.access_token, login.user.voter_id)
+          setQrToken(qr.qr_token)
+          setStep('success-tps')
+          return
+        } catch (err) {
+          console.warn('Failed to generate TPS QR', err)
+          setStep('fallback-tps')
+          return
+        }
+      }
+
+      setStep(mode === 'tps' ? 'fallback-tps' : 'success-online')
+    } catch (err) {
+      console.warn('Login after register failed', err)
+      setStep(mode === 'tps' ? 'fallback-tps' : 'success-online')
+    }
+  }
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -53,31 +97,31 @@ const Register = (): JSX.Element => {
 
     try {
       if (role === 'student') {
-        await registerStudent({
+        const res = await registerStudent({
           nim: studentForm.nim.trim(),
           name: studentForm.name.trim(),
           email: studentForm.email.trim(),
           password: studentForm.password,
+          faculty_name: studentForm.faculty.trim(),
+          study_program_name: studentForm.program.trim(),
+          cohort_year: studentForm.angkatan ? Number(studentForm.angkatan) : undefined,
+          voting_mode: mode === 'tps' ? 'TPS' : 'ONLINE',
         })
-        setLastIdentity({ username: studentForm.nim.trim(), mode })
+        await handleRegisterSuccess(res, studentForm.nim.trim(), studentForm.password)
       } else {
         const type = role === 'lecturer' ? 'LECTURER' : 'STAFF'
-        await registerLecturerOrStaff({
+        const res = await registerLecturerOrStaff({
           username: staffForm.username.trim(),
           name: staffForm.name.trim(),
           email: staffForm.email.trim(),
           password: staffForm.password,
           type,
+          faculty_name: staffForm.faculty.trim(),
+          department_name: role === 'lecturer' ? staffForm.program.trim() : undefined,
+          unit_name: role === 'staff' ? staffForm.program.trim() : undefined,
+          voting_mode: mode === 'tps' ? 'TPS' : 'ONLINE',
         })
-        setLastIdentity({ username: staffForm.username.trim(), mode })
-      }
-
-      if (mode === 'tps') {
-        const baseValue = `${role.toUpperCase()}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}-${lastIdentity.username || studentForm.nim || staffForm.username}`
-        setQrValue(baseValue)
-        setStep('success-tps')
-      } else {
-        setStep('success-online')
+        await handleRegisterSuccess(res, staffForm.username.trim(), staffForm.password)
       }
     } catch (err: any) {
       const apiErr = err as ApiError
@@ -91,10 +135,7 @@ const Register = (): JSX.Element => {
     }
   }
 
-  const onlineNote = useMemo(() => {
-    if (mode === 'online') return 'Anda hanya dapat memilih secara daring (online).'
-    return 'Anda hanya dapat memilih di TPS sesuai jadwal.'
-  }, [mode])
+  const onlineNote = useMemo(() => (mode === 'online' ? 'Anda hanya dapat memilih secara daring (online).' : 'Anda hanya dapat memilih di TPS sesuai jadwal.'), [mode])
 
   const renderSuccessOnline = () => (
     <div className="login-card" style={{ textAlign: 'center' }}>
@@ -106,7 +147,7 @@ const Register = (): JSX.Element => {
         <p className="credential">
           Username: <strong>{lastIdentity.username}</strong>
         </p>
-        <p className="credential">Password: dikirim via email</p>
+        <p className="credential">Password: gunakan yang baru Anda setel.</p>
       </div>
       <button className="btn-primary btn-block" onClick={() => navigate('/login')} type="button">
         Ke Halaman Login
@@ -121,8 +162,8 @@ const Register = (): JSX.Element => {
       <p>Anda terdaftar sebagai PEMILIH OFFLINE (TPS). Tunjukkan QR berikut kepada panitia.</p>
 
       <div className="qr-box">
-        {qrDataUri ? <img src={qrDataUri} alt="QR TPS" /> : <div className="qr-placeholder">QR-ID: {qrValue}</div>}
-        <p className="qr-id">QR-ID: {qrValue}</p>
+        {qrDataUri ? <img src={qrDataUri} alt="QR TPS" /> : <div className="qr-placeholder">QR tidak tersedia</div>}
+        <p className="qr-id">QR-Token: {qrToken}</p>
       </div>
 
       <p className="small-note">QR berlaku sekali untuk TPS dan tidak dapat digunakan online.</p>
@@ -135,6 +176,17 @@ const Register = (): JSX.Element => {
           Kembali ke Beranda
         </button>
       </div>
+    </div>
+  )
+
+  const renderFallbackTPS = () => (
+    <div className="login-card" style={{ textAlign: 'center' }}>
+      <div className="warning-icon">⚠</div>
+      <h2>Pendaftaran Berhasil, QR belum tersedia</h2>
+      <p>QR TPS belum dapat ditampilkan. Silakan login untuk mengambil QR Anda.</p>
+      <button className="btn-primary btn-block" onClick={() => navigate('/login')} type="button">
+        Ke Halaman Login
+      </button>
     </div>
   )
 
@@ -152,7 +204,11 @@ const Register = (): JSX.Element => {
 
   if (step === 'success-online') return <div className="login-page">{renderSuccessOnline()}</div>
   if (step === 'success-tps') return <div className="login-page">{renderSuccessTPS()}</div>
+  if (step === 'fallback-tps') return <div className="login-page">{renderFallbackTPS()}</div>
   if (step === 'duplicate') return <div className="login-page">{renderDuplicate()}</div>
+
+  const selectedProgramLabel = role === 'student' ? 'Program Studi' : role === 'lecturer' ? 'Departemen' : 'Unit'
+  const selectedAngkatanLabel = role === 'student' ? 'Angkatan' : 'Tahun Masuk'
 
   return (
     <div className="login-page">
@@ -178,9 +234,11 @@ const Register = (): JSX.Element => {
               <ul>
                 <li>Isi data sesuai NIM/akun kampus UNIWA.</li>
                 <li>Pilih satu mode pemilihan untuk menghindari kebingungan.</li>
-                <li>Password tidak ditampilkan, dikirim via email.</li>
+                <li>Password tidak ditampilkan di layar, gunakan yang Anda setel.</li>
               </ul>
-              <p className="info-note">{onlineNote}</p>
+              <p className="info-note">
+                {onlineNote} (Election ID: {ACTIVE_ELECTION_ID})
+              </p>
             </div>
           </div>
 
@@ -210,12 +268,16 @@ const Register = (): JSX.Element => {
                       <input value={studentForm.nim} onChange={(e) => setStudentForm((prev) => ({ ...prev, nim: e.target.value }))} required />
                     </label>
                     <label>
-                      Program Studi
+                      {selectedProgramLabel}
                       <input value={studentForm.program} onChange={(e) => setStudentForm((prev) => ({ ...prev, program: e.target.value }))} />
                     </label>
                     <label>
-                      Angkatan
+                      {selectedAngkatanLabel}
                       <input value={studentForm.angkatan} onChange={(e) => setStudentForm((prev) => ({ ...prev, angkatan: e.target.value }))} />
+                    </label>
+                    <label>
+                      Fakultas
+                      <input value={studentForm.faculty} onChange={(e) => setStudentForm((prev) => ({ ...prev, faculty: e.target.value }))} />
                     </label>
                     <label>
                       Email UNIWA
@@ -233,16 +295,20 @@ const Register = (): JSX.Element => {
                       <input value={staffForm.name} onChange={(e) => setStaffForm((prev) => ({ ...prev, name: e.target.value }))} required />
                     </label>
                     <label>
-                      Username
+                      Username {role === 'lecturer' ? '(NIDN)' : '(NIP)'}
                       <input value={staffForm.username} onChange={(e) => setStaffForm((prev) => ({ ...prev, username: e.target.value }))} required />
                     </label>
                     <label>
-                      Program Studi / Unit
+                      {selectedProgramLabel}
                       <input value={staffForm.program} onChange={(e) => setStaffForm((prev) => ({ ...prev, program: e.target.value }))} />
                     </label>
                     <label>
-                      Angkatan / Tahun Masuk
+                      {selectedAngkatanLabel}
                       <input value={staffForm.angkatan} onChange={(e) => setStaffForm((prev) => ({ ...prev, angkatan: e.target.value }))} />
+                    </label>
+                    <label>
+                      Fakultas / Unit
+                      <input value={staffForm.faculty} onChange={(e) => setStaffForm((prev) => ({ ...prev, faculty: e.target.value }))} />
                     </label>
                     <label>
                       Email UNIWA

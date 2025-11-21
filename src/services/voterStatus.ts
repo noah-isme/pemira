@@ -6,6 +6,7 @@ export type VoterMeStatus = {
   eligible: boolean
   has_voted: boolean
   method: 'NONE' | 'ONLINE' | 'TPS'
+  preferred_method?: 'ONLINE' | 'TPS'
   tps_id?: number | null
   last_vote_at?: string | null
   online_allowed: boolean
