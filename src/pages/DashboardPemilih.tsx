@@ -111,11 +111,11 @@ const DashboardPemilih = (): JSX.Element => {
   }
 
   const hasVoted = meStatus?.has_voted ?? false
-  const isEligible = meStatus?.eligible ?? true
+  const showNotEligible = Boolean(meStatus && !meStatus.eligible && !meStatus.online_allowed && !meStatus.tps_allowed)
   const isVotingOpen = election?.status === 'VOTING_OPEN'
   const votingStatus: VotingStatus = hasVoted ? 'voted' : isVotingOpen ? 'open' : election ? 'closed' : 'not_started'
-  const canOnline = Boolean(isVotingOpen && isEligible && meStatus?.online_allowed)
-  const canTPS = Boolean(isVotingOpen && isEligible && meStatus?.tps_allowed)
+  const canOnline = Boolean(isVotingOpen && meStatus?.online_allowed)
+  const canTPS = Boolean(isVotingOpen && meStatus?.tps_allowed)
   const lastVoteTime = formatDateTime(meStatus?.last_vote_at)
   const methodLabel = methodLabelMap[meStatus?.method ?? 'NONE'] ?? 'Belum memilih'
   const modeVoting = election ? [election.online_enabled && 'Online', election.tps_enabled && 'TPS'].filter(Boolean).join(' & ') || 'Belum ditetapkan' : '—'
@@ -162,7 +162,7 @@ const DashboardPemilih = (): JSX.Element => {
       }
     }
 
-    if (!isEligible) {
+    if (showNotEligible) {
       return {
         type: 'warning',
         icon: '⚠',
@@ -201,7 +201,7 @@ const DashboardPemilih = (): JSX.Element => {
       description: 'Silakan pilih salah satu metode di bawah.',
       showCTA: true,
     }
-  }, [statusLoading, statusError, election, isEligible, hasVoted, isVotingOpen, lastVoteTime, methodLabel, periodeVoting])
+  }, [statusLoading, statusError, election, showNotEligible, hasVoted, isVotingOpen, lastVoteTime, methodLabel, periodeVoting])
 
   const handleStartVotingOnline = () => {
     if (!canOnline || hasVoted) return
