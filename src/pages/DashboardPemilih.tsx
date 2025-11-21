@@ -56,7 +56,7 @@ const DashboardPemilih = (): JSX.Element => {
   const [showDropdown, setShowDropdown] = useState(false)
 
   useEffect(() => {
-    if (!session) return
+    if (!session?.accessToken) return
     const controller = new AbortController()
     const loadStatus = async () => {
       setStatusLoading(true)
@@ -74,7 +74,10 @@ const DashboardPemilih = (): JSX.Element => {
             : current.status === 'VOTING_CLOSED' || current.status === 'CLOSED'
               ? 'closed'
               : 'not_started'
-        updateSession({ hasVoted: status.has_voted, votingStatus: computed })
+
+        if (session.hasVoted !== status.has_voted || session.votingStatus !== computed) {
+          updateSession({ hasVoted: status.has_voted, votingStatus: computed })
+        }
       } catch (err: any) {
         if ((err as Error).name === 'AbortError') return
         setStatusError(err?.message ?? 'Gagal memuat status pemilu.')
@@ -86,7 +89,7 @@ const DashboardPemilih = (): JSX.Element => {
 
     loadStatus()
     return () => controller.abort()
-  }, [session, updateSession])
+  }, [session?.accessToken, session?.hasVoted, session?.votingStatus, updateSession])
 
   useEffect(() => {
     const controller = new AbortController()
