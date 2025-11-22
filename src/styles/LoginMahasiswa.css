@@ -413,6 +413,10 @@
   gap: 0.75rem;
 }
 
+.auth-logo-large {
+  --brand-logo-size: 54px;
+}
+
 .topbar-text {
   font-weight: 700;
   color: #0f172a;

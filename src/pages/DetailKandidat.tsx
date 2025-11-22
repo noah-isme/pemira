@@ -169,7 +169,11 @@ const DetailKandidat = (): JSX.Element => {
           <div className="kandidat-hero">
             <div className="hero-left">
               <div className="kandidat-photo-large">
-                <div className="photo-placeholder-large">{kandidat.foto}</div>
+                {kandidat.foto ? (
+                  <img src={kandidat.foto} alt={`Foto ${kandidat.nama}`} loading="lazy" />
+                ) : (
+                  <div className="photo-placeholder-large">{kandidat.nama.charAt(0)}</div>
+                )}
               </div>
 
               <div className="kandidat-identity">

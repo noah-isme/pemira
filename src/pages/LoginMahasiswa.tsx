@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import PemiraLogos from '../components/shared/PemiraLogos'
 import { useVotingSession } from '../hooks/useVotingSession'
 import { loginUser } from '../services/auth'
 import '../styles/LoginMahasiswa.css'
@@ -72,8 +73,7 @@ const LoginMahasiswa = (): JSX.Element => {
       <header className="login-topbar new-appbar" ref={headerRef}>
         <div className="topbar-inner">
           <div className="topbar-left">
-            <div className="logo-pill">P</div>
-            <span className="topbar-text">PEMIRA UNIWA 2025</span>
+            <PemiraLogos size="lg" title="PEMIRA UNIWA 2025" className="auth-logo-large" />
           </div>
         </div>
       </header>

@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import PemiraLogos from '../components/shared/PemiraLogos'
 import { demoAccountCards } from '../data/demoAccounts'
 import { demoFeatureList, quickLinks } from '../data/dashboard'
 import '../styles/DemoAccounts.css'
@@ -28,8 +29,7 @@ const DemoAccounts = (): JSX.Element => {
       <header className="demo-header">
         <div className="demo-header-container">
           <div className="header-logo">
-            <div className="logo-circle">P</div>
-            <span className="logo-text">PEMIRA UNIWA</span>
+            <PemiraLogos size="sm" />
           </div>
           <button className="btn-back" onClick={() => navigate('/')} type="button">
             Kembali ke Beranda

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import PemiraLogos from '../components/shared/PemiraLogos'
 import { useAdminAuth } from '../hooks/useAdminAuth'
 import '../styles/AdminLogin.css'
 
@@ -26,6 +27,9 @@ const AdminLogin = (): JSX.Element => {
   return (
     <div className="admin-login-page">
       <div className="admin-login-card">
+        <div className="admin-login-brand">
+          <PemiraLogos size="sm" subtitle="Admin Panel" variant="kpu" />
+        </div>
         <h1>Login Admin</h1>
         <p>Masuk untuk mengelola PEMIRA.</p>
         <form onSubmit={handleSubmit}>

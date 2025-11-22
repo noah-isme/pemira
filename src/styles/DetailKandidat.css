@@ -4,7 +4,7 @@
 }
 
 .detail-main {
-  padding: 2rem;
+  padding: 2rem 1.25rem 3rem;
 }
 
 .detail-container {
@@ -39,11 +39,11 @@
 .kandidat-hero {
   background: white;
   border-radius: 20px;
-  padding: 3rem;
+  padding: 2.5rem;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   display: grid;
   grid-template-columns: 35% 65%;
-  gap: 3rem;
+  gap: 2.5rem;
 }
 
 .hero-left {
@@ -58,6 +58,7 @@
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  background: #f8fafc;
 }
 
 .photo-placeholder-large {
@@ -68,8 +69,15 @@
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 8rem;
+  font-size: clamp(3.5rem, 8vw, 6rem);
   font-weight: 700;
+}
+
+.kandidat-photo-large img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .kandidat-identity {
@@ -103,7 +111,7 @@
 }
 
 .identity-nama {
-  font-size: 2rem;
+  font-size: clamp(1.6rem, 3vw, 2rem);
   font-weight: 800;
   margin: 0;
   color: #1a1a1a;
@@ -144,7 +152,7 @@
 }
 
 .hero-tagline {
-  font-size: 2.5rem;
+  font-size: clamp(1.4rem, 3.6vw, 2.2rem);
   font-weight: 800;
   line-height: 1.2;
   color: #1a1a1a;
@@ -407,6 +415,32 @@
   margin: 0 0 1rem 0;
 }
 
+.kampanye-media {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.kampanye-video {
+  background: #000;
+  border-radius: 12px;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+}
+
+.kampanye-video iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.kampanye-files {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
 .video-container {
   width: 100%;
   border-radius: 12px;
@@ -571,6 +605,7 @@
   .kandidat-hero {
     grid-template-columns: 1fr;
     padding: 2rem;
+    gap: 2rem;
   }
 
   .hero-tagline {
@@ -578,6 +613,10 @@
   }
 
   .program-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .kampanye-media {
     grid-template-columns: 1fr;
   }
 }
@@ -589,10 +628,11 @@
 
   .kandidat-hero {
     padding: 1.5rem;
+    gap: 1.25rem;
   }
 
   .photo-placeholder-large {
-    font-size: 5rem;
+    font-size: 4rem;
   }
 
   .identity-nama {
@@ -620,6 +660,15 @@
     font-size: 0.875rem;
   }
 
+  .kampanye-media {
+    gap: 1rem;
+  }
+
+  .kampanye-files {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
   .timeline {
     padding-left: 1rem;
   }
@@ -640,5 +689,30 @@
 
   .btn-pilih-sticky {
     width: 100%;
+  }
+}
+
+@media (max-width: 560px) {
+  .detail-main {
+    padding: 0.75rem;
+  }
+
+  .kandidat-hero {
+    padding: 1.25rem;
+  }
+
+  .btn-pilih-kandidat {
+    font-size: 1.05rem;
+    padding: 1rem 1.5rem;
+  }
+
+  .tab-item {
+    padding: 0.65rem 1rem;
+    font-size: 0.8rem;
+  }
+
+  .program-card,
+  .content-sections {
+    padding: 1.25rem;
   }
 }

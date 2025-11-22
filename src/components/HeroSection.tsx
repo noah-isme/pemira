@@ -55,6 +55,12 @@ const HeroSection = ({ election, loading = false, error }: Props): JSX.Element =
 
           <p className="hero-subtitle">{subtitle}</p>
 
+          <div className="hero-demo-cta">
+            <a href="/demo" className="demo-pill">
+              Coba Akun Demo
+            </a>
+          </div>
+
           <div className="hero-badge">
             <span className="badge-status">{statusLabel}</span>
           </div>

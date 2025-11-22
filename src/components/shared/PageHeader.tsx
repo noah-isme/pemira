@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import PemiraLogos from './PemiraLogos'
 import type { VoterProfile } from '../../types/voting'
 import '../../styles/shared/PageHeader.css'
 
@@ -42,8 +43,7 @@ const PageHeader = ({
           {logo && (
             <>
               <div className="header-logo">
-                <div className="logo-circle">P</div>
-                <span className="logo-text">PEMIRA UNIWA</span>
+                <PemiraLogos size="sm" />
               </div>
               {title && <span className="header-divider">|</span>}
             </>

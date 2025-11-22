@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import PemiraLogos from './shared/PemiraLogos'
 import type { TPSPanitiaProfile } from '../types/tpsPanel'
 
 type TPSPanelHeaderProps = {
@@ -39,9 +40,7 @@ const TPSPanelHeader = ({ panitia, locationLabel, subtitle, onLogout }: TPSPanel
     <header className="tps-panel-header">
       <div className="header-left">
         <div className="brand-line">
-          <span className="brand-text">PEMIRA UNIWA</span>
-          <span className="brand-divider">–</span>
-          <span className="brand-subtitle">TPS Panel</span>
+          <PemiraLogos size="sm" subtitle="TPS Panel" />
         </div>
         {subtitle && <p className="panel-subtitle">{subtitle}</p>}
       </div>

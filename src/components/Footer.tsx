@@ -1,3 +1,4 @@
+import PemiraLogos from './shared/PemiraLogos'
 import '../styles/Footer.css'
 
 const Footer = (): JSX.Element => (
@@ -6,8 +7,7 @@ const Footer = (): JSX.Element => (
       <div className="footer-top">
         <div className="footer-brand">
           <div className="footer-logo">
-            <div className="logo-circle">P</div>
-            <span className="logo-text">PEMIRA UNIWA</span>
+            <PemiraLogos size="sm" />
           </div>
           <p className="footer-tagline">
             Sistem pemilu kampus yang aman, transparan, dan modern.

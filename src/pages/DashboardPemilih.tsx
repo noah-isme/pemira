@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { mockCandidates } from '../data/mockCandidates'
+import PemiraLogos from '../components/shared/PemiraLogos'
 import { useVotingSession } from '../hooks/useVotingSession'
 import { fetchPublicCandidates } from '../services/publicCandidates'
 import { fetchCurrentElection, type PublicElection } from '../services/publicElection'
@@ -241,8 +242,7 @@ const DashboardPemilih = (): JSX.Element => {
         <div className="dashboard-header-container">
           <div className="header-left">
             <div className="header-logo">
-              <div className="logo-circle">P</div>
-              <span className="logo-text">PEMIRA UNIWA</span>
+              <PemiraLogos size="sm" />
             </div>
             <span className="header-divider">|</span>
             <span className="header-title">Dashboard Pemilih</span>

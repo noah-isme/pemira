@@ -55,6 +55,7 @@ export type QuickAction = {
   label: string
   description: string
   href: string
+  icon?: string
 }
 
 export type SystemInfo = {

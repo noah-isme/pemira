@@ -1,8 +1,11 @@
 .admin-candidates-page {
-  padding: 2rem;
-  background: #f8fafc;
+  padding: 1rem;
+  background: var(--admin-color-bg-page, #f3f5fb);
   min-height: 100vh;
-  color: #0f172a;
+  color: var(--admin-color-neutral-900, #0f172a);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .page-header {
@@ -24,9 +27,9 @@
 }
 
 .filters {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
   margin-bottom: 1rem;
 }
 
@@ -46,14 +49,15 @@
 .filters select {
   padding: 0.6rem 0.8rem;
   border-radius: 10px;
-  border: 1px solid #d1d5db;
-  background: #fff;
+  border: 1px solid var(--admin-color-neutral-200, #e5e7eb);
+  background: var(--admin-color-bg-card, #fff);
 }
 
 .table-wrapper {
-  background: #fff;
+  background: var(--admin-color-bg-card, #fff);
   border-radius: 16px;
-  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.05);
+  border: 1px solid var(--admin-color-neutral-200, #e5e7eb);
+  box-shadow: var(--admin-shadow-md, 0 4px 12px rgba(15, 23, 42, 0.08));
 }
 
 .candidates-table {
@@ -99,18 +103,18 @@
 }
 
 .status-chip.active {
-  background: #dcfce7;
-  color: #15803d;
+  background: var(--admin-color-success-soft, #dcfce7);
+  color: var(--admin-color-success-500, #16a34a);
 }
 
 .status-chip.draft {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--admin-color-warning-soft, #fef3c7);
+  color: var(--admin-color-warning-500, #f59e0b);
 }
 
 .status-chip.hidden {
-  background: #e2e8f0;
-  color: #475569;
+  background: var(--admin-color-neutral-200, #e5e7eb);
+  color: var(--admin-color-neutral-700, #374151);
 }
 
 .table-actions {
@@ -119,16 +123,22 @@
 }
 
 .btn-table {
-  border: 1px solid #cbd5f5;
-  background: white;
+  border: 1px solid var(--admin-color-neutral-200, #e5e7eb);
+  background: var(--admin-color-bg-card, #fff);
   border-radius: 8px;
   padding: 0.35rem 0.75rem;
   cursor: pointer;
+  transition: transform var(--admin-motion-fast, 120ms) var(--admin-motion-ease, cubic-bezier(0.22, 0.61, 0.36, 1)), box-shadow var(--admin-motion-fast, 120ms) var(--admin-motion-ease, cubic-bezier(0.22, 0.61, 0.36, 1));
 }
 
 .btn-table.danger {
   border-color: #f87171;
   color: #b91c1c;
+}
+
+.btn-table:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--admin-shadow-sm, 0 1px 2px rgba(15, 23, 42, 0.06));
 }
 
 .empty-state {
@@ -153,10 +163,10 @@
 }
 
 .candidate-form section {
-  background: #fff;
+  background: var(--admin-color-bg-card, #fff);
   padding: 1.5rem;
   border-radius: 18px;
-  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--admin-shadow-md, 0 4px 12px rgba(15, 23, 42, 0.08));
 }
 
 .candidate-form h2 {

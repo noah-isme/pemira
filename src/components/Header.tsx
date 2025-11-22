@@ -1,37 +1,75 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import PemiraLogos from './shared/PemiraLogos'
 import '../styles/Header.css'
 
+const navLinks = [
+  { href: '#tentang', label: 'Tentang' },
+  { href: '#kandidat', label: 'Kandidat' },
+  { href: '#cara-memilih', label: 'Cara Memilih' },
+  { href: '/panduan', label: 'Panduan' },
+]
+
 const Header = (): JSX.Element => {
+  const [isScrolled, setIsScrolled] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
 
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 4)
+    handleScroll()
+    window.addEventListener('scroll', handleScroll)
+    requestAnimationFrame(() => setMounted(true))
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  const headerClass = ['header']
+  if (mounted) headerClass.push('mounted')
+  if (isScrolled) headerClass.push('scrolled')
+
+  const closeMenu = () => setMenuOpen(false)
+
   return (
-    <header className="header">
+    <header className={headerClass.join(' ')}>
       <div className="header-container">
-        <div className="header-logo">
-          <div className="logo-circle">P</div>
-          <span className="logo-text">PEMIRA UNIWA</span>
+        <div className="header-brand">
+          <PemiraLogos size="sm" title="PEMIRA UNIWA" subtitle="2025" className="header-logo-cluster" />
         </div>
 
-        <nav className={`header-nav ${menuOpen ? 'open' : ''}`}>
-          <a href="#tentang">Tentang</a>
-          <a href="#cara-memilih">Cara Memilih</a>
-          <a href="#kandidat">Kandidat</a>
-          <a href="/panduan">Panduan</a>
+        <nav className="header-nav desktop-nav">
+          {navLinks.map((link) => (
+            <a key={link.href} href={link.href}>
+              {link.label}
+            </a>
+          ))}
         </nav>
 
-        <div className="header-actions">
-          <a href="/login">
-            <button className="btn-primary">Masuk Mahasiswa</button>
-          </a>
-          <a href="/demo">
-            <button className="btn-secondary">Akun Demo</button>
+        <div className="header-actions desktop-actions">
+          <a href="/login" className="appbar-login">
+            <span className="login-icon">🔒</span>
+            <span>Masuk</span>
           </a>
         </div>
 
-        <button className="menu-toggle" onClick={() => setMenuOpen((prev) => !prev)}>
-          ☰
-        </button>
+        <div className="mobile-actions">
+          <button className="mobile-menu-toggle" onClick={() => setMenuOpen((prev) => !prev)} aria-label="Buka menu">
+            ☰
+          </button>
+        </div>
       </div>
+
+      {menuOpen && (
+        <div className="mobile-menu" role="menu">
+          <a href="/login" className="mobile-menu-item mobile-menu-login" onClick={closeMenu} role="menuitem">
+            <span className="login-icon">🔒</span>
+            <span>Masuk</span>
+          </a>
+          {navLinks.map((link) => (
+            <a key={link.href} href={link.href} className="mobile-menu-item" onClick={closeMenu} role="menuitem">
+              {link.label}
+            </a>
+          ))}
+        </div>
+      )}
     </header>
   )
 }

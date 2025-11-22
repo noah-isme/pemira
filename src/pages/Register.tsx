@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BrowserQRCodeSvgWriter } from '@zxing/library'
+import PemiraLogos from '../components/shared/PemiraLogos'
 import { loginUser, registerLecturerOrStaff, registerStudent, type RegisterResponse } from '../services/auth'
 import { rotateVoterQr } from '../services/voterQr'
 import { useVotingSession } from '../hooks/useVotingSession'
@@ -275,8 +276,7 @@ const Register = (): JSX.Element => {
       <header className="login-topbar new-appbar" ref={heroRef}>
         <div className="topbar-inner">
           <div className="topbar-left">
-            <div className="logo-pill">P</div>
-            <span className="topbar-text">PEMIRA UNIWA 2025</span>
+            <PemiraLogos size="lg" title="PEMIRA UNIWA 2025" className="auth-logo-large" />
           </div>
         </div>
       </header>

@@ -73,218 +73,208 @@ const AdminElectionSettings = (): JSX.Element => {
   return (
     <AdminLayout title="Pengaturan Pemilu">
       <div className="admin-settings-page">
-      <header className="settings-header">
-        <div>
-          <p className="label">PEMIRA UNIWA</p>
-          <h1>Pengaturan Pemilu</h1>
-          <p>Atur jadwal, mode voting, dan aturan utama pemilu.</p>
-        </div>
-      </header>
+        <header className="settings-sticky">
+          <div className="settings-top">
+            <a className="back-link" href="/admin">
+              ◀ Pengaturan Pemilu
+            </a>
+            <div className="status-chip">
+              <span className="dot live" />
+              <span>Aktif</span>
+            </div>
+          </div>
+          <p className="sub-label">Mode: Online + TPS</p>
+        </header>
 
-      <section className="card mode-card">
-        <h2>Status & Mode Pemilu</h2>
-        <div className="field-group">
-          <label>Status Pemilu Saat Ini</label>
-          <select value={status} onChange={(event) => setStatus(event.target.value as typeof status)}>
-            {electionStatusOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <small>Override manual. Status otomatis mengikuti timeline ({statusLabel}).</small>
-        </div>
-
-        <div className="field-group">
-          <label>Mode Voting</label>
-          <div className="mode-options">
-            {(Object.keys(votingModeLabels) as VotingMode[]).map((value) => (
-              <label key={value} className={isModeChangeDisabled && mode !== value ? 'disabled' : ''}>
+        <div className="settings-grid">
+          <div className="settings-col">
+            <section className="card schedule-card">
+              <div className="card-head">
+                <h2>Jadwal Pemilu</h2>
+                <small>Terakhir diubah: {lastUpdated}</small>
+              </div>
+              <div className="schedule-grid">
+                {timeline.map((stage) => (
+              <div key={stage.id} className="schedule-row">
+                <label>{stage.label}</label>
                 <input
-                  type="radio"
-                  name="voting-mode"
-                  value={value}
-                  checked={mode === value}
-                  onChange={() => setMode(value)}
-                  disabled={isModeChangeDisabled}
+                  className="time-input"
+                  type="datetime-local"
+                  value={stage.start}
+                  onChange={(event) => handleTimelineChange(stage.id, 'start', event.target.value)}
                 />
-                {votingModeLabels[value]}
-              </label>
+                <input
+                  className="time-input"
+                  type="datetime-local"
+                  value={stage.end}
+                  onChange={(event) => handleTimelineChange(stage.id, 'end', event.target.value)}
+                />
+              </div>
             ))}
           </div>
-          {mode === 'hybrid' && (
-            <div className="tps-hint">
-              <p>TPS Aktif: 5</p>
-              <button className="btn-link" type="button" onClick={() => (window.location.href = '/tps-panel')}>
-                Kelola TPS →
-              </button>
-            </div>
-          )}
-        </div>
+              {!timelineValid && <p className="warning">Cek kembali jadwal. Ada tanggal yang bertumpuk.</p>}
+              <div className="card-actions">
+                <button className="btn-primary" type="button" onClick={handleSaveTimeline} disabled={savingSection === 'timeline'}>
+                  {savingSection === 'timeline' ? 'Menyimpan...' : 'Simpan Jadwal'}
+                </button>
+              </div>
+            </section>
 
-        <button className="btn-primary" type="button" onClick={handleSaveMode} disabled={savingSection === 'mode'}>
-          {savingSection === 'mode' ? 'Menyimpan...' : 'Simpan Perubahan Mode'}
-        </button>
-      </section>
+            <section className="card rules-card">
+              <h2>Hak Suara & Bobot</h2>
+              <div className="rules-stack">
+                <div className="rule-block">
+                  <h3>Hak Suara</h3>
+                  <label className="check-row">
+                    <input
+                      type="checkbox"
+                      checked={rules.allowActiveStudents}
+                      onChange={(event) => updateRule('allowActiveStudents', event.target.checked)}
+                    />
+                    Mahasiswa aktif
+                  </label>
+                  <label className="check-row">
+                    <input
+                      type="checkbox"
+                      checked={rules.allowLeaveStudents}
+                      onChange={(event) => updateRule('allowLeaveStudents', event.target.checked)}
+                    />
+                    Mahasiswa cuti
+                  </label>
+                  <label className="check-row">
+                    <input type="checkbox" checked={rules.allowAlumni} onChange={(event) => updateRule('allowAlumni', event.target.checked)} />
+                    Alumni
+                  </label>
+                </div>
 
-      <section className="card timeline-card">
-        <div className="card-heading">
-          <div>
-            <h2>Pengaturan Jadwal</h2>
-            <small>Terakhir diubah: {lastUpdated}</small>
-          </div>
-        </div>
-        <div className="timeline-table">
-          <div className="timeline-header">
-            <span>Tahap</span>
-            <span>Mulai</span>
-            <span>Selesai</span>
-          </div>
-          {timeline.map((stage) => (
-            <div key={stage.id} className="timeline-row">
-              <span>{stage.label}</span>
-              <input type="datetime-local" value={stage.start} onChange={(event) => handleTimelineChange(stage.id, 'start', event.target.value)} />
-              <input type="datetime-local" value={stage.end} onChange={(event) => handleTimelineChange(stage.id, 'end', event.target.value)} />
-            </div>
-          ))}
-        </div>
-        {!timelineValid && <p className="warning">Cek kembali jadwal. Ada tanggal yang bertumpuk.</p>}
-        <button className="btn-primary" type="button" onClick={handleSaveTimeline} disabled={savingSection === 'timeline'}>
-          {savingSection === 'timeline' ? 'Menyimpan...' : 'Simpan Jadwal'}
-        </button>
-      </section>
+                <div className="rule-block">
+                  <h3>Bobot Suara</h3>
+                  <div className="weight-row">
+                    <label>
+                      DPT Umum
+                      <input
+                        type="number"
+                        min={1}
+                        max={5}
+                        value={rules.publicWeight}
+                        onChange={(event) => updateRule('publicWeight', Number(event.target.value))}
+                      />
+                    </label>
+                    <label>
+                      DPT Khusus
+                      <input
+                        type="number"
+                        min={1}
+                        max={5}
+                        value={rules.specialWeight}
+                        onChange={(event) => updateRule('specialWeight', Number(event.target.value))}
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+              <div className="card-actions">
+                <button className="btn-primary" type="button" onClick={handleSaveRules} disabled={savingSection === 'rules'}>
+                  {savingSection === 'rules' ? 'Menyimpan...' : 'Simpan Aturan'}
+                </button>
+              </div>
+            </section>
 
-      <section className="card rules-card">
-        <h2>Aturan Pemilu</h2>
-        <div className="rules-grid">
-          <div>
-            <h3>Hak Suara</h3>
-            <label>
-              <input
-                type="checkbox"
-                checked={rules.allowActiveStudents}
-                onChange={(event) => updateRule('allowActiveStudents', event.target.checked)}
-              />
-              Mahasiswa aktif
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={rules.allowLeaveStudents}
-                onChange={(event) => updateRule('allowLeaveStudents', event.target.checked)}
-              />
-              Mahasiswa cuti
-            </label>
-            <label>
-              <input type="checkbox" checked={rules.allowAlumni} onChange={(event) => updateRule('allowAlumni', event.target.checked)} />
-              Alumni
-            </label>
+            <section className="card checklist-card">
+              <h2>Syarat Suara Sah</h2>
+              <ul className="checklist">
+                <li>
+                  <span className="dot" /> Pilih satu kandidat
+                </li>
+                <li>
+                  <span className="dot" /> Konfirmasi final dilakukan
+                </li>
+                <li>
+                  <span className="dot" /> Tidak ada duplikasi perangkat
+                </li>
+              </ul>
+            </section>
           </div>
-          <div>
-            <h3>Bobot Suara</h3>
-            <label>
-              Bobot DPT Umum
-              <input type="number" min={1} max={5} value={rules.publicWeight} onChange={(event) => updateRule('publicWeight', Number(event.target.value))} />
-            </label>
-            <label>
-              Bobot DPT Khusus
-              <input type="number" min={1} max={5} value={rules.specialWeight} onChange={(event) => updateRule('specialWeight', Number(event.target.value))} />
-            </label>
-          </div>
-          <div>
-            <h3>Voting Online</h3>
-            <label>
-              <input
-                type="radio"
-                name="device"
-                checked={rules.singleDeviceOnly}
-                onChange={() => updateRule('singleDeviceOnly', true)}
-              />
-              Hanya 1 perangkat
-            </label>
-            <label>
-              <input type="radio" name="device" checked={!rules.singleDeviceOnly} onChange={() => updateRule('singleDeviceOnly', false)} />
-              Multi perangkat
-            </label>
-            <label>
-              <input
-                type="radio"
-                name="geolocation"
-                checked={rules.geolocationRequired}
-                onChange={() => updateRule('geolocationRequired', true)}
-              />
-              Lokasi wajib
-            </label>
-            <label>
-              <input
-                type="radio"
-                name="geolocation"
-                checked={!rules.geolocationRequired}
-                onChange={() => updateRule('geolocationRequired', false)}
-              />
-              Lokasi tidak wajib
-            </label>
-          </div>
-          <div>
-            <h3>Pengaturan TPS</h3>
-            <label>
-              <input type="radio" name="tps-mode" checked={rules.tpsMode === 'static'} onChange={() => updateRule('tpsMode', 'static')} />
-              QR Statis + Verifikasi Panitia
-            </label>
-            <label>
-              <input type="radio" name="tps-mode" checked={rules.tpsMode === 'dynamic'} onChange={() => updateRule('tpsMode', 'dynamic')} />
-              QR Dinamis + Auto Rotate 30s
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={rules.requirePanitiaVerification}
-                onChange={(event) => updateRule('requirePanitiaVerification', event.target.checked)}
-              />
-              Verifikasi panitia wajib
-            </label>
-          </div>
-          <div>
-            <h3>Syarat Suara Sah</h3>
-            <ul>
-              <li>Memilih satu kandidat</li>
-              <li>Konfirmasi final dilakukan</li>
-              <li>Tidak ditemukan duplikasi device/token</li>
-            </ul>
-          </div>
-        </div>
-        <button className="btn-primary" type="button" onClick={handleSaveRules} disabled={savingSection === 'rules'}>
-          {savingSection === 'rules' ? 'Menyimpan...' : 'Simpan Aturan Pemilu'}
-        </button>
-      </section>
 
-      <section className="card security-card">
-        <h2>Kunci & Keamanan</h2>
-        <div className="security-grid">
-          <div>
-            <h3>Lock Voting</h3>
-            <label>
-              <input type="checkbox" checked={security.lockVoting} onChange={handleLockVoting} />
-              Kunci semua suara
-            </label>
-            <small>Aktifkan saat voting ditutup agar tidak ada data yang berubah.</small>
-          </div>
-          <div>
-            <h3>Reset TPS</h3>
-            <button className="btn-outline" type="button" onClick={handleResetTPS}>
-              Reset Queue TPS
-            </button>
-          </div>
-          <div>
-            <h3>Reset Pemilu (Super Admin)</h3>
-            <p className="warning-text">Aksi ini tidak dapat dibatalkan. Hanya untuk keadaan darurat.</p>
-            <button className="btn-danger" type="button" onClick={handleResetElection}>
-              Reset Seluruh Suara & Data Pemilu
-            </button>
+          <div className="settings-col">
+            <section className="card mode-card">
+              <h2>Voting Online</h2>
+              <div className="field-stack">
+                <p className="label">Perangkat</p>
+                <label className="radio-row">
+                  <input type="radio" name="device" checked={rules.singleDeviceOnly} onChange={() => updateRule('singleDeviceOnly', true)} />
+                  Hanya 1 perangkat
+                </label>
+                <label className="radio-row">
+                  <input type="radio" name="device" checked={!rules.singleDeviceOnly} onChange={() => updateRule('singleDeviceOnly', false)} />
+                  Multi perangkat
+                </label>
+              </div>
+              <div className="field-stack">
+                <p className="label">Lokasi</p>
+                <label className="radio-row">
+                  <input
+                    type="radio"
+                    name="geolocation"
+                    checked={!rules.geolocationRequired}
+                    onChange={() => updateRule('geolocationRequired', false)}
+                  />
+                  Lokasi tidak wajib
+                </label>
+                <label className="radio-row">
+                  <input type="radio" name="geolocation" checked={rules.geolocationRequired} onChange={() => updateRule('geolocationRequired', true)} />
+                  Lokasi wajib
+                </label>
+              </div>
+              <div className="card-actions">
+                <button className="btn-primary" type="button" onClick={handleSaveMode} disabled={savingSection === 'mode'}>
+                  {savingSection === 'mode' ? 'Menyimpan...' : 'Simpan Mode'}
+                </button>
+              </div>
+            </section>
+
+            <section className="card tps-card">
+              <h2>Pengaturan TPS</h2>
+              <div className="field-stack">
+                <p className="label">QR Mode</p>
+                <label className="radio-row">
+                  <input type="radio" name="tps-mode" checked={rules.tpsMode === 'static'} onChange={() => updateRule('tpsMode', 'static')} />
+                  Statis + Verifikasi Panitia
+                </label>
+                <label className="radio-row">
+                  <input type="radio" name="tps-mode" checked={rules.tpsMode === 'dynamic'} onChange={() => updateRule('tpsMode', 'dynamic')} />
+                  Dinamis (Auto Rotate 30s)
+                </label>
+              </div>
+              <label className="check-row">
+                <input
+                  type="checkbox"
+                  checked={rules.requirePanitiaVerification}
+                  onChange={(event) => updateRule('requirePanitiaVerification', event.target.checked)}
+                />
+                Verifikasi panitia wajib
+              </label>
+            </section>
+
+            <section className="card danger-card">
+              <h2>⚠ Zona Bahaya (Critical)</h2>
+              <label className="check-row danger-check">
+                <input type="checkbox" checked={security.lockVoting} onChange={handleLockVoting} />
+                Lock Voting
+              </label>
+              <div className="card-actions danger-actions">
+                <button className="btn-outline danger" type="button" onClick={handleResetTPS}>
+                  Reset Queue TPS
+                </button>
+                <button className="btn-danger" type="button" onClick={handleResetElection}>
+                  Reset Seluruh Suara & Data Pemilu
+                </button>
+                <p className="danger-note">Hanya untuk keadaan darurat.</p>
+              </div>
+            </section>
           </div>
         </div>
-      </section>
-    </div>
+      </div>
     </AdminLayout>
   )
 }

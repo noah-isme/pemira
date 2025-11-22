@@ -19,132 +19,156 @@ const AdminDashboard = (): JSX.Element => {
   } = useAdminDashboardData()
 
   const voteTotal = useMemo(() => votes.reduce((sum, item) => sum + item.votes, 0), [votes])
+  const topCandidateId = useMemo(() => {
+    if (!votes.length) return null
+    return votes.reduce((max, curr) => (curr.votes > max.votes ? curr : max), votes[0])
+  }, [votes])
 
   return (
-    <AdminLayout title="Admin Panel">
-      <section className="hero-card">
-        <div>
-          <p className="status-label">Status Pemilu</p>
-          <h2>{overview.stageLabel}</h2>
-          <p className="meta">Periode voting: {overview.votingPeriod}</p>
-        </div>
-        <div className="hero-stats">
+    <AdminLayout title="Dashboard Admin">
+      <section className="admin-hero">
+        <div className="hero-top">
           <div>
-            <span>Kandidat</span>
-            <strong>{overview.totalCandidates}</strong>
+            <p className="eyebrow">Status Pemilu</p>
+            <h2>{overview.stageLabel}</h2>
+            <p className="meta">Periode: {overview.votingPeriod}</p>
           </div>
-          <div>
-            <span>Total Pemilih (DPT)</span>
+          <div className="hero-badges">
+            <span className="badge live">Voting Dibuka</span>
+            <span className="badge soft">Mode: {overview.activeMode}</span>
+          </div>
+        </div>
+
+        <div className="hero-metrics">
+          <div className="metric-block">
+            <span>Total DPT</span>
             <strong>{overview.totalVoters.toLocaleString('id-ID')}</strong>
           </div>
-          <div>
-            <span>Mode Voting Aktif</span>
-            <strong>{overview.activeMode}</strong>
+          <div className="metric-block">
+            <span>Sudah Memilih</span>
+            <strong>{participation.voted.toLocaleString('id-ID')}</strong>
+          </div>
+          <div className="metric-block">
+            <span>Belum Memilih</span>
+            <strong>{participation.notVoted.toLocaleString('id-ID')}</strong>
           </div>
         </div>
+
         <div className="hero-actions">
-          <button type="button" className="btn-outline">
-            Edit Jadwal Pemilu
-          </button>
-          <button type="button" className="btn-primary">
-            Atur Mode Voting
-          </button>
+          <button type="button" className="btn-outline">Edit Jadwal</button>
+          <button type="button" className="btn-primary">Atur Mode Voting</button>
         </div>
       </section>
 
-      <section className="grid cards">
-        <article className="card participation-card">
+      <section className="section-grid two-col">
+        <article className="card status-card">
           <div className="card-header">
-            <h3>Partisipasi Mahasiswa</h3>
-            <span>Real-time</span>
+            <h3>Status Pemilu</h3>
+            <span className="muted">Realtime</span>
           </div>
-          <div className="participation-stats">
+          <div className="status-pill-row">
+            <span className="pill success">Voting Dibuka</span>
+            <span className="pill outline">Mode: {overview.activeMode}</span>
+            <span className="pill outline">Jadwal: {overview.votingPeriod}</span>
+          </div>
+          <div className="status-stats">
             <div>
               <span>Total DPT</span>
+              <strong>{overview.totalVoters.toLocaleString('id-ID')}</strong>
+            </div>
+            <div>
+              <span>Sudah Memilih</span>
+              <strong>{participation.voted.toLocaleString('id-ID')}</strong>
+            </div>
+            <div>
+              <span>Belum Memilih</span>
+              <strong>{participation.notVoted.toLocaleString('id-ID')}</strong>
+            </div>
+          </div>
+          <div className="status-actions">
+            <button type="button" className="btn-ghost">Edit Jadwal</button>
+            <button type="button" className="btn-ghost">Atur Mode Voting</button>
+          </div>
+        </article>
+
+        <article className="card participation-premium">
+          <div className="card-header">
+            <div>
+              <h3>Partisipasi Mahasiswa</h3>
+              <p className="muted">Realtime</p>
+            </div>
+            <span className="trend">Tren 5 menit terakhir: +{Math.max(1, Math.round(participation.voted * 0.012))}</span>
+          </div>
+          <div className="participation-meta">
+            <div>
+              <span>Total Peserta</span>
               <strong>{participation.totalVoters.toLocaleString('id-ID')}</strong>
             </div>
             <div>
               <span>Sudah memilih</span>
-              <strong>{participation.voted.toLocaleString('id-ID')}</strong>
-            </div>
-            <div>
-              <span>Belum memilih</span>
-              <strong>{participation.notVoted.toLocaleString('id-ID')}</strong>
-            </div>
-          </div>
-          <div className="progress-bar">
-            <div style={{ width: `${participationPercentage}%` }} />
-          </div>
-          <p className="progress-label">{participationPercentage}%</p>
-          <a href="#detail" className="link">
-            Lihat detail per fakultas →
-          </a>
-        </article>
-
-        <article className="card tps-card">
-          <div className="card-header">
-            <h3>Status TPS</h3>
-            <span>Real-time</span>
-          </div>
-          <div className="tps-summary">
-            <div>
-              <span>TPS Aktif</span>
               <strong>
-                {tpsStatus.active}/{tpsStatus.total}
+                {participation.voted.toLocaleString('id-ID')} ({participationPercentage}%)
               </strong>
             </div>
-            <div>
-              <span>TPS Bermasalah</span>
-              <strong>{tpsStatus.issue}</strong>
-            </div>
-            <div>
-              <span>TPS Ditutup</span>
-              <strong>{tpsStatus.closed}</strong>
+          </div>
+          <div className="premium-progress">
+            <div className="bar">
+              <div style={{ width: `${participationPercentage}%` }} />
             </div>
           </div>
-          <ul className="tps-list">
-            {tpsStatus.detail.map((item) => (
-              <li key={item.id}>
-                <div>
-                  <strong>{item.name}</strong>
-                  <span>{item.voters.toLocaleString('id-ID')} pemilih</span>
-                </div>
-                <span className={`status-dot ${item.status}`}>
-                  {item.status === 'active' ? '✔ Aktif' : item.status === 'issue' ? '⚠' : 'Tutup'}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <a href="/tps-panel" className="link">
-            Lihat Panel TPS Lengkap →
-          </a>
-        </article>
-
-        <article className="card activity-card">
-          <div className="card-header">
-            <h3>Aktivitas Pemilu</h3>
-            <span>Log cepat</span>
-          </div>
-          <ul className="activity-list">
-            {logs.map((log) => (
-              <li key={log.id}>
-                <span className="time">{log.time}</span>
-                <p>{log.message}</p>
-              </li>
-            ))}
-          </ul>
-          <button type="button" className="btn-link">
-            Lihat Log Lengkap →
-          </button>
+          <a href="#detail" className="muted-link">Lihat detail per fakultas →</a>
         </article>
       </section>
 
-      <section className="grid charts">
+      <section className="section-grid two-col">
+        <article className="card tps-status">
+          <div className="card-header">
+            <h3>Status TPS</h3>
+            <span className="muted">Realtime</span>
+          </div>
+          <div className="tps-tiles">
+            {tpsStatus.detail.slice(0, 5).map((item) => (
+              <div key={item.id} className="tps-tile">
+                <div className="tps-info">
+                  <h4>{item.name}</h4>
+                  <p>{item.voters.toLocaleString('id-ID')} pemilih</p>
+                  <span className="muted">Terakhir update: —</span>
+                </div>
+                <span className={`tps-status-pill ${item.status}`}>
+                  {item.status === 'active' ? '✔ Aktif' : item.status === 'issue' ? '⚠ Bermasalah' : 'Ditutup'}
+                </span>
+              </div>
+            ))}
+          </div>
+          <a href="/tps-panel" className="muted-link">Panel TPS Lengkap →</a>
+        </article>
+
+        <article className="card activity-feed">
+          <div className="card-header">
+            <h3>Aktivitas Pemilu</h3>
+            <span className="muted">Log cepat</span>
+          </div>
+          <ul className="activity-list">
+            {logs.slice(0, 6).map((log) => (
+              <li key={log.id}>
+                <span className="pulse-dot" aria-hidden />
+                <div>
+                  <span className="time">{log.time}</span>
+                  <p>{log.message}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <button type="button" className="muted-link">Lihat Log Lengkap →</button>
+        </article>
+      </section>
+
+      <section className="section-grid two-col">
         <article className="card vote-card">
           <div className="card-header">
             <div>
               <h3>Grafik Suara per Kandidat</h3>
-              <span>Total suara: {voteTotal.toLocaleString('id-ID')}</span>
+              <span className="muted">Total suara: {voteTotal.toLocaleString('id-ID')}</span>
             </div>
             <div className="chart-toggle">
               <button type="button" className={voteViewMode === 'bar' ? 'active' : ''} onClick={() => setVoteViewMode('bar')}>
@@ -157,7 +181,7 @@ const AdminDashboard = (): JSX.Element => {
           </div>
           <div className={`vote-chart ${voteViewMode}`}>
             {votes.map((candidate) => (
-              <div key={candidate.id} className="vote-item">
+              <div key={candidate.id} className={`vote-item ${candidate.id === topCandidateId?.id ? 'leader' : ''}`}>
                 <div className="vote-bar-wrapper">
                   <div className="vote-bar" style={{ width: `${candidate.percentage}%` }} />
                 </div>
@@ -176,7 +200,7 @@ const AdminDashboard = (): JSX.Element => {
           <div className="card-header">
             <div>
               <h3>Partisipasi per Fakultas</h3>
-              <span>Filter: Semua Fakultas</span>
+              <span className="muted">Filter: Semua Fakultas</span>
             </div>
           </div>
           <ul className="faculty-list">
@@ -201,12 +225,20 @@ const AdminDashboard = (): JSX.Element => {
       </section>
 
       <section className="quick-actions">
-        <h3>Quick Actions</h3>
+        <div className="section-header-row">
+          <h3>Quick Actions</h3>
+          <span className="muted">Pintasan penting</span>
+        </div>
         <div className="action-grid">
           {actions.map((action) => (
             <a key={action.id} className="action-card" href={action.href}>
-              <strong>{action.label}</strong>
-              <p>{action.description}</p>
+              <div className="action-icon" aria-hidden>
+                {action.icon ?? '↗'}
+              </div>
+              <div>
+                <strong>{action.label}</strong>
+                <p>{action.description}</p>
+              </div>
             </a>
           ))}
         </div>
@@ -222,8 +254,8 @@ const AdminDashboard = (): JSX.Element => {
           <strong>{systemInfo.lastSync}</strong>
         </div>
         <div>
-          <span>Data Terkunci</span>
-          <strong>{systemInfo.dataLocked ? 'Ya (Voting selesai)' : 'Belum (Voting aktif)'}</strong>
+          <span>Data Sinkronisasi</span>
+          <strong>{systemInfo.dataLocked ? 'Terkunci' : 'Live'}</strong>
         </div>
       </section>
     </AdminLayout>

@@ -60,10 +60,10 @@ export const facultyParticipationStats: FacultyParticipationStat[] = [
 ]
 
 export const quickActions: QuickAction[] = [
-  { id: 'candidates', label: 'Kelola Kandidat', description: 'Tambah / edit kandidat serta dokumen', href: '/admin/kandidat' },
-  { id: 'announcements', label: 'Pengumuman & Konten', description: 'Upload berita resmi PEMIRA', href: '/admin/pengumuman' },
-  { id: 'tps', label: 'Kelola TPS', description: 'Pantau status dan panitia TPS', href: '/admin/tps' },
-  { id: 'schedule', label: 'Jadwal & Mode Voting', description: 'Atur timeline pemilu', href: '/admin/pengaturan' },
+  { id: 'candidates', label: 'Kelola Kandidat', description: 'Tambah / edit kandidat serta dokumen', href: '/admin/kandidat', icon: '👥' },
+  { id: 'announcements', label: 'Pengumuman & Konten', description: 'Upload berita resmi PEMIRA', href: '/admin/pengumuman', icon: '📢' },
+  { id: 'tps', label: 'Kelola TPS', description: 'Pantau status dan panitia TPS', href: '/admin/tps', icon: '🏛️' },
+  { id: 'schedule', label: 'Jadwal & Mode Voting', description: 'Atur timeline pemilu', href: '/admin/pengaturan', icon: '🗓️' },
 ]
 
 export const systemInfo: SystemInfo = {
