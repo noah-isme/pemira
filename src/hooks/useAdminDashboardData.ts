@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   activityLogs,
   adminOverview,
@@ -127,6 +127,7 @@ const buildOverview = (election: AdminElectionResponse | null, totalCandidates: 
 export const useAdminDashboardData = () => {
   const { token } = useAdminAuth()
   const [electionId, setElectionId] = useState<number>(ACTIVE_ELECTION_ID)
+  const candidateCacheRef = useRef<Map<number, CandidateAdmin[]>>(new Map())
   const [overview, setOverview] = useState<AdminOverview>({
     ...adminOverview,
     totalCandidates: 0,
@@ -167,7 +168,18 @@ export const useAdminDashboardData = () => {
           }
         }
 
-        const [snapshot, candidateList] = await Promise.all([fetchMonitoringLive(token, targetElectionId), fetchAdminCandidates(token, targetElectionId)])
+        const resolveCandidates = async (id: number) => {
+          const cached = candidateCacheRef.current.get(id)
+          if (cached) return cached
+          const fetched = await fetchAdminCandidates(token, id)
+          candidateCacheRef.current.set(id, fetched)
+          return fetched
+        }
+
+        const [snapshot, candidateList] = await Promise.all([
+          fetchMonitoringLive(token, targetElectionId),
+          resolveCandidates(targetElectionId).catch(() => candidateCacheRef.current.get(targetElectionId) ?? []),
+        ])
         if (!mounted) return
 
         const totalVoters = snapshot.participation?.total_eligible ?? participationStats.totalVoters

@@ -7,13 +7,14 @@ import { useTPSPanelStore } from '../hooks/useTPSPanelStore'
 import type { TPSQueueEntry } from '../types/tpsPanel'
 import '../styles/TPSPanel.css'
 
-const formatTime = (value: string) =>
-  new Intl.DateTimeFormat('id-ID', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  }).format(new Date(value))
+const timeFormatter = new Intl.DateTimeFormat('id-ID', {
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: false,
+})
+
+const formatTime = (value: string) => timeFormatter.format(new Date(value))
 
 const TPSPanelDashboard = (): JSX.Element => {
   const navigate = useNavigate()
@@ -35,10 +36,15 @@ const TPSPanelDashboard = (): JSX.Element => {
   const [panelModeView, setPanelModeView] = useState<'approve' | 'reject' | 'detail'>('approve')
 
   const stats = useMemo(() => {
-    const waiting = queue.filter((entry) => entry.status === 'waiting').length
-    const verified = queue.filter((entry) => entry.status === 'verified').length
-    const rejected = queue.filter((entry) => entry.status === 'rejected' || entry.status === 'cancelled').length
-    return { waiting, verified, rejected }
+    return queue.reduce(
+      (acc, entry) => {
+        if (entry.status === 'waiting') acc.waiting += 1
+        else if (entry.status === 'verified') acc.verified += 1
+        else if (entry.status === 'rejected' || entry.status === 'cancelled') acc.rejected += 1
+        return acc
+      },
+      { waiting: 0, verified: 0, rejected: 0 },
+    )
   }, [queue])
 
   const highlightEntryId = notification?.type === 'queue' ? notification.entryId : undefined

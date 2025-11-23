@@ -1,10 +1,14 @@
 export type CandidateStatus = 'draft' | 'active' | 'hidden' | 'archived'
 
+export type CandidateMediaSlot = 'poster' | 'photo_extra' | 'pdf_program' | 'pdf_visimisi'
+
 export type CandidateMedia = {
   id: string
-  type: 'photo' | 'video' | 'pdf'
+  slot: CandidateMediaSlot
+  type: 'photo' | 'pdf'
   url: string
   label: string
+  contentType?: string
 }
 
 export type CandidateProgramAdmin = {
@@ -23,6 +27,7 @@ export type CandidateAdmin = {
   angkatan: string
   status: CandidateStatus
   photoUrl: string
+  photoMediaId?: string | null
   tagline?: string
   shortBio?: string
   longBio?: string

@@ -62,7 +62,7 @@ const Register = (): JSX.Element => {
 
   useEffect(() => {
     fetchFacultiesPrograms()
-      .then((res) => setMetaOptions(res.data ?? []))
+      .then((res) => setMetaOptions(res.faculties ?? []))
       .catch(() => setMetaOptions([]))
   }, [])
 
@@ -76,7 +76,7 @@ const Register = (): JSX.Element => {
     }
   }, [qrToken])
 
-  const canSubmit = agree && !loading
+  const canSubmit = agree && !loading && (role === 'student' ? studentForm.password.length >= 6 : staffForm.password.length >= 6)
 
   const handleRegisterSuccess = async (resp: RegisterResponse, username: string, password: string) => {
     setLastIdentity({ username, mode, voterId: resp.user.voter_id ?? undefined })
@@ -128,11 +128,11 @@ const Register = (): JSX.Element => {
         const res = await registerStudent({
           nim: studentForm.nim.trim(),
           name: studentForm.name.trim(),
-          email: studentForm.email.trim(),
+          email: studentForm.email.trim() || undefined,
           password: studentForm.password,
           faculty_name: studentForm.faculty.trim(),
           study_program_name: studentForm.program.trim(),
-          semester: studentForm.semester ? Number(studentForm.semester) : undefined,
+          semester: studentForm.semester ? studentForm.semester.trim() : undefined,
           voting_mode: mode === 'tps' ? 'TPS' : 'ONLINE',
         })
         await handleRegisterSuccess(res, studentForm.nim.trim(), studentForm.password)
@@ -141,7 +141,7 @@ const Register = (): JSX.Element => {
         const res = await registerLecturerOrStaff({
           username: staffForm.username.trim(),
           name: staffForm.name.trim(),
-          email: staffForm.email.trim(),
+          email: staffForm.email.trim() || undefined,
           password: staffForm.password,
           type,
           faculty_name: staffForm.faculty.trim(),
@@ -265,11 +265,11 @@ const Register = (): JSX.Element => {
 
   const selectedProgramLabel = role === 'student' ? 'Program Studi' : role === 'lecturer' ? 'Departemen' : 'Unit'
   const selectedSemesterLabel = 'Semester'
-  const facultyOptions = metaOptions.map((item) => item.faculty_name)
+  const facultyOptions = metaOptions.map((item) => item.faculty)
   const programOptions =
     role === 'student'
-      ? metaOptions.find((item) => item.faculty_name === studentForm.faculty)?.programs ?? []
-      : metaOptions.find((item) => item.faculty_name === staffForm.faculty)?.programs ?? []
+      ? metaOptions.find((item) => item.faculty === studentForm.faculty)?.programs ?? []
+      : metaOptions.find((item) => item.faculty === staffForm.faculty)?.programs ?? []
 
   return (
     <div className="login-page premium-page">
@@ -336,10 +336,6 @@ const Register = (): JSX.Element => {
                       <input value={studentForm.nim} onChange={(e) => setStudentForm((prev) => ({ ...prev, nim: e.target.value }))} required />
                     </label>
                     <label className="form-field">
-                      <span className="field-label">{selectedProgramLabel}</span>
-                      <input value={studentForm.program} onChange={(e) => setStudentForm((prev) => ({ ...prev, program: e.target.value }))} />
-                    </label>
-                    <label className="form-field">
                       <span className="field-label">Fakultas</span>
                       <select value={studentForm.faculty} onChange={(e) => setStudentForm((prev) => ({ ...prev, faculty: e.target.value, program: '' }))}>
                         <option value="">Pilih Fakultas</option>
@@ -370,10 +366,15 @@ const Register = (): JSX.Element => {
                       >
                         <option value="">Pilih semester</option>
                         <option value="1">Semester 1</option>
+                        <option value="2">Semester 2</option>
                         <option value="3">Semester 3</option>
+                        <option value="4">Semester 4</option>
                         <option value="5">Semester 5</option>
+                        <option value="6">Semester 6</option>
                         <option value="7">Semester 7</option>
+                        <option value="8">Semester 8</option>
                         <option value="9">Semester 9</option>
+                        <option value="10">Semester 10</option>
                       </select>
                     </label>
                     <p className="microcopy">Gunakan data sesuai sistem akademik kampus.</p>
@@ -421,23 +422,24 @@ const Register = (): JSX.Element => {
                   <h3>Akun & Keamanan</h3>
                 </div>
                 <label className="form-field">
-                  <span className="field-label">Email UNIWA</span>
+                  <span className="field-label">Email UNIWA (opsional)</span>
                   <input
                     type="email"
+                    placeholder="Kosongkan jika ingin otomatis nim@pemira.ac.id"
                     value={role === 'student' ? studentForm.email : staffForm.email}
                     onChange={(e) =>
                       role === 'student'
                         ? setStudentForm((prev) => ({ ...prev, email: e.target.value }))
                         : setStaffForm((prev) => ({ ...prev, email: e.target.value }))
                     }
-                    required
                   />
                 </label>
                 <label className="form-field">
-                  <span className="field-label">Password</span>
+                  <span className="field-label">Password (min. 6 karakter)</span>
                   <div className="password-field">
                     <input
                       type={showPassword ? 'text' : 'password'}
+                      minLength={6}
                       value={role === 'student' ? studentForm.password : staffForm.password}
                       onChange={(e) =>
                         role === 'student'

@@ -33,6 +33,7 @@ type QueueSnapshotResponse = {
 }
 
 const QR_ROTATION_INTERVAL = 30
+const MAX_QUEUE_ENTRIES = 200
 
 const generateId = (prefix: string) => `${prefix}-${Math.random().toString(36).slice(2, 8)}`
 
@@ -109,6 +110,13 @@ export const TPSPanelProvider = ({ children }: { children: ReactNode }) => {
     })
   }, [])
 
+  const capQueueSize = useCallback((items: TPSQueueEntry[]) => {
+    const waiting = items.filter((item) => item.status === 'waiting')
+    const others = items.filter((item) => item.status !== 'waiting')
+    const allowedOthers = Math.max(0, MAX_QUEUE_ENTRIES - waiting.length)
+    return [...waiting, ...others.slice(0, allowedOthers)]
+  }, [])
+
   const setPanelStatus = useCallback(
     (status: string) => {
       setPanelInfo((prevInfo) => ({ ...prevInfo, status }))
@@ -160,7 +168,7 @@ export const TPSPanelProvider = ({ children }: { children: ReactNode }) => {
         token: createToken(),
         waktuScan: new Date().toISOString(),
       }
-      setQueue((prev) => [payload, ...prev])
+      setQueue((prev) => capQueueSize([payload, ...prev]))
       pushLog(`${payload.nama} scan QR dan menunggu verifikasi`)
       pushHistory({ type: 'open', nim: payload.nim, nama: payload.nama, detail: 'Scan QR TPS' })
       showNotification({
@@ -224,10 +232,10 @@ export const TPSPanelProvider = ({ children }: { children: ReactNode }) => {
           })
         }
 
-        return transformed
+        return capQueueSize(transformed)
       })
     },
-    [pushHistory, pushLog, showNotification],
+    [capQueueSize, pushHistory, pushLog, showNotification],
   )
 
   const removeFromQueue = useCallback(
@@ -257,11 +265,13 @@ export const TPSPanelProvider = ({ children }: { children: ReactNode }) => {
       }
       const payload = (await response.json()) as QueueSnapshotResponse
       setQueue(
-        payload.queue.map((item) => ({
-          ...item,
-          id: item.id ?? generateId('queue'),
-          token: item.token ?? createToken(),
-        })),
+        capQueueSize(
+          payload.queue.map((item) => ({
+            ...item,
+            id: item.id ?? generateId('queue'),
+            token: item.token ?? createToken(),
+          })),
+        ),
       )
       if (payload.panel) {
         setPanelInfo((prev) => ({ ...prev, ...payload.panel }))
@@ -281,7 +291,7 @@ export const TPSPanelProvider = ({ children }: { children: ReactNode }) => {
         message: 'Tidak dapat mengambil data TPS. Coba lagi beberapa saat.',
       })
     }
-  }, [pushHistory, pushLog, setPanelInfo, showNotification])
+  }, [capQueueSize, pushHistory, pushLog, setPanelInfo, showNotification])
 
   useEffect(() => {
     if (!feedRef.current.length) return

@@ -38,7 +38,11 @@ const AdminCandidatePreview = (): JSX.Element => {
         </div>
 
       <section className="preview-hero">
-        <img src={candidate.photoUrl} alt={candidate.name} className="preview-photo" />
+        {candidate.photoUrl ? (
+          <img src={candidate.photoUrl} alt={candidate.name} className="preview-photo" />
+        ) : (
+          <div className="preview-photo placeholder">Foto belum diunggah</div>
+        )}
         <div>
           <span className="preview-number">No Urut {candidate.number.toString().padStart(2, '0')}</span>
           <h2>{candidate.name}</h2>

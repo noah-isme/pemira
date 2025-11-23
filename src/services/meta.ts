@@ -1,10 +1,10 @@
 import { apiRequest } from '../utils/apiClient'
 
 export type FacultyProgram = {
-  faculty_name: string
+  faculty: string
   programs: string[]
 }
 
 export const fetchFacultiesPrograms = () => {
-  return apiRequest<{ data: FacultyProgram[] }>('/meta/faculties-programs')
+  return apiRequest<{ faculties: FacultyProgram[] }>('/meta/faculties-programs')
 }

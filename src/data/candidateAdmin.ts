@@ -30,8 +30,8 @@ export const candidateAdminList: CandidateAdmin[] = [
       },
     ],
     media: [
-      { id: 'media-1', type: 'photo', url: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80', label: 'Foto Kampanye 1' },
-      { id: 'media-2', type: 'pdf', url: '/docs/visi-misi.pdf', label: 'Dokumen Visi' },
+      { id: 'media-1', slot: 'photo_extra', type: 'photo', url: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80', label: 'Foto Kampanye 1' },
+      { id: 'media-2', slot: 'pdf_visimisi', type: 'pdf', url: '/docs/visi-misi.pdf', label: 'Dokumen Visi' },
     ],
     campaignVideo: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
   },
@@ -73,7 +73,7 @@ export const candidateAdminList: CandidateAdmin[] = [
       { id: 'prog-5', title: 'Grant Riset Mahasiswa', description: 'Pendanaan kompetitif untuk proyek riset mahasiswa.' },
     ],
     media: [
-      { id: 'media-3', type: 'photo', url: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80', label: 'Poster Kampanye' },
+      { id: 'media-3', slot: 'poster', type: 'photo', url: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80', label: 'Poster Kampanye' },
     ],
   },
 ]

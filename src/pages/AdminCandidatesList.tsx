@@ -108,7 +108,11 @@ const AdminCandidatesList = (): JSX.Element => {
                 return (
                   <tr key={candidate.id}>
                     <td>
-                      <img src={candidate.photoUrl} alt={candidate.name} className="candidate-thumb" />
+                      {candidate.photoUrl ? (
+                        <img src={candidate.photoUrl} alt={candidate.name} className="candidate-thumb" />
+                      ) : (
+                        <div className="candidate-thumb placeholder">?</div>
+                      )}
                     </td>
                     <td>{candidate.number.toString().padStart(2, '0')}</td>
                     <td>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAdminAuth } from './useAdminAuth'
 import { fetchAdminCandidates } from '../services/adminCandidates'
 import { fetchMonitoringLive, type MonitoringLiveResponse } from '../services/adminMonitoring'
@@ -70,6 +70,7 @@ export const useMonitoringLive = () => {
   const [publicLiveEnabled, setPublicLiveEnabled] = useState(true)
   const [filters, setFilters] = useState({ faculty: 'all', tps: 'all' })
   const [loading, setLoading] = useState(false)
+  const baselineCandidatesRef = useRef<CandidateLiveStat[] | null>(null)
 
   const loadSnapshot = async () => {
     if (!token) return
@@ -77,26 +78,36 @@ export const useMonitoringLive = () => {
     try {
       const [snapshot, adminCandidates] = await Promise.all([
         fetchMonitoringLive(token),
-        fetchAdminCandidates(token).catch(() => []),
-      ])
-      const baselineCandidates =
-        adminCandidates.length > 0
-          ? adminCandidates.map((item, idx) => ({
+        (async () => {
+          if (baselineCandidatesRef.current) return baselineCandidatesRef.current
+          try {
+            const fetched = await fetchAdminCandidates(token)
+            const normalized = fetched.map((item, idx) => ({
               id: Number(item.id),
               name: item.name,
               votes: 0,
               percentage: 0,
               color: colors[idx % colors.length],
             }))
-          : candidates
-      const mapped = mapSnapshotToState(snapshot, baselineCandidates)
+            baselineCandidatesRef.current = normalized
+            return normalized
+          } catch {
+            return baselineCandidatesRef.current ?? []
+          }
+        })(),
+      ])
+      const baselineCandidates = (adminCandidates.length ? adminCandidates : baselineCandidatesRef.current) ?? candidates
+      if (!baselineCandidatesRef.current && adminCandidates.length) {
+        baselineCandidatesRef.current = adminCandidates
+      }
+      const mapped = mapSnapshotToState(snapshot, baselineCandidates.length ? baselineCandidates : candidates)
       setSummary(mapped.summary)
       setCandidates(mapped.candidates)
       setTps(mapped.tps)
       setLogs((prev) => [
         { id: `log-${Date.now()}`, timestamp: mapped.summary.lastUpdated, message: 'Snapshot diperbarui' },
         ...prev,
-      ])
+      ].slice(0, 200))
     } catch (err) {
       console.error('Failed to load monitoring snapshot', err)
     } finally {

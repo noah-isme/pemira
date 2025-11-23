@@ -15,6 +15,7 @@ const defaultCandidate: CandidateAdmin = {
   angkatan: '',
   status: 'draft',
   photoUrl: '',
+  photoMediaId: null,
   tagline: '',
   shortBio: '',
   longBio: '',
@@ -29,8 +30,8 @@ const defaultCandidate: CandidateAdmin = {
 const CandidateAdminContext = createContext<{
   candidates: CandidateAdmin[]
   getCandidateById: (id: string) => CandidateAdmin | undefined
-  addCandidate: (payload: CandidateAdmin) => void
-  updateCandidate: (id: string, payload: Partial<CandidateAdmin>) => void
+  addCandidate: (payload: CandidateAdmin) => Promise<CandidateAdmin>
+  updateCandidate: (id: string, payload: Partial<CandidateAdmin>) => Promise<CandidateAdmin>
   archiveCandidate: (id: string) => void
   createEmptyCandidate: () => CandidateAdmin
   isNumberAvailable: (number: number, excludeId?: string) => boolean
@@ -82,9 +83,11 @@ export const CandidateAdminProvider = ({ children }: { children: ReactNode }) =>
       if (token) {
         const created = await createAdminCandidate(token, payload)
         setCandidates((prev) => [created, ...prev])
-      } else {
-        setCandidates((prev) => [{ ...payload, id: generateId('cand') }, ...prev])
+        return created
       }
+      const offline = { ...payload, id: payload.id || generateId('cand') }
+      setCandidates((prev) => [offline, ...prev])
+      return offline
     },
     [token],
   )
@@ -95,9 +98,11 @@ export const CandidateAdminProvider = ({ children }: { children: ReactNode }) =>
       if (token) {
         const updated = await updateAdminCandidate(token, id, { ...baseCandidate, ...payload } as CandidateAdmin)
         setCandidates((prev) => prev.map((candidate) => (candidate.id === id ? updated : candidate)))
-      } else {
-        setCandidates((prev) => prev.map((candidate) => (candidate.id === id ? { ...candidate, ...baseCandidate, ...payload } : candidate)))
+        return updated
       }
+      const offline = { ...baseCandidate, ...payload }
+      setCandidates((prev) => prev.map((candidate) => (candidate.id === id ? offline : candidate)))
+      return offline as CandidateAdmin
     },
     [createEmptyCandidate, getCandidateById, token],
   )
