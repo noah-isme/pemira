@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import AdminLayout from '../components/admin/AdminLayout'
+import PemiraLogos from '../components/shared/PemiraLogos'
 import { useElectionSettings } from '../hooks/useElectionSettings'
 import type { ElectionRules, VotingMode } from '../types/electionSettings'
 import '../styles/AdminElectionSettings.css'
@@ -9,7 +11,10 @@ const votingModeLabels: Record<VotingMode, string> = {
   hybrid: 'Hybrid (Online + TPS)',
 }
 
+type BrandingKey = 'primaryLogo' | 'secondaryLogo'
+
 const AdminElectionSettings = (): JSX.Element => {
+  const [brandingError, setBrandingError] = useState<string | undefined>(undefined)
   const {
     statusLabel,
     mode,
@@ -19,6 +24,10 @@ const AdminElectionSettings = (): JSX.Element => {
     timelineValid,
     rules,
     setRules,
+    branding,
+    queueBrandingUpload,
+    markBrandingRemoval,
+    resetBrandingDraft,
     security,
     setSecurity,
     savingSection,
@@ -27,6 +36,7 @@ const AdminElectionSettings = (): JSX.Element => {
     saveMode,
     saveTimeline,
     saveRules,
+    saveBranding,
     loading,
     error,
   } = useElectionSettings()
@@ -49,6 +59,34 @@ const AdminElectionSettings = (): JSX.Element => {
 
   const handleSaveRules = () => {
     void saveRules()
+  }
+
+  const handleSaveBranding = () => {
+    setBrandingError(undefined)
+    void saveBranding()
+  }
+
+  const toSlot = (field: BrandingKey): 'primary' | 'secondary' => (field === 'primaryLogo' ? 'primary' : 'secondary')
+
+  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>, field: BrandingKey) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) {
+      setBrandingError('Ukuran logo maksimal 2MB.')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      queueBrandingUpload(toSlot(field), reader.result as string, file)
+      setBrandingError(undefined)
+      event.target.value = ''
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleResetBranding = () => {
+    resetBrandingDraft()
+    setBrandingError(undefined)
   }
 
   const handleLockVoting = () => {
@@ -198,6 +236,72 @@ const AdminElectionSettings = (): JSX.Element => {
           </div>
 
           <div className="settings-col">
+            <section className="card branding-card" id="branding">
+              <div className="card-head">
+                <div>
+                  <h2>Branding & Logo</h2>
+                  <p className="sub-label">Upload logo terbaru untuk tampilan publik.</p>
+                </div>
+                <button className="btn-outline" type="button" onClick={handleResetBranding}>
+                  Reset Default
+                </button>
+              </div>
+              {brandingError && <p className="error-text">{brandingError}</p>}
+              <div className="logo-upload-grid">
+                <div className="logo-upload">
+                  <p className="label">Logo Utama</p>
+                  <div className="logo-preview-box">
+                    {branding.primaryLogo ? (
+                      <img src={branding.primaryLogo} alt="Logo utama" />
+                    ) : (
+                      <span className="logo-placeholder">Logo utama belum dipilih</span>
+                    )}
+                  </div>
+                  <label className="upload-control">
+                    <input type="file" accept="image/*" onChange={(event) => handleLogoUpload(event, 'primaryLogo')} />
+                    <span>Unggah Logo Utama</span>
+                  </label>
+                  <button className="btn-link" type="button" onClick={() => markBrandingRemoval('primary')}>
+                    Hapus logo utama
+                  </button>
+                  <p className="upload-hint">PNG/JPG, maks 2MB</p>
+                </div>
+                <div className="logo-upload">
+                  <p className="label">Logo Sekunder</p>
+                  <div className="logo-preview-box">
+                    {branding.secondaryLogo ? (
+                      <img src={branding.secondaryLogo} alt="Logo sekunder" />
+                    ) : (
+                      <span className="logo-placeholder">Opsional, ditampilkan berdampingan</span>
+                    )}
+                  </div>
+                  <label className="upload-control">
+                    <input type="file" accept="image/*" onChange={(event) => handleLogoUpload(event, 'secondaryLogo')} />
+                    <span>Unggah Logo Sekunder</span>
+                  </label>
+                  <button className="btn-link" type="button" onClick={() => markBrandingRemoval('secondary')}>
+                    Hapus logo sekunder
+                  </button>
+                  <p className="upload-hint">Rekomendasi rasio persegi</p>
+                </div>
+              </div>
+              <div className="branding-preview">
+                <p className="label">Preview</p>
+                <div className="branding-preview-box">
+                  {([branding.primaryLogo, branding.secondaryLogo].filter(Boolean) as string[]).length ? (
+                    <PemiraLogos size="md" stacked customLogos={([branding.primaryLogo, branding.secondaryLogo].filter(Boolean) as string[])} />
+                  ) : (
+                    <span className="logo-placeholder">Belum ada logo yang diunggah</span>
+                  )}
+                </div>
+              </div>
+              <div className="card-actions">
+                <button className="btn-primary" type="button" onClick={handleSaveBranding} disabled={savingSection === 'branding'}>
+                  {savingSection === 'branding' ? 'Menyimpan...' : 'Simpan Branding'}
+                </button>
+              </div>
+            </section>
+
             <section className="card mode-card" id="mode-voting">
               <h2>Voting Online</h2>
               <div className="field-stack">

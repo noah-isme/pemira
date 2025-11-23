@@ -32,3 +32,8 @@ export type ElectionRules = {
 export type SecuritySettings = {
   lockVoting: boolean
 }
+
+export type BrandingSettings = {
+  primaryLogo?: string
+  secondaryLogo?: string
+}

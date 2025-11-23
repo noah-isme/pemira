@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { electionStatusOptions, initialElectionStatus, initialRules, initialTimeline, initialVotingMode } from '../data/electionSettings'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { electionStatusOptions, initialBranding, initialElectionStatus, initialRules, initialTimeline, initialVotingMode } from '../data/electionSettings'
 import { ACTIVE_ELECTION_ID } from '../config/env'
 import { fetchAdminElection, updateAdminElection, type AdminElectionResponse, type AdminElectionUpdatePayload } from '../services/adminElection'
+import { deleteBrandingLogo, fetchBranding, fetchBrandingLogo, uploadBrandingLogo, type BrandingMetadata } from '../services/adminBranding'
 import { fetchCurrentElection } from '../services/publicElection'
-import type { ElectionRules, ElectionStatus, TimelineStage, VotingMode } from '../types/electionSettings'
+import type { BrandingSettings, ElectionRules, ElectionStatus, TimelineStage, VotingMode } from '../types/electionSettings'
 import type { ApiError } from '../utils/apiClient'
 import { useAdminAuth } from './useAdminAuth'
 
@@ -94,11 +95,15 @@ export const useElectionSettings = () => {
   const [mode, setMode] = useState<VotingMode>(initialVotingMode)
   const [timeline, setTimeline] = useState<TimelineStage[]>(initialTimeline)
   const [rules, setRules] = useState<ElectionRules>(initialRules)
+  const [branding, setBrandingState] = useState<BrandingSettings>(initialBranding)
+  const [brandingUploads, setBrandingUploads] = useState<{ primary?: File; secondary?: File }>({})
+  const [brandingRemoval, setBrandingRemoval] = useState<{ primary: boolean; secondary: boolean }>({ primary: false, secondary: false })
   const [security, setSecurity] = useState({ lockVoting: false })
   const [saving, setSaving] = useState<{ section: string | null }>({ section: null })
   const [lastUpdated, setLastUpdated] = useState('12 Juni 10:32 oleh Admin Dwi')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | undefined>(undefined)
+  const brandingObjectUrlRef = useRef<{ primary?: string; secondary?: string }>({})
 
   const isModeChangeDisabled = status === 'voting_dibuka' || status === 'voting_ditutup'
 
@@ -123,6 +128,71 @@ export const useElectionSettings = () => {
     )
   }, [])
 
+  const revokeLogoUrl = useCallback((slot: 'primary' | 'secondary') => {
+    const existing = brandingObjectUrlRef.current[slot]
+    if (existing) {
+      URL.revokeObjectURL(existing)
+      brandingObjectUrlRef.current[slot] = undefined
+    }
+  }, [])
+
+  const setBrandingPreview = useCallback(
+    (slot: 'primary' | 'secondary', preview?: string, file?: File) => {
+      const key = slot === 'primary' ? 'primaryLogo' : 'secondaryLogo'
+      setBrandingState((prev) => ({ ...prev, [key]: preview }))
+      setBrandingUploads((prev) => ({ ...prev, [slot]: file ?? undefined }))
+      setBrandingRemoval((prev) => ({ ...prev, [slot]: false }))
+    },
+    [],
+  )
+
+  const markBrandingRemoval = useCallback(
+    (slot: 'primary' | 'secondary') => {
+      const key = slot === 'primary' ? 'primaryLogo' : 'secondaryLogo'
+      setBrandingState((prev) => ({ ...prev, [key]: undefined }))
+      setBrandingUploads((prev) => ({ ...prev, [slot]: undefined }))
+      setBrandingRemoval((prev) => ({ ...prev, [slot]: true }))
+      revokeLogoUrl(slot)
+    },
+    [revokeLogoUrl],
+  )
+
+  const resetBrandingDraft = useCallback(() => {
+    markBrandingRemoval('primary')
+    markBrandingRemoval('secondary')
+  }, [markBrandingRemoval])
+
+  const loadBrandingLogos = useCallback(
+    async (meta: BrandingMetadata, electionId: number) => {
+      if (!token) return
+
+      const [primaryUrl, secondaryUrl] = await Promise.all([
+        meta.primary_logo_id ? fetchBrandingLogo(token, 'primary', electionId).catch(() => null) : Promise.resolve(null),
+        meta.secondary_logo_id ? fetchBrandingLogo(token, 'secondary', electionId).catch(() => null) : Promise.resolve(null),
+      ])
+
+      if (primaryUrl !== null) {
+        revokeLogoUrl('primary')
+        if (primaryUrl) brandingObjectUrlRef.current.primary = primaryUrl
+      }
+      if (secondaryUrl !== null) {
+        revokeLogoUrl('secondary')
+        if (secondaryUrl) brandingObjectUrlRef.current.secondary = secondaryUrl
+      }
+
+      setBrandingState({
+        primaryLogo: primaryUrl || undefined,
+        secondaryLogo: secondaryUrl || undefined,
+      })
+      setBrandingRemoval({ primary: false, secondary: false })
+      setBrandingUploads({})
+      if (meta.updated_at) {
+        setLastUpdated(formatTimestamp(meta.updated_at))
+      }
+    },
+    [revokeLogoUrl, token],
+  )
+
   const fetchElectionWithFallback = useCallback(
     async (targetId: number) => {
       try {
@@ -141,6 +211,28 @@ export const useElectionSettings = () => {
     [token],
   )
 
+  const refreshBranding = useCallback(
+    async (targetId?: number) => {
+      if (!token) {
+        setBrandingState(initialBranding)
+        setBrandingUploads({})
+        setBrandingRemoval({ primary: false, secondary: false })
+        revokeLogoUrl('primary')
+        revokeLogoUrl('secondary')
+        return
+      }
+      try {
+        const electionId = targetId || currentElectionId || ACTIVE_ELECTION_ID
+        const meta = await fetchBranding(token, electionId)
+        await loadBrandingLogos(meta, electionId)
+      } catch (err) {
+        console.error('Failed to load branding', err)
+        setError((err as { message?: string })?.message ?? 'Gagal memuat branding')
+      }
+    },
+    [currentElectionId, loadBrandingLogos, revokeLogoUrl, token],
+  )
+
   const refreshElection = useCallback(async () => {
     if (!token) return
     setLoading(true)
@@ -148,17 +240,36 @@ export const useElectionSettings = () => {
     try {
       const election = await fetchElectionWithFallback(currentElectionId || ACTIVE_ELECTION_ID)
       applyElectionData(election)
+      await refreshBranding(election.id)
     } catch (err) {
       console.error('Failed to load election settings', err)
       setError((err as { message?: string })?.message ?? 'Gagal memuat pengaturan pemilu')
     } finally {
       setLoading(false)
     }
-  }, [applyElectionData, currentElectionId, fetchElectionWithFallback, token])
+  }, [applyElectionData, currentElectionId, fetchElectionWithFallback, refreshBranding, token])
 
   useEffect(() => {
     void refreshElection()
   }, [refreshElection])
+
+  useEffect(() => {
+    if (!token) {
+      setBrandingState(initialBranding)
+      setBrandingUploads({})
+      setBrandingRemoval({ primary: false, secondary: false })
+      revokeLogoUrl('primary')
+      revokeLogoUrl('secondary')
+    }
+  }, [revokeLogoUrl, token])
+
+  useEffect(
+    () => () => {
+      revokeLogoUrl('primary')
+      revokeLogoUrl('secondary')
+    },
+    [revokeLogoUrl],
+  )
 
   const handleTimelineChange = useCallback((id: TimelineStage['id'], field: 'start' | 'end', value: string) => {
     setTimeline((prev) => prev.map((stage) => (stage.id === id ? { ...stage, [field]: value } : stage)))
@@ -225,6 +336,35 @@ export const useElectionSettings = () => {
     })
   }, [saveSection])
 
+  const saveBranding = useCallback(async () => {
+    await saveSection('branding', async () => {
+      if (!token) return
+      const electionId = currentElectionId || ACTIVE_ELECTION_ID
+      const operations: Promise<unknown>[] = []
+
+      if (brandingRemoval.primary) {
+        operations.push(deleteBrandingLogo(token, 'primary', electionId))
+      }
+      if (brandingRemoval.secondary) {
+        operations.push(deleteBrandingLogo(token, 'secondary', electionId))
+      }
+      if (brandingUploads.primary) {
+        operations.push(uploadBrandingLogo(token, 'primary', brandingUploads.primary, electionId))
+      }
+      if (brandingUploads.secondary) {
+        operations.push(uploadBrandingLogo(token, 'secondary', brandingUploads.secondary, electionId))
+      }
+
+      if (operations.length) {
+        await Promise.all(operations)
+      }
+
+      await refreshBranding(electionId)
+    })
+    setBrandingUploads({})
+    setBrandingRemoval({ primary: false, secondary: false })
+  }, [brandingRemoval.primary, brandingRemoval.secondary, brandingUploads.primary, brandingUploads.secondary, currentElectionId, refreshBranding, saveSection, token])
+
   const timelineValid = validateTimeline()
 
   const statusLabel = useMemo(() => electionStatusOptions.find((option) => option.value === status)?.label ?? '', [status])
@@ -240,6 +380,11 @@ export const useElectionSettings = () => {
     timelineValid,
     rules,
     setRules,
+    branding,
+    setBranding: setBrandingPreview,
+    queueBrandingUpload: setBrandingPreview,
+    markBrandingRemoval,
+    resetBrandingDraft,
     security,
     setSecurity,
     savingSection: saving.section,
@@ -248,6 +393,7 @@ export const useElectionSettings = () => {
     saveMode,
     saveTimeline,
     saveRules,
+    saveBranding,
     loading,
     error,
     refreshElection,

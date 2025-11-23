@@ -94,6 +94,100 @@
   font-size: 1.1rem;
 }
 
+.branding-card .card-head {
+  align-items: flex-start;
+}
+
+.logo-upload-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.75rem;
+}
+
+.logo-upload {
+  border: 1px dashed var(--admin-color-neutral-200, #e5e7eb);
+  background: var(--admin-color-bg-card-soft, #f9faff);
+  border-radius: 12px;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.logo-upload .label,
+.branding-preview .label {
+  margin: 0;
+  color: var(--admin-color-neutral-700, #374151);
+  font-weight: 700;
+}
+
+.logo-preview-box {
+  border: 1px solid var(--admin-color-neutral-200, #e5e7eb);
+  border-radius: 10px;
+  background: white;
+  min-height: 120px;
+  display: grid;
+  place-items: center;
+  padding: 0.75rem;
+}
+
+.logo-preview-box img {
+  max-height: 120px;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.logo-placeholder {
+  color: var(--admin-color-neutral-600, #4b5563);
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.upload-control {
+  border: 1px solid var(--admin-color-neutral-200, #e5e7eb);
+  border-radius: 10px;
+  padding: 0.55rem 0.75rem;
+  background: #fff;
+  font-weight: 700;
+  color: var(--admin-color-neutral-800, #1f2937);
+  cursor: pointer;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  transition: transform var(--admin-motion-fast, 120ms) var(--admin-motion-ease, cubic-bezier(0.22, 0.61, 0.36, 1)), box-shadow var(--admin-motion-fast, 120ms) var(--admin-motion-ease, cubic-bezier(0.22, 0.61, 0.36, 1));
+}
+
+.upload-control:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--admin-shadow-sm, 0 1px 2px rgba(15, 23, 42, 0.06));
+}
+
+.upload-control input {
+  display: none;
+}
+
+.upload-hint {
+  margin: 0;
+  color: var(--admin-color-neutral-700, #374151);
+  font-size: 0.9rem;
+}
+
+.branding-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.branding-preview-box {
+  border: 1px solid var(--admin-color-neutral-200, #e5e7eb);
+  border-radius: 12px;
+  background: var(--admin-color-bg-card-soft, #f9faff);
+  padding: 0.75rem;
+  display: flex;
+  justify-content: center;
+}
+
 .card-head {
   display: flex;
   justify-content: space-between;
@@ -130,6 +224,12 @@
 .warning {
   color: var(--admin-color-danger-500, #dc2626);
   margin: 0;
+  font-weight: 700;
+}
+
+.error-text {
+  margin: 0;
+  color: var(--admin-color-danger-500, #dc2626);
   font-weight: 700;
 }
 

@@ -1,4 +1,4 @@
-import type { ElectionRules, ElectionStatus, TimelineStage, VotingMode } from '../types/electionSettings'
+import type { BrandingSettings, ElectionRules, ElectionStatus, TimelineStage, VotingMode } from '../types/electionSettings'
 
 export const electionStatusOptions: { value: ElectionStatus; label: string }[] = [
   { value: 'pendaftaran', label: 'Pendaftaran Kandidat' },
@@ -34,4 +34,11 @@ export const initialRules: ElectionRules = {
   geolocationRequired: false,
   tpsMode: 'static',
   requirePanitiaVerification: true,
+}
+
+export const BRANDING_STORAGE_KEY = 'pemira-branding'
+
+export const initialBranding: BrandingSettings = {
+  primaryLogo: '/images/logo kpu.png',
+  secondaryLogo: '/images/Logo UNIWA.png',
 }
