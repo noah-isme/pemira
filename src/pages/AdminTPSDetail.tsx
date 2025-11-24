@@ -3,6 +3,8 @@ import { BrowserQRCodeSvgWriter } from '@zxing/library'
 import { useNavigate, useParams } from 'react-router-dom'
 import AdminLayout from '../components/admin/AdminLayout'
 import { useTPSAdminStore } from '../hooks/useTPSAdminStore'
+import { useToast } from '../components/Toast'
+import { usePopup } from '../components/Popup'
 import type { TPSAdmin } from '../types/tpsAdmin'
 import '../styles/AdminTPS.css'
 
@@ -12,6 +14,8 @@ const AdminTPSDetail = (): JSX.Element => {
   const { getById, loadDetail, rotateQr, deleteTPS, loading } = useTPSAdminStore()
   const [tps, setTps] = useState<TPSAdmin | undefined>(() => (id ? getById(id) : undefined))
   const [qrImage, setQrImage] = useState<string | undefined>(undefined)
+  const { showToast } = useToast()
+  const { showPopup } = usePopup()
 
   useEffect(() => {
     if (id && /^\d+$/.test(id)) {
@@ -119,13 +123,20 @@ const AdminTPSDetail = (): JSX.Element => {
               className="btn-outline danger"
               type="button"
               onClick={async () => {
-                if (!window.confirm('Hapus TPS ini? Tindakan ini tidak bisa dibatalkan.')) return
+                const confirmed = await showPopup({
+                  title: 'Konfirmasi Hapus TPS',
+                  message: 'Hapus TPS ini? Tindakan ini tidak bisa dibatalkan.',
+                  type: 'warning',
+                  confirmText: 'Hapus',
+                  cancelText: 'Batal'
+                })
+                if (!confirmed) return
                 try {
                   await deleteTPS(tps.id)
                   navigate('/admin/tps')
                 } catch (err) {
                   console.error('Failed to delete TPS', err)
-                  alert('Gagal menghapus TPS dari server.')
+                  showToast('Gagal menghapus TPS dari server.', 'error')
                 }
               }}
             >

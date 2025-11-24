@@ -1,11 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import React, { useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import TPSPanelHeader from '../components/TPSPanelHeader'
-import TPSPanelVerificationPanel from '../components/TPSPanelVerificationPanel'
-import { securityChecklist } from '../data/tpsPanel'
 import { useTPSPanelStore } from '../hooks/useTPSPanelStore'
 import { useAdminAuth } from '../hooks/useAdminAuth'
-import type { TPSQueueEntry } from '../types/tpsPanel'
+import { usePopup } from '../components/Popup'
 import '../styles/TPSPanel.css'
 
 const timeFormatter = new Intl.DateTimeFormat('id-ID', {
@@ -25,19 +23,12 @@ const TPSPanelDashboard = (): JSX.Element => {
   const {
     panelInfo,
     panitia,
-    staticQr,
     queue,
-    logs,
-    notification,
-    panelMode,
-    triggerManualRefresh,
-    updateQueueStatus,
-    dismissNotification,
-    setPanelMode,
     setPanelStatus,
     syncFromApi,
+    triggerManualRefresh,
   } = useTPSPanelStore()
-  const [selectedEntry, setSelectedEntry] = useState<TPSQueueEntry | null>(null)
+  const { showPopup } = usePopup()
 
   useEffect(() => {
     if (token && tpsIdParam) {
@@ -45,278 +36,124 @@ const TPSPanelDashboard = (): JSX.Element => {
     }
   }, [syncFromApi, token, tpsIdParam])
 
-  const stats = useMemo(() => {
-    return queue.reduce(
-      (acc, entry) => {
-        if (entry.status === 'waiting') acc.waiting += 1
-        else if (entry.status === 'verified') acc.verified += 1
-        else if (entry.status === 'rejected' || entry.status === 'cancelled') acc.rejected += 1
-        return acc
-      },
-      { waiting: 0, verified: 0, rejected: 0 },
-    )
-  }, [queue])
+  const handleScanQR = () => {
+    navigate('/tps-panel/scan-qr')
+  }
 
-  const highlightEntryId = notification?.type === 'queue' ? notification.entryId : undefined
+  const handleRefresh = () => {
+    if (token && tpsIdParam) {
+      void syncFromApi(token, tpsIdParam)
+    } else {
+      triggerManualRefresh()
+    }
+  }
 
-  const handleDetail = (entry: TPSQueueEntry) => setSelectedEntry(entry)
-
-  const handleCloseTPS = () => {
+  const handleCloseTPS = async () => {
     if (panelInfo.status !== 'Aktif') return
-    if (!window.confirm('Tutup TPS Aula Utama?')) return
+    const confirmed = await showPopup({
+      title: 'Tutup TPS',
+      message: 'Tutup TPS Aula Utama?',
+      type: 'warning',
+      confirmText: 'Tutup TPS',
+      cancelText: 'Batal',
+    })
+    if (!confirmed) return
     setPanelStatus('Ditutup')
   }
 
-  const hakSuaraLabel = (entry: TPSQueueEntry) => {
-    if (entry.hasVoted) return 'Sudah'
-    if (entry.status === 'verified') return 'Sedang'
-    if (entry.status === 'rejected') return 'Ditolak'
-    if (entry.status === 'cancelled') return 'Dibatalkan'
-    return 'Belum'
+  const handleDetail = (entry: TPSQueueEntry) => {
+    setSelectedEntry(entry)
+    navigate(`/tps-panel/detail/${entry.id}`)
   }
 
-  const queueIndicatorLabel = panelMode === 'mobile' ? 'Model A: Mahasiswa voting via HP' : 'Model B: Voting di perangkat TPS'
+  const getStatusLabel = (entry: TPSQueueEntry) => {
+    if (entry.status === 'VOTED') return 'VOTED'
+    return 'CHECKED_IN'
+  }
 
   return (
     <div className="tps-panel-page">
       <div className="panel-shell">
-        <div className="panel-topbar">
-          <button className="btn-ghost" type="button" onClick={() => window.history.back()}>
-            ← Kembali
+        {/* Header Section */}
+        <div className="tps-panel-header">
+          <div className="header-logo">
+            <img src="/assets/images/logo-pemira.png" alt="PEMIRA" />
+          </div>
+          <div className="header-info">
+            <h1>TPS Panel - {panelInfo.tpsName}</h1>
+            <div className="operator-info">
+              <span>Operator: {panitia.nama}</span>
+              <span>TPS Status: {panelInfo.status}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Scan Button */}
+        <div className="scan-section">
+          <button className="btn-primary btn-large" onClick={handleScanQR}>
+            SCAN QR PEMILIH
           </button>
         </div>
-        <TPSPanelHeader
-          panitia={panitia}
-          locationLabel={`${panelInfo.tpsName} (${panelInfo.tpsCode})`}
-          subtitle="Dashboard TPS – Monitoring Real-time"
-        />
 
-        {notification && (
-          <div className={`panel-notification ${notification.type}`}>
-            <div>
-              <strong>{notification.title}</strong>
-              <p>{notification.message}</p>
-            </div>
-            <button className="btn-ghost" onClick={dismissNotification} type="button">
-              Tutup
-            </button>
-          </div>
-        )}
-
-        <div className="panel-body">
-          <div className="panel-main-grid">
-            <div className="info-column">
-              <section className="status-card">
-                <div className="status-header">
-                  <div>
-                    <p className="status-label">Status TPS</p>
-                    <h2>{panelInfo.tpsName}</h2>
-                    <p className="status-meta">
-                      {panelInfo.tpsCode} · Status: {panelInfo.status} · Jam Operasional: {panelInfo.jamOperasional}
-                    </p>
-                  </div>
-                  <div className="status-actions">
-                    <button className="btn-danger" type="button" disabled={panelInfo.status !== 'Aktif'} onClick={handleCloseTPS}>
-                      Tutup TPS
-                    </button>
-                    <button
-                      className="btn-ghost"
-                      type="button"
-                      onClick={() => {
-                        if (token && tpsIdParam) void syncFromApi(token, tpsIdParam)
-                        else triggerManualRefresh()
-                      }}
-                    >
-                      Refresh
-                    </button>
-                  </div>
-                </div>
-
-                <div className="stats-grid">
-                  <div className="stats-chip">
-                    <span>Pemilih sudah voting di TPS ini</span>
-                    <strong>{panelInfo.totalVoters}</strong>
-                  </div>
-                  <div className="stats-chip">
-                    <span>Pemilih sedang diproses</span>
-                    <strong>{stats.waiting}</strong>
-                  </div>
-                  <div className="stats-chip">
-                    <span>Sudah diverifikasi</span>
-                    <strong>{stats.verified}</strong>
-                  </div>
-                  <div className="stats-chip">
-                    <span>Ditolak / Dibatalkan</span>
-                    <strong>{stats.rejected}</strong>
-                  </div>
-                </div>
-              </section>
-
-              <section className="qr-static-card">
-                <p className="status-label">Info QR TPS</p>
-                <h2>QR TPS – Dicetak &amp; Ditempel</h2>
-                <div className="qr-static-info">
-                  <div>
-                    <span>ID QR</span>
-                    <strong>{staticQr.id}</strong>
-                  </div>
-                  <div>
-                    <span>Status</span>
-                    <strong>{staticQr.status}</strong>
-                  </div>
-                </div>
-                <p className="status-meta">{staticQr.description}</p>
-                <ul className="qr-notes">
-                  {staticQr.notes.map((note) => (
-                    <li key={note}>{note}</li>
-                  ))}
-                </ul>
-                <a className="btn-secondary" href={staticQr.fileUrl} download target="_blank" rel="noreferrer">
-                  Download QR Lagi
-                </a>
-              </section>
-            </div>
-
-            <section className="queue-section queue-card">
-              <div className="queue-header">
-                <div>
-                  <p className="status-label">Pemilih Baru</p>
-                <h2>Menunggu Verifikasi</h2>
-                <p className="status-meta">Queue terhubung realtime via WebSocket</p>
-              </div>
-              <div className="mode-toggle">
-                <button
-                  type="button"
-                  className={panelMode === 'mobile' ? 'active' : ''}
-                  onClick={() => setPanelMode('mobile')}
-                >
-                  Voting di HP Mahasiswa
-                </button>
-                <button
-                  type="button"
-                  className={panelMode === 'device' ? 'active' : ''}
-                  onClick={() => setPanelMode('device')}
-                >
-                  Voting di Perangkat TPS
-                </button>
-              </div>
-            </div>
-
-            <div className="queue-indicator">
-              <span className="ping-dot" /> {queueIndicatorLabel}
-              {panelMode === 'device' && (
-                <button className="btn-link" type="button" onClick={() => navigate('/tps-panel/mode-voting')}>
-                  Buka Ruang Voting TPS →
-                </button>
-              )}
-            </div>
-
-            <div className="queue-table-wrapper">
-              <table className="queue-table">
-                <thead>
+        {/* Attendance List */}
+        <div className="attendance-section">
+          <h2>Daftar Kehadiran (Real-time)</h2>
+          <div className="attendance-table-wrapper">
+            <table className="attendance-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Nama Pemilih</th>
+                  <th>Prodi</th>
+                  <th>Status</th>
+                  <th>Waktu</th>
+                </tr>
+              </thead>
+              <tbody>
+                {queue.length === 0 && (
                   <tr>
-                    <th>Waktu</th>
-                    <th>NIM</th>
-                    <th>Nama</th>
-                    <th>Prodi / Fakultas</th>
-                    <th>Status</th>
+                    <td colSpan={5}>
+                      <div className="empty-attendance">Belum ada pemilih yang check-in.</div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {queue.length === 0 && (
-                    <tr>
-                      <td colSpan={6}>
-                        <div className="empty-queue">Belum ada pemilih yang scan QR.</div>
-                      </td>
-                    </tr>
-                  )}
-                  {queue.map((entry) => {
-                    const hakSuara = hakSuaraLabel(entry)
-                    return (
-                      <tr
-                        key={entry.id}
-                        className={`${entry.id === highlightEntryId ? 'highlight' : ''} ${entry.hasVoted ? 'done' : ''}`.trim()}
-                        onClick={() => handleDetail(entry)}
-                      >
-                        <td>{formatTime(entry.waktuScan)}</td>
-                        <td>{entry.nim}</td>
-                        <td>
-                          <div className="name-cell">
-                            <strong>{entry.nama}</strong>
-                            <p>Angkatan {entry.angkatan}</p>
-                          </div>
-                        </td>
-                        <td>
-                          <p className="program-label">{entry.prodi}</p>
-                          <span className="faculty-label">{entry.fakultas}</span>
-                        </td>
-                        <td>
-                          <span className={`status-pill ${entry.status}`}>{hakSuara}</span>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-            </section>
-          </div>
-
-          <section className="activity-card log-card">
-            <div className="activity-header">
-              <div>
-                <p className="status-label">Riwayat Singkat TPS</p>
-                <h2>Aktivitas Terakhir</h2>
-              </div>
-              <button className="btn-link" type="button" onClick={() => navigate('/tps-panel/riwayat')}>
-                Lihat riwayat lengkap →
-              </button>
-            </div>
-            <ul className="activity-list">
-              {logs.map((log) => (
-                <li key={log.id}>
-                  <span className="activity-time">{formatTime(log.timestamp)}</span>
-                  <span>{log.message}</span>
-                </li>
-              ))}
-            </ul>
-            <div className="security-card compact">
-              <div className="activity-header">
-                <p className="status-label">Keamanan Panel</p>
-                <h3>Checklist Cepat</h3>
-              </div>
-              <ul className="security-list">
-                {securityChecklist.map((item) => (
-                  <li key={item.id}>
-                    <span className="check-icon">{item.completed ? '✔' : '○'}</span>
-                    <div>
-                      <strong>{item.label}</strong>
-                      {item.description && <p>{item.description}</p>}
-                    </div>
-                  </li>
+                )}
+                {queue.map((entry, index) => (
+                  <tr
+                    key={entry.id}
+                    className={entry.status === 'VOTED' ? 'voted' : 'checked-in'}
+                    onClick={() => handleDetail(entry)}
+                  >
+                    <td>{index + 1}</td>
+                    <td>{entry.nama}</td>
+                    <td>{entry.prodi}</td>
+                    <td>
+                      <span className={`status-badge ${entry.status.toLowerCase()}`}>
+                        {getStatusLabel(entry)}
+                      </span>
+                    </td>
+                    <td>{formatTime(entry.waktuCheckIn)}</td>
+                  </tr>
                 ))}
-              </ul>
-            </div>
-          </section>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="action-buttons">
+          <button className="btn-outline" onClick={handleRefresh}>
+            Refresh
+          </button>
+          <button className="btn-outline" onClick={() => navigate('/tps-panel/settings')}>
+            Pengaturan
+          </button>
+          <button className="btn-outline" onClick={handleCloseTPS}>
+            Keluar
+          </button>
         </div>
       </div>
 
-      {selectedEntry && (
-        <TPSPanelVerificationPanel
-          entry={selectedEntry}
-          panelInfo={panelInfo}
-          mode={panelModeView}
-          onClose={() => setSelectedEntry(null)}
-          onApprove={() => {
-            updateQueueStatus(selectedEntry.id, 'verified')
-            setSelectedEntry(null)
-          }}
-          onReject={(reason) => {
-            updateQueueStatus(selectedEntry.id, 'rejected', { reason })
-            setSelectedEntry(null)
-          }}
-        />
-      )}
+      {/* Detail Modal would go here if needed */}
     </div>
   )
 }

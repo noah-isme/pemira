@@ -90,6 +90,22 @@
   color: #a0aec0;
 }
 
+.footer-credits {
+  margin-top: 1rem;
+}
+
+.web-dev-credit {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.web-dev-credit:hover {
+  color: #764ba2;
+  text-decoration: underline;
+}
+
 @media (max-width: 968px) {
   .footer-top {
     grid-template-columns: 1fr;

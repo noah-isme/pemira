@@ -1,0 +1,344 @@
+.results-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f6f8fb 0%, #e9ecef 100%);
+}
+
+.results-main {
+  padding: 2rem;
+  min-height: calc(100vh - 80px);
+}
+
+.results-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* Loading */
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 1.5rem;
+}
+
+.spinner {
+  width: 60px;
+  height: 60px;
+  border: 4px solid #e2e8f0;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-spinner p {
+  font-size: 1.125rem;
+  color: #718096;
+  font-weight: 600;
+}
+
+.no-results {
+  text-align: center;
+  padding: 3rem;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.no-results p {
+  font-size: 1.125rem;
+  color: #718096;
+  margin: 0;
+}
+
+/* Winner Section */
+.winner-section {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 20px;
+  padding: 3rem;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+  animation: fadeIn 0.6s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.trophy-icon {
+  font-size: 5rem;
+  margin-bottom: 1rem;
+  animation: bounce 2s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.winner-section h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0 0 1.5rem 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.winner-name {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.winner-votes {
+  font-size: 1.5rem;
+  font-weight: 600;
+  opacity: 0.95;
+}
+
+/* Rekapitulasi Section */
+.rekapitulasi-section,
+.faculty-section,
+.download-section {
+  background: white;
+  border-radius: 20px;
+  padding: 2.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  animation: fadeIn 0.8s ease;
+}
+
+.rekapitulasi-section h2,
+.faculty-section h2,
+.download-section h3 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1a202c;
+  margin: 0 0 2rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.section-icon {
+  font-size: 1.5rem;
+}
+
+.rekapitulasi-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.candidate-result-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 200px;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.candidate-result-label {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #2d3748;
+  text-align: right;
+}
+
+.candidate-result-bar-container {
+  position: relative;
+  height: 48px;
+  background: #e2e8f0;
+  border-radius: 24px;
+  overflow: hidden;
+}
+
+.candidate-result-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #718096 0%, #4a5568 100%);
+  border-radius: 24px;
+  transition: width 1.5s ease-out;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 1rem;
+}
+
+.candidate-result-bar.winner {
+  background: linear-gradient(90deg, #48bb78 0%, #38a169 100%);
+  box-shadow: 0 0 20px rgba(72, 187, 120, 0.3);
+}
+
+.candidate-result-stats {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #2d3748;
+}
+
+/* Faculty Section */
+.faculty-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.faculty-card {
+  background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+  border: 2px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.faculty-card:hover {
+  border-color: #667eea;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.15);
+  transform: translateY(-2px);
+}
+
+.faculty-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #667eea;
+  margin-bottom: 0.75rem;
+}
+
+.faculty-winner {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.faculty-detail {
+  font-size: 0.875rem;
+  color: #718096;
+  font-weight: 500;
+}
+
+/* Download Section */
+.download-section h3 {
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.btn-download {
+  width: 100%;
+  padding: 1.25rem 2rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.125rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.btn-download:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+}
+
+.btn-download::before {
+  content: '📥';
+  font-size: 1.5rem;
+}
+
+/* Publish Info */
+.publish-info {
+  text-align: center;
+  padding: 1.5rem;
+  background: #f7fafc;
+  border-radius: 12px;
+  border: 2px dashed #cbd5e0;
+}
+
+.publish-info p {
+  font-size: 0.95rem;
+  color: #718096;
+  margin: 0;
+  font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 968px) {
+  .candidate-result-row {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .candidate-result-label {
+    text-align: left;
+  }
+
+  .faculty-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .results-main {
+    padding: 1rem;
+  }
+
+  .winner-section {
+    padding: 2rem 1.5rem;
+  }
+
+  .winner-section h1 {
+    font-size: 1.5rem;
+  }
+
+  .winner-name {
+    font-size: 1.75rem;
+  }
+
+  .winner-votes {
+    font-size: 1.125rem;
+  }
+
+  .trophy-icon {
+    font-size: 3.5rem;
+  }
+
+  .rekapitulasi-section,
+  .faculty-section,
+  .download-section {
+    padding: 1.5rem;
+  }
+
+  .rekapitulasi-section h2,
+  .faculty-section h2 {
+    font-size: 1.375rem;
+  }
+
+  .candidate-result-stats {
+    font-size: 1rem;
+  }
+}

@@ -306,13 +306,37 @@ const Register = (): JSX.Element => {
           <div className="role-selector">
             <span className="role-label">Daftar sebagai</span>
             <div className="tab-row compact">
-              <button type="button" className={role === 'student' ? 'active' : ''} onClick={() => setRole('student')}>
+              <button 
+                type="button" 
+                className={role === 'student' ? 'active' : ''} 
+                onClick={() => {
+                  setRole('student')
+                  setStudentForm({ nim: '', name: '', email: '', password: '', program: '', semester: '', faculty: '' })
+                  setStaffForm({ username: '', name: '', email: '', password: '', program: '', semester: '', faculty: '' })
+                }}
+              >
                 Mahasiswa
               </button>
-              <button type="button" className={role === 'lecturer' ? 'active' : ''} onClick={() => setRole('lecturer')}>
+              <button 
+                type="button" 
+                className={role === 'lecturer' ? 'active' : ''} 
+                onClick={() => {
+                  setRole('lecturer')
+                  setStudentForm({ nim: '', name: '', email: '', password: '', program: '', semester: '', faculty: '' })
+                  setStaffForm({ username: '', name: '', email: '', password: '', program: '', semester: '', faculty: '' })
+                }}
+              >
                 Dosen
               </button>
-              <button type="button" className={role === 'staff' ? 'active' : ''} onClick={() => setRole('staff')}>
+              <button 
+                type="button" 
+                className={role === 'staff' ? 'active' : ''} 
+                onClick={() => {
+                  setRole('staff')
+                  setStudentForm({ nim: '', name: '', email: '', password: '', program: '', semester: '', faculty: '' })
+                  setStaffForm({ username: '', name: '', email: '', password: '', program: '', semester: '', faculty: '' })
+                }}
+              >
                 Staf
               </button>
             </div>

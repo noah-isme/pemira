@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type JSX } from 'react'
 import type { PublicElection } from '../services/publicElection'
 import '../styles/HeroSection.css'
 
@@ -188,20 +188,50 @@ const HeroSection = ({ election, loading = false, error }: Props): JSX.Element =
 
         <div className="hero-right">
           <div className="hero-illustration">
-            <div className="card-mockup">
-              <div className="mockup-header">Kandidat BEM</div>
-              <div className="mockup-cards">
-                <div className="mockup-card">
-                  <div className="mockup-avatar" />
-                  <div className="mockup-text" />
+            <div className="election-timeline">
+              <h3 className="timeline-title">Tahapan Pemilihan</h3>
+              <div className="timeline-phases">
+                <div className="timeline-phase active">
+                  <div className="phase-dot"></div>
+                  <div className="phase-content">
+                    <h4 className="phase-title">Pendaftaran</h4>
+                    <p className="phase-desc">01/11/2025 - 30/11/2025</p>
+                  </div>
                 </div>
-                <div className="mockup-card">
-                  <div className="mockup-avatar" />
-                  <div className="mockup-text" />
+                <div className="timeline-phase upcoming">
+                  <div className="phase-dot"></div>
+                  <div className="phase-content">
+                    <h4 className="phase-title">Verifikasi Berkas</h4>
+                    <p className="phase-desc">01/12/2025 - 07/12/2025</p>
+                  </div>
                 </div>
-                <div className="mockup-card">
-                  <div className="mockup-avatar" />
-                  <div className="mockup-text" />
+                <div className="timeline-phase upcoming">
+                  <div className="phase-dot"></div>
+                  <div className="phase-content">
+                    <h4 className="phase-title">Kampanye</h4>
+                    <p className="phase-desc">08/12/2025 - 10/12/2025</p>
+                  </div>
+                </div>
+                <div className="timeline-phase upcoming">
+                  <div className="phase-dot"></div>
+                  <div className="phase-content">
+                    <h4 className="phase-title">Masa Tenang</h4>
+                    <p className="phase-desc">11/12/2025 - 14/12/2025</p>
+                  </div>
+                </div>
+                <div className="timeline-phase upcoming">
+                  <div className="phase-dot"></div>
+                  <div className="phase-content">
+                    <h4 className="phase-title">Voting</h4>
+                    <p className="phase-desc">15/12/2025 - 17/12/2025</p>
+                  </div>
+                </div>
+                <div className="timeline-phase upcoming">
+                  <div className="phase-dot"></div>
+                  <div className="phase-content">
+                    <h4 className="phase-title">Rekapitulasi</h4>
+                    <p className="phase-desc">21/12/2025 - 22/12/2025</p>
+                  </div>
                 </div>
               </div>
             </div>

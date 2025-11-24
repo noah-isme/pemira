@@ -1,5 +1,6 @@
 import PemiraLogos from './shared/PemiraLogos'
 import '../styles/Footer.css'
+import type { JSX } from 'react'
 
 const Footer = (): JSX.Element => (
   <footer className="footer">
@@ -18,8 +19,8 @@ const Footer = (): JSX.Element => (
           <div className="footer-column">
             <h4>Informasi</h4>
             <a href="#tentang">Tentang</a>
-            <a href="#kandidat">Kandidat</a>
-            <a href="#tentang">Jadwal Pemilu</a>
+            <a href="/kandidat">Kandidat</a>
+            <a href="/jadwal">Jadwal Pemilu</a>
           </div>
           <div className="footer-column">
             <h4>Bantuan</h4>
@@ -40,6 +41,11 @@ const Footer = (): JSX.Element => (
         <div className="footer-contact">
           <span>📞 Hotline Panitia: 0800-123-456</span>
           <span>📧 pemira@uniwa.ac.id</span>
+        </div>
+        <div className="footer-credits">
+          <a href="https://noahis.me" target="_blank" rel="noopener noreferrer" className="web-dev-credit">
+            web dev: noahis.me
+          </a>
         </div>
       </div>
     </div>

@@ -86,6 +86,7 @@
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -304,11 +305,11 @@
   }
 
   .hero-left {
-    order: 2;
+    order: 1;
   }
 
   .hero-right {
-    order: 1;
+    order: 2;
   }
 
   .hero-title {
@@ -355,4 +356,117 @@
   .hero-illustration {
     max-width: 100%;
   }
+
+  .election-timeline {
+    padding: 1.5rem;
+  }
+
+  .timeline-title {
+    font-size: 1.125rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .timeline-phases {
+    gap: 1.25rem;
+  }
+
+  .phase-dot {
+    width: 24px;
+    height: 24px;
+  }
+
+  .phase-title {
+    font-size: 0.875rem;
+  }
+
+  .phase-desc {
+    font-size: 0.8125rem;
+  }
+}
+
+/* Election Timeline Styles */
+.election-timeline {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+}
+
+.timeline-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  color: #1a1a1a;
+  text-align: center;
+}
+
+.timeline-phases {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  position: relative;
+}
+
+.timeline-phases::before {
+  content: '';
+  position: absolute;
+  left: 15px;
+  top: 30px;
+  bottom: 30px;
+  width: 2px;
+  background: #e2e8f0;
+}
+
+.timeline-phase {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  position: relative;
+}
+
+.phase-dot {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 3px solid #e2e8f0;
+  background: white;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.timeline-phase.active .phase-dot {
+  background: #667eea;
+  border-color: #667eea;
+}
+
+.timeline-phase.upcoming .phase-dot {
+  background: white;
+  border-color: #cbd5e0;
+}
+
+.phase-content {
+  flex: 1;
+  padding-bottom: 0.5rem;
+}
+
+.phase-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0 0 0.25rem 0;
+}
+
+.timeline-phase.active .phase-title {
+  color: #667eea;
+}
+
+.phase-desc {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.timeline-phase.active .phase-desc {
+  color: #475569;
 }

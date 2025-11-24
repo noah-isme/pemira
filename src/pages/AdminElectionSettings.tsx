@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import AdminLayout from '../components/admin/AdminLayout'
 import PemiraLogos from '../components/shared/PemiraLogos'
 import { useElectionSettings } from '../hooks/useElectionSettings'
+import { useToast } from '../components/Toast'
+import { usePopup } from '../components/Popup'
 import type { ElectionRules, VotingMode } from '../types/electionSettings'
 import '../styles/AdminElectionSettings.css'
 
@@ -17,6 +19,8 @@ type BrandingKey = 'primaryLogo' | 'secondaryLogo'
 const AdminElectionSettings = (): JSX.Element => {
   const navigate = useNavigate()
   const [brandingError, setBrandingError] = useState<string | undefined>(undefined)
+  const { showToast } = useToast()
+  const { showPopup } = usePopup()
   const {
     statusLabel,
     mode,
@@ -53,7 +57,7 @@ const AdminElectionSettings = (): JSX.Element => {
 
   const handleSaveTimeline = () => {
     if (!timelineValid) {
-      alert('Periksa kembali jadwal. Pastikan tidak ada tanggal yang tumpang tindih.')
+      showToast('Periksa kembali jadwal. Pastikan tidak ada tanggal yang tumpang tindih.', 'warning')
       return
     }
     void saveTimeline()
@@ -95,16 +99,31 @@ const AdminElectionSettings = (): JSX.Element => {
     setSecurity((prev) => ({ ...prev, lockVoting: !prev.lockVoting }))
   }
 
-  const handleResetTPS = () => {
-    if (window.confirm('Reset queue TPS? Semua antrean akan hilang.')) {
-      alert('Queue TPS berhasil direset (simulasi).')
+  const handleResetTPS = async () => {
+    const confirmed = await showPopup({
+      title: 'Reset Queue TPS',
+      message: 'Reset queue TPS? Semua antrean akan hilang.',
+      type: 'warning',
+      confirmText: 'Reset',
+      cancelText: 'Batal',
+    })
+    if (confirmed) {
+      showToast('Queue TPS berhasil direset (simulasi).', 'success')
     }
   }
 
-  const handleResetElection = () => {
-    if (window.prompt('Ketik "RESET PEMIRA" untuk melanjutkan.') === 'RESET PEMIRA') {
-      if (window.confirm('Yakin ingin reset seluruh suara dan data pemilu? Aksi ini tidak dapat dibatalkan.')) {
-        alert('Pemilu direset (simulasi).')
+  const handleResetElection = async () => {
+    const inputText = window.prompt('Ketik "RESET PEMIRA" untuk melanjutkan.')
+    if (inputText === 'RESET PEMIRA') {
+      const confirmed = await showPopup({
+        title: 'Reset Pemilu',
+        message: 'Yakin ingin reset seluruh suara dan data pemilu? Aksi ini tidak dapat dibatalkan.',
+        type: 'warning',
+        confirmText: 'Reset Semua',
+        cancelText: 'Batal',
+      })
+      if (confirmed) {
+        showToast('Pemilu direset (simulasi).', 'success')
       }
     }
   }
@@ -141,23 +160,23 @@ const AdminElectionSettings = (): JSX.Element => {
               </div>
               <div className="schedule-grid">
                 {timeline.map((stage) => (
-              <div key={stage.id} className="schedule-row">
-                <label>{stage.label}</label>
-                <input
-                  className="time-input"
-                  type="datetime-local"
-                  value={stage.start}
-                  onChange={(event) => handleTimelineChange(stage.id, 'start', event.target.value)}
-                />
-                <input
-                  className="time-input"
-                  type="datetime-local"
-                  value={stage.end}
-                  onChange={(event) => handleTimelineChange(stage.id, 'end', event.target.value)}
-                />
+                  <div key={stage.id} className="schedule-row">
+                    <label>{stage.label}</label>
+                    <input
+                      className="time-input"
+                      type="datetime-local"
+                      value={stage.start}
+                      onChange={(event) => handleTimelineChange(stage.id, 'start', event.target.value)}
+                    />
+                    <input
+                      className="time-input"
+                      type="datetime-local"
+                      value={stage.end}
+                      onChange={(event) => handleTimelineChange(stage.id, 'end', event.target.value)}
+                    />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
               {!timelineValid && <p className="warning">Cek kembali jadwal. Ada tanggal yang bertumpuk.</p>}
               <div className="card-actions">
                 <button className="btn-primary" type="button" onClick={handleSaveTimeline} disabled={savingSection === 'timeline'}>

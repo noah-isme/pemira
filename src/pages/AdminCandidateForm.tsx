@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import AdminLayout from '../components/admin/AdminLayout'
 import { useAdminAuth } from '../hooks/useAdminAuth'
 import { useCandidateAdminStore } from '../hooks/useCandidateAdminStore'
+import { usePopup } from '../components/Popup'
 import { fetchAdminCandidateDetail } from '../services/adminCandidates'
 import {
   deleteCandidateMedia,
@@ -16,10 +17,10 @@ import type { CandidateAdmin, CandidateMediaSlot, CandidateProgramAdmin, Candida
 import '../styles/AdminCandidates.css'
 
 const statusLabels: Record<CandidateStatus, string> = {
-  active: 'Aktif',
-  draft: 'Draft',
-  hidden: 'Disembunyikan',
-  archived: 'Diarsipkan',
+  PENDING: 'Menunggu Review',
+  APPROVED: 'Disetujui',
+  REJECTED: 'Ditolak',
+  WITHDRAWN: 'Ditarik',
 }
 
 type StepId = 'data' | 'profile' | 'vision' | 'program' | 'review'
@@ -82,6 +83,7 @@ const AdminCandidateForm = (): JSX.Element => {
   const { id } = useParams<{ id: string }>()
   const { token } = useAdminAuth()
   const { getCandidateById, createEmptyCandidate, addCandidate, updateCandidate, isNumberAvailable, refresh } = useCandidateAdminStore()
+  const { showPopup } = usePopup()
 
   const editing = Boolean(id)
   const existingCandidate = id ? getCandidateById(id) : undefined
@@ -208,8 +210,15 @@ const AdminCandidateForm = (): JSX.Element => {
     setMissionDraft('')
   }
 
-  const removeMission = (index: number) => {
-    if (!window.confirm('Hapus misi ini?')) return
+  const removeMission = async (index: number) => {
+    const confirmed = await showPopup({
+      title: 'Hapus Misi',
+      message: 'Hapus misi ini?',
+      type: 'warning',
+      confirmText: 'Hapus',
+      cancelText: 'Batal'
+    })
+    if (!confirmed) return
     updateField('missions', formData.missions.filter((_, idx) => idx !== index))
   }
 
@@ -217,7 +226,7 @@ const AdminCandidateForm = (): JSX.Element => {
     const target = direction === 'up' ? index - 1 : index + 1
     if (target < 0 || target >= formData.missions.length) return
     const next = [...formData.missions]
-    ;[next[index], next[target]] = [next[target], next[index]]
+      ;[next[index], next[target]] = [next[target], next[index]]
     updateField('missions', next)
   }
 
@@ -240,8 +249,15 @@ const AdminCandidateForm = (): JSX.Element => {
     )
   }
 
-  const removeProgram = (programId: string) => {
-    if (!window.confirm('Hapus program ini?')) return
+  const removeProgram = async (programId: string) => {
+    const confirmed = await showPopup({
+      title: 'Hapus Program',
+      message: 'Hapus program ini?',
+      type: 'warning',
+      confirmText: 'Hapus',
+      cancelText: 'Batal'
+    })
+    if (!confirmed) return
     updateField('programs', formData.programs.filter((program) => program.id !== programId))
   }
 
@@ -251,7 +267,7 @@ const AdminCandidateForm = (): JSX.Element => {
     const target = direction === 'up' ? idx - 1 : idx + 1
     if (target < 0 || target >= formData.programs.length) return
     const next = [...formData.programs]
-    ;[next[idx], next[target]] = [next[target], next[idx]]
+      ;[next[idx], next[target]] = [next[target], next[idx]]
     updateField('programs', next)
   }
 
@@ -469,11 +485,17 @@ const AdminCandidateForm = (): JSX.Element => {
     }
   }
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     if (!validateStep('review')) return
-    const confirmed = window.confirm('Pastikan nama, nomor urut, dan fakultas sudah benar. Kandidat akan muncul di halaman publik.')
+    const confirmed = await showPopup({
+      title: 'Publikasikan Kandidat',
+      message: 'Pastikan nama, nomor urut, dan fakultas sudah benar. Kandidat akan muncul di halaman publik.',
+      type: 'info',
+      confirmText: 'Publikasikan',
+      cancelText: 'Batal'
+    })
     if (!confirmed) return
-    void handleSubmit('active')
+    void handleSubmit('APPROVED')
   }
 
   const helperText = (text: string, required?: boolean) => (
@@ -493,11 +515,11 @@ const AdminCandidateForm = (): JSX.Element => {
             <button className="btn-link" type="button" onClick={() => navigate('/admin/kandidat')}>
               ◀ Kembali ke daftar kandidat
             </button>
-          <div className="wizard-status">
-            <span className="status-chip">{statusLabels[formData.status]}</span>
-            <span className="autosave">{autosaveStatus}</span>
-            {mediaLoading && <span className="autosave">Memproses media...</span>}
-          </div>
+            <div className="wizard-status">
+              <span className="status-chip">{statusLabels[formData.status]}</span>
+              <span className="autosave">{autosaveStatus}</span>
+              {mediaLoading && <span className="autosave">Memproses media...</span>}
+            </div>
           </div>
           <div className="wizard-title-row">
             <div>
@@ -902,7 +924,7 @@ const AdminCandidateForm = (): JSX.Element => {
                 </button>
               </div>
               <div className="right">
-                <button className="btn-outline" type="button" onClick={() => void handleSubmit('draft')}>
+                <button className="btn-outline" type="button" onClick={() => void handleSubmit('PENDING')}>
                   Simpan Draft
                 </button>
                 {stepIndex < steps.length - 1 ? (

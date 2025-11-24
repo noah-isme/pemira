@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import DashboardPemilih from '../pages/DashboardPemilih'
+import DashboardPemilihHiFi from '../pages/DashboardPemilihHiFi'
 import DaftarKandidat from '../pages/DaftarKandidat'
 import DemoAccounts from '../pages/DemoAccounts'
 import DetailKandidat from '../pages/DetailKandidat'
@@ -15,6 +15,12 @@ import VotingTPS from '../pages/VotingTPS'
 import TPSPanelDashboard from '../pages/TPSPanelDashboard'
 import TPSPanelHistory from '../pages/TPSPanelHistory'
 import TPSPanelVotingRoom from '../pages/TPSPanelVotingRoom'
+import TPSQRScanner from '../pages/TPSQRScanner'
+import TPSCheckInSuccess from '../pages/TPSCheckInSuccess'
+import TPSVoterDetail from '../pages/TPSVoterDetail'
+import TPSPanelSettings from '../pages/TPSPanelSettings'
+import VoterQRScanner from '../pages/VoterQRScanner'
+import ElectionResults from '../pages/ElectionResults'
 import AdminDashboard from '../pages/AdminDashboard'
 import AdminLogin from '../pages/AdminLogin'
 import AdminCandidatesList from '../pages/AdminCandidatesList'
@@ -28,8 +34,11 @@ import AdminTPSDetail from '../pages/AdminTPSDetail'
 import AdminDPTList from '../pages/AdminDPTList'
 import AdminDPTImport from '../pages/AdminDPTImport'
 import AdminDPTDetail from '../pages/AdminDPTDetail'
+import AdminDPTEdit from '../pages/AdminDPTEdit'
 import Panduan from '../pages/Panduan'
 import AdminFlowGuide from '../pages/AdminFlowGuide'
+import JadwalPemilu from '../pages/JadwalPemilu'
+import Tentang from '../pages/Tentang'
 
 export type RouteDefinition = {
   id: string
@@ -47,7 +56,7 @@ export const appRoutes: RouteDefinition[] = [
   { id: 'login', path: '/login', Component: LoginMahasiswa, publicOnly: true },
   { id: 'register', path: '/register', Component: Register, publicOnly: true },
   { id: 'admin-login', path: '/admin/login', Component: AdminLogin },
-  { id: 'dashboard', path: '/dashboard', Component: DashboardPemilih, requiresAuth: true },
+  { id: 'dashboard', path: '/dashboard', Component: DashboardPemilihHiFi, requiresAuth: true },
   { id: 'candidates', path: '/kandidat', Component: DaftarKandidat },
   { id: 'candidate-detail', path: '/kandidat/detail/:id', Component: DetailKandidat },
   { id: 'online-voting', path: '/voting', Component: VotingOnline, requiresAuth: true },
@@ -55,10 +64,16 @@ export const appRoutes: RouteDefinition[] = [
   { id: 'tps-scanner', path: '/voting-tps/scanner', Component: TPSScanner, requiresAuth: true },
   { id: 'tps-validate', path: '/voting-tps/validate', Component: TPSValidation, requiresAuth: true },
   { id: 'tps-vote', path: '/voting-tps/vote', Component: TPSVoting, requiresAuth: true },
+  { id: 'tps-scan-candidate', path: '/voting-tps/scan-candidate', Component: VoterQRScanner, requiresAuth: true },
   { id: 'tps-success', path: '/voting-tps/success', Component: TPSSuccess, requiresAuth: true },
+  { id: 'hasil-pemilihan', path: '/hasil', Component: ElectionResults },
   { id: 'tps-panel', path: '/tps-panel', Component: TPSPanelDashboard },
   { id: 'tps-panel-history', path: '/tps-panel/riwayat', Component: TPSPanelHistory },
   { id: 'tps-panel-voting-room', path: '/tps-panel/mode-voting', Component: TPSPanelVotingRoom },
+  { id: 'tps-panel-scan-qr', path: '/tps-panel/scan-qr', Component: TPSQRScanner },
+  { id: 'tps-panel-checkin-success', path: '/tps-panel/checkin-success', Component: TPSCheckInSuccess },
+  { id: 'tps-panel-voter-detail', path: '/tps-panel/detail/:id', Component: TPSVoterDetail },
+  { id: 'tps-panel-settings', path: '/tps-panel/settings', Component: TPSPanelSettings },
   { id: 'admin-tps-panel', path: '/admin/tps/panel', Component: TPSPanelDashboard, requiresAdminAuth: true },
   { id: 'admin-dashboard', path: '/admin', Component: AdminDashboard, requiresAdminAuth: true },
   { id: 'admin-candidates', path: '/admin/kandidat', Component: AdminCandidatesList, requiresAdminAuth: true },
@@ -74,7 +89,10 @@ export const appRoutes: RouteDefinition[] = [
   { id: 'admin-tps-detail', path: '/admin/tps/:id', Component: AdminTPSDetail, requiresAdminAuth: true },
   { id: 'admin-dpt-list', path: '/admin/dpt', Component: AdminDPTList, requiresAdminAuth: true },
   { id: 'admin-dpt-import', path: '/admin/dpt/import', Component: AdminDPTImport, requiresAdminAuth: true },
+  { id: 'admin-dpt-edit', path: '/admin/dpt/:id/edit', Component: AdminDPTEdit, requiresAdminAuth: true },
   { id: 'admin-dpt-detail', path: '/admin/dpt/:id', Component: AdminDPTDetail, requiresAdminAuth: true },
+  { id: 'jadwal-pemilu', path: '/jadwal', Component: JadwalPemilu },
+  { id: 'tentang', path: '/tentang', Component: Tentang },
 ]
 
 export const fallbackRoute: RouteDefinition = {

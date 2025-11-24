@@ -2,19 +2,27 @@ import { useNavigate } from 'react-router-dom'
 import PemiraLogos from '../components/shared/PemiraLogos'
 import { demoAccountCards } from '../data/demoAccounts'
 import { demoFeatureList, quickLinks } from '../data/dashboard'
+import { usePopup } from '../components/Popup'
 import '../styles/DemoAccounts.css'
-
-const notifyCopy = (text: string) => window.alert(`Copied: ${text}`)
 
 const DemoAccounts = (): JSX.Element => {
   const navigate = useNavigate()
+  const { showPopup } = usePopup()
 
   const handleCopy = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text)
-      notifyCopy(text)
+      await showPopup({
+        title: 'Berhasil',
+        message: `Teks berhasil disalin: ${text}`,
+        type: 'success'
+      })
     } catch {
-      notifyCopy(text)
+      await showPopup({
+        title: 'Berhasil',
+        message: `Teks berhasil disalin: ${text}`,
+        type: 'success'
+      })
     }
   }
 

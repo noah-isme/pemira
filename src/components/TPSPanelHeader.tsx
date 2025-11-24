@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import PemiraLogos from './shared/PemiraLogos'
+import { usePopup } from './Popup'
 import type { TPSPanitiaProfile } from '../types/tpsPanel'
 
 type TPSPanelHeaderProps = {
@@ -12,6 +13,7 @@ type TPSPanelHeaderProps = {
 const TPSPanelHeader = ({ panitia, locationLabel, subtitle, onLogout }: TPSPanelHeaderProps): JSX.Element => {
   const [openMenu, setOpenMenu] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
+  const { showPopup } = usePopup()
 
   useEffect(() => {
     const handleClick = (event: MouseEvent) => {
@@ -25,13 +27,20 @@ const TPSPanelHeader = ({ panitia, locationLabel, subtitle, onLogout }: TPSPanel
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setOpenMenu(false)
     if (onLogout) {
       onLogout()
       return
     }
-    if (window.confirm('Keluar dari TPS Panel?')) {
+    const confirmed = await showPopup({
+      title: 'Keluar dari TPS Panel',
+      message: 'Keluar dari TPS Panel?',
+      type: 'warning',
+      confirmText: 'Keluar',
+      cancelText: 'Batal'
+    })
+    if (confirmed) {
       window.location.href = '/'
     }
   }

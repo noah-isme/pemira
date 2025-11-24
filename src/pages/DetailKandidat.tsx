@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, type JSX } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import Header from '../components/Header'
 import EmptyState from '../components/shared/EmptyState'
 import { fetchPublicCandidateDetail, fetchPublicCandidates } from '../services/publicCandidates'
+import { fetchPublicCandidateProfileMedia } from '../services/adminCandidateMedia'
 import type { CandidateDetail } from '../types/voting'
 import '../styles/DetailKandidat.css'
 
@@ -26,6 +27,13 @@ const DetailKandidat = (): JSX.Element => {
   const [kandidat, setKandidat] = useState<CandidateDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [photoUrl, setPhotoUrl] = useState<string>('')
+  const objectUrlsRef = useRef<string[]>([])
+
+  const registerObjectUrl = (url: string) => {
+    objectUrlsRef.current.push(url)
+    return url
+  }
 
   useEffect(() => {
     if (Number.isNaN(candidateId)) {
@@ -51,7 +59,7 @@ const DetailKandidat = (): JSX.Element => {
           visi: detail.vision ?? '',
           misi: detail.missions ?? [],
           programKerja: (detail.main_programs ?? []).map((prog, index) => ({
-            id: `${prog.title}-${index}`,
+            id: index + 1,
             title: prog.title,
             description: prog.description,
           })),
@@ -100,6 +108,30 @@ const DetailKandidat = (): JSX.Element => {
       .finally(() => setLoading(false))
     return () => controller.abort()
   }, [candidateId])
+
+  useEffect(() => {
+    if (!kandidat || photoUrl) return
+
+    const loadPhoto = async () => {
+      try {
+        const url = await fetchPublicCandidateProfileMedia(kandidat.id)
+        if (url) {
+          setPhotoUrl(registerObjectUrl(url))
+        }
+      } catch (err) {
+        console.debug(`Could not fetch photo for candidate ${kandidat.id}:`, err)
+      }
+    }
+    void loadPhoto()
+  }, [kandidat, photoUrl])
+
+  useEffect(
+    () => () => {
+      objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url))
+      objectUrlsRef.current = []
+    },
+    [],
+  )
 
   useEffect(() => {
     const handleScroll = () => {
@@ -154,8 +186,8 @@ const DetailKandidat = (): JSX.Element => {
           <div className="kandidat-hero">
             <div className="hero-left">
               <div className="kandidat-photo-large">
-                {kandidat.foto ? (
-                  <img src={kandidat.foto} alt={`Foto ${kandidat.nama}`} loading="lazy" />
+                {photoUrl ? (
+                  <img src={photoUrl} alt={`Foto ${kandidat.nama}`} loading="lazy" />
                 ) : (
                   <div className="photo-placeholder-large">{kandidat.nama.charAt(0)}</div>
                 )}

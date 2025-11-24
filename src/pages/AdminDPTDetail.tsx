@@ -1,6 +1,8 @@
+import React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import AdminLayout from '../components/admin/AdminLayout'
 import { useDPTAdminStore } from '../hooks/useDPTAdminStore'
+import { useToast } from '../components/Toast'
 import '../styles/AdminDPT.css'
 
 const AdminDPTDetail = (): JSX.Element => {
@@ -8,6 +10,19 @@ const AdminDPTDetail = (): JSX.Element => {
   const navigate = useNavigate()
   const { voters } = useDPTAdminStore()
   const voter = voters.find((entry) => entry.id === id)
+  const { showToast } = useToast()
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleResetStatus = () => {
+    // Simulate status reset
+    showToast.success('Status suara berhasil direset.')
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleNonaktifkanPemilih = () => {
+    // Simulate voter deactivation
+    showToast.success('Pemilih berhasil dinonaktifkan.')
+  }
 
   if (!voter) {
     return (
@@ -55,11 +70,11 @@ const AdminDPTDetail = (): JSX.Element => {
           </ul>
         </section>
 
-      <section className="card">
-        <h2>Status Hak Suara</h2>
-        <p>Status Suara: {voter.statusSuara === 'sudah' ? 'SUDAH MEMILIH' : 'BELUM MEMILIH'}</p>
-        <p>Metode: {voter.metodeVoting}</p>
-        {voter.waktuVoting && <p>Waktu Voting: {new Date(voter.waktuVoting).toLocaleString('id-ID')}</p>}
+        <section className="card">
+          <h2>Status Hak Suara</h2>
+          <p>Status Suara: {voter.statusSuara === 'sudah' ? 'SUDAH MEMILIH' : 'BELUM MEMILIH'}</p>
+          <p>Metode: {voter.metodeVoting}</p>
+          {voter.waktuVoting && <p>Waktu Voting: {new Date(voter.waktuVoting).toLocaleString('id-ID')}</p>}
           {voter.metodeVoting.startsWith('TPS') && <p>TPS: {voter.metodeVoting}</p>}
           {voter.statusSuara === 'sudah' && <p>Token Hash: x81c-a91b-d33f</p>}
         </section>
@@ -68,10 +83,10 @@ const AdminDPTDetail = (): JSX.Element => {
           <h2>Aksi Admin</h2>
           <p>Peringatan: Aksi berikut hanya boleh dilakukan sesuai prosedur KPUM.</p>
           <div className="form-actions">
-            <button className="btn-outline" type="button" onClick={() => alert('Reset status suara (simulasi)')}>
+            <button className="btn-outline" type="button" onClick={() => showToast('Reset status suara (simulasi)', 'info')}>
               Reset Status Suara
             </button>
-            <button className="btn-danger" type="button" onClick={() => alert('Nonaktifkan pemilih (simulasi)')}>
+            <button className="btn-danger" type="button" onClick={() => showToast('Nonaktifkan pemilih (simulasi)', 'warning')}>
               Nonaktifkan Pemilih
             </button>
           </div>

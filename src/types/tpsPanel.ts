@@ -1,4 +1,4 @@
-export type TPSQueueStatus = 'waiting' | 'verified' | 'rejected' | 'cancelled'
+export type TPSQueueStatus = 'CHECKED_IN' | 'VOTED'
 
 export type TPSVotingMode = 'mobile' | 'device'
 
@@ -11,12 +11,11 @@ export type TPSQueueEntry = {
   angkatan: string
   statusMahasiswa: string
   mode: TPSVotingMode
-  waktuScan: string
+  waktuCheckIn: string
   status: TPSQueueStatus
-  token: string
   hasVoted?: boolean
-  verifiedAt?: string
-  rejectionReason?: string
+  voteTime?: string
+  checkInToken?: string
 }
 
 export type TPSActivityLog = {
@@ -62,7 +61,7 @@ export type TPSVotingCandidate = {
   deskripsi: string
 }
 
-export type TPSQueueFeedPayload = Omit<TPSQueueEntry, 'id' | 'waktuScan' | 'status' | 'token'> & {
+export type TPSQueueFeedPayload = Omit<TPSQueueEntry, 'id' | 'waktuCheckIn' | 'status' | 'checkInToken'> & {
   nim: string
   nama: string
   delayMs: number
@@ -79,7 +78,7 @@ export type TPSStaticQRInfo = {
 export type TPSHistoryRecord = {
   id: string
   timestamp: string
-  type: 'verification' | 'rejection' | 'open' | 'close' | 'qr'
+  type: 'checkin' | 'verification' | 'rejection' | 'open' | 'close' | 'qr' | 'vote'
   nim?: string
   nama?: string
   detail?: string

@@ -6,6 +6,7 @@ import { fetchPublicCandidates } from '../services/publicCandidates'
 import { fetchCurrentElection, type PublicElection } from '../services/publicElection'
 import { fetchVoterStatus, type VoterMeStatus } from '../services/voterStatus'
 import type { Candidate, VotingStatus } from '../types/voting'
+import { usePopup } from '../components/Popup'
 import '../styles/DashboardPemilih.css'
 
 type BannerContent = {
@@ -44,6 +45,7 @@ const formatDateTime = (value?: string | null) => {
 const DashboardPemilih = (): JSX.Element => {
   const navigate = useNavigate()
   const { session, mahasiswa, updateSession, clearSession } = useVotingSession()
+  const { showPopup } = usePopup()
 
   const [election, setElection] = useState<PublicElection | null>(null)
   const [meStatus, setMeStatus] = useState<VoterMeStatus | null>(null)
@@ -131,14 +133,14 @@ const DashboardPemilih = (): JSX.Element => {
   const kandidatPreview = candidates.slice(0, 2)
   const voteData = hasVoted
     ? (() => {
-        const raw = sessionStorage.getItem('voteData')
-        if (!raw) return null
-        try {
-          return JSON.parse(raw) as { token?: string }
-        } catch {
-          return null
-        }
-      })()
+      const raw = sessionStorage.getItem('voteData')
+      if (!raw) return null
+      try {
+        return JSON.parse(raw) as { token?: string }
+      } catch {
+        return null
+      }
+    })()
     : null
 
   const banner: BannerContent = (() => {
@@ -223,8 +225,15 @@ const DashboardPemilih = (): JSX.Element => {
     navigate('/voting-tps/scanner')
   }
 
-  const handleLogout = () => {
-    if (window.confirm('Yakin ingin keluar?')) {
+  const handleLogout = async () => {
+    const confirmed = await showPopup({
+      title: 'Konfirmasi Keluar',
+      message: 'Yakin ingin keluar?',
+      type: 'warning',
+      confirmText: 'Keluar',
+      cancelText: 'Batal'
+    })
+    if (confirmed) {
       clearSession()
       navigate('/', { replace: true })
     }

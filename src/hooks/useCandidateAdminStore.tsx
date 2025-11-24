@@ -12,7 +12,7 @@ const defaultCandidate: CandidateAdmin = {
   faculty: '',
   programStudi: '',
   angkatan: '',
-  status: 'draft',
+  status: 'PENDING',
   photoUrl: '',
   photoMediaId: null,
   tagline: '',
@@ -96,7 +96,7 @@ export const CandidateAdminProvider = ({ children }: { children: ReactNode }) =>
   const archiveCandidate = useCallback(
     (id: string) => {
       setCandidates((prev) =>
-        prev.map((candidate) => (candidate.id === id ? { ...candidate, status: 'hidden' as CandidateStatus } : candidate)),
+        prev.map((candidate) => (candidate.id === id ? { ...candidate, status: 'WITHDRAWN' as CandidateStatus } : candidate)),
       )
     },
     [],

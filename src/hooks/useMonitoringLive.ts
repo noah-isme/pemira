@@ -12,21 +12,21 @@ const mapSnapshotToState = (snapshot: MonitoringLiveResponse, candidatesRef: Can
   const mappedCandidates =
     candidatesRef.length > 0
       ? candidatesRef.map((candidate, idx) => {
-          const votes = snapshot.candidate_votes[candidate.id.toString()] ?? 0
-          return {
-            ...candidate,
-            votes,
-            percentage: totalVotes ? Number(((votes / totalVotes) * 100).toFixed(1)) : 0,
-            color: candidate.color ?? colors[idx % colors.length],
-          }
-        })
-      : Object.entries(snapshot.candidate_votes).map(([id, votes], idx) => ({
-          id: Number(id),
-          name: `Kandidat ${id}`,
+        const votes = snapshot.candidate_votes[candidate.id.toString()] ?? 0
+        return {
+          ...candidate,
           votes,
           percentage: totalVotes ? Number(((votes / totalVotes) * 100).toFixed(1)) : 0,
-          color: colors[idx % colors.length],
-        }))
+          color: candidate.color ?? colors[idx % colors.length],
+        }
+      })
+      : Object.entries(snapshot.candidate_votes).map(([id, votes], idx) => ({
+        id: Number(id),
+        name: `Kandidat ${id}`,
+        votes,
+        percentage: totalVotes ? Number(((votes / totalVotes) * 100).toFixed(1)) : 0,
+        color: colors[idx % colors.length],
+      }))
 
   const mappedTPS: TPSLiveStatus[] = snapshot.tps_stats.map((item) => ({
     id: item.tps_id.toString(),
@@ -148,7 +148,7 @@ export const useMonitoringLive = () => {
   }
 
   const exportSnapshot = () => {
-    alert(`Export data per ${summary.lastUpdated}`) // TODO: integrate real export endpoint
+    console.log(`Export data per ${summary.lastUpdated}`) // TODO: integrate real export endpoint
   }
 
   return {

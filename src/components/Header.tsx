@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type JSX } from 'react'
 import PemiraLogos from './shared/PemiraLogos'
 import '../styles/Header.css'
 
 const navLinks = [
-  { href: '#tentang', label: 'Tentang' },
   { href: '#kandidat', label: 'Kandidat' },
   { href: '#cara-memilih', label: 'Cara Memilih' },
   { href: '/panduan', label: 'Panduan' },
+  { href: '/jadwal', label: 'Jadwal' },
+  { href: '/tentang', label: 'Tentang' },
 ]
 
 const Header = (): JSX.Element => {
@@ -32,7 +33,14 @@ const Header = (): JSX.Element => {
     <header className={headerClass.join(' ')}>
       <div className="header-container">
         <div className="header-brand">
-          <PemiraLogos size="sm" title="PEMIRA UNIWA" subtitle="2025" className="header-logo-cluster" />
+          <a href="/" className="header-logo-link">
+            <PemiraLogos
+              size="sm"
+              title="PEMIRA UNIWA"
+              subtitle="2025"
+              className="header-logo-cluster"
+            />
+          </a>
         </div>
 
         <nav className="header-nav desktop-nav">
@@ -51,7 +59,11 @@ const Header = (): JSX.Element => {
         </div>
 
         <div className="mobile-actions">
-          <button className="mobile-menu-toggle" onClick={() => setMenuOpen((prev) => !prev)} aria-label="Buka menu">
+          <button
+            className="mobile-menu-toggle"
+            onClick={() => setMenuOpen((prev) => !prev)}
+            aria-label="Buka menu"
+          >
             ☰
           </button>
         </div>
@@ -59,12 +71,23 @@ const Header = (): JSX.Element => {
 
       {menuOpen && (
         <div className="mobile-menu" role="menu">
-          <a href="/login" className="mobile-menu-item mobile-menu-login" onClick={closeMenu} role="menuitem">
+          <a
+            href="/login"
+            className="mobile-menu-item mobile-menu-login"
+            onClick={closeMenu}
+            role="menuitem"
+          >
             <span className="login-icon">🔒</span>
             <span>Masuk</span>
           </a>
           {navLinks.map((link) => (
-            <a key={link.href} href={link.href} className="mobile-menu-item" onClick={closeMenu} role="menuitem">
+            <a
+              key={link.href}
+              href={link.href}
+              className="mobile-menu-item"
+              onClick={closeMenu}
+              role="menuitem"
+            >
               {link.label}
             </a>
           ))}

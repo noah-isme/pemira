@@ -1,4 +1,4 @@
-import { ACTIVE_ELECTION_ID } from '../config/env'
+import { ACTIVE_ELECTION_ID, API_BASE_URL } from '../config/env'
 import type { CandidateAdmin, CandidateMedia, CandidateMediaSlot, CandidateProgramAdmin, CandidateStatus } from '../types/candidateAdmin'
 import { apiRequest } from '../utils/apiClient'
 
@@ -33,23 +33,17 @@ export type AdminCandidateResponse = {
     label?: string | null
     content_type?: string | null
   }[]
-  status: 'DRAFT' | 'PUBLISHED' | 'HIDDEN' | 'ARCHIVED'
+  status: CandidateStatus
   created_at?: string
   updated_at?: string
 }
 
-const mapStatusFromApi = (status: AdminCandidateResponse['status']): CandidateStatus => {
-  if (status === 'PUBLISHED') return 'active'
-  if (status === 'HIDDEN') return 'hidden'
-  if (status === 'ARCHIVED') return 'archived'
-  return 'draft'
+const mapStatusFromApi = (status: CandidateStatus): CandidateStatus => {
+  return status
 }
 
-const mapStatusToApi = (status: CandidateStatus): AdminCandidateResponse['status'] => {
-  if (status === 'active') return 'PUBLISHED'
-  if (status === 'hidden') return 'HIDDEN'
-  if (status === 'archived') return 'ARCHIVED'
-  return 'DRAFT'
+const mapStatusToApi = (status: CandidateStatus): CandidateStatus => {
+  return status
 }
 
 const mapSlotToLabel = (slot: CandidateMediaSlot | 'profile') => {
@@ -88,43 +82,52 @@ const buildMediaFromMeta = (candidateId: string, media?: AdminCandidateResponse[
     }))
 }
 
-export const transformCandidateFromApi = (payload: AdminCandidateResponse): CandidateAdmin => ({
-  id: payload.id.toString(),
-  number: payload.number,
-  name: payload.name,
-  faculty: payload.faculty_name ?? '',
-  programStudi: payload.study_program_name ?? '',
-  angkatan: payload.cohort_year?.toString() ?? '',
-  status: mapStatusFromApi(payload.status),
-  photoUrl: payload.photo_url ?? '',
-  photoMediaId: payload.photo_media_id ?? null,
-  tagline: payload.tagline,
-  shortBio: payload.short_bio,
-  longBio: payload.long_bio,
-  visionTitle: payload.vision ?? '',
-  visionDescription: payload.vision ?? '',
-  missions: payload.missions ?? [],
-  programs: (payload.main_programs ?? []).map((program, index) => ({
-    id: `program-${program.title}-${index}`,
-    title: program.title,
-    description: program.description,
-    category: program.category,
-  })),
-  media: [
-    ...(payload.media_files && payload.media_files.length === 0
-      ? []
-      : buildMediaFromMeta(payload.id.toString(), payload.media_files)),
-    ...(payload.media_files?.length
-      ? []
-      : payload.media?.gallery_photos?.map((url, index) => ({
+export const transformCandidateFromApi = (payload: AdminCandidateResponse | null | undefined): CandidateAdmin => {
+  if (!payload) {
+    throw new Error('Invalid candidate data from API: payload is null or undefined')
+  }
+
+  if (!payload.id && payload.id !== 0) {
+    throw new Error('Invalid candidate data from API: missing id')
+  }
+
+  return {
+    id: String(payload.id),
+    number: payload.number ?? 0,
+    name: payload.name ?? '',
+    faculty: payload.faculty_name ?? '',
+    programStudi: payload.study_program_name ?? '',
+    angkatan: payload.cohort_year?.toString() ?? '',
+    status: mapStatusFromApi(payload.status),
+    photoUrl: payload.photo_url ? (payload.photo_url.startsWith('http') ? payload.photo_url : `http://localhost:8080${payload.photo_url}`) : '',
+    photoMediaId: payload.photo_media_id ?? null,
+    tagline: payload.tagline ?? '',
+    shortBio: payload.short_bio ?? '',
+    longBio: payload.long_bio ?? '',
+    visionTitle: payload.vision ?? '',
+    visionDescription: payload.vision ?? '',
+    missions: payload.missions ?? [],
+    programs: (payload.main_programs ?? []).map((program, index) => ({
+      id: `program-${program.title}-${index}`,
+      title: program.title,
+      description: program.description,
+      category: program.category,
+    })),
+    media: [
+      ...(payload.media_files && payload.media_files.length === 0
+        ? []
+        : buildMediaFromMeta(payload.id.toString(), payload.media_files)),
+      ...(payload.media_files?.length
+        ? []
+        : payload.media?.gallery_photos?.map((url, index) => ({
           id: `photo-${index}`,
           slot: 'photo_extra' as CandidateMediaSlot,
           type: 'photo' as const,
           url,
           label: `Foto ${index + 1}`,
         })) ?? []),
-    ...(payload.media?.document_manifesto_url
-      ? [
+      ...(payload.media?.document_manifesto_url
+        ? [
           {
             id: 'pdf-1',
             slot: 'pdf_visimisi' as CandidateMediaSlot,
@@ -133,20 +136,26 @@ export const transformCandidateFromApi = (payload: AdminCandidateResponse): Cand
             label: 'Manifesto',
           },
         ]
-      : []),
-  ],
-  campaignVideo: payload.media?.video_url ?? undefined,
-})
+        : []),
+    ],
+    campaignVideo: payload.media?.video_url ?? undefined,
+  }
+}
 
-export const buildCandidatePayload = (candidate: CandidateAdmin) => {
+export const buildCandidatePayload = (candidate: CandidateAdmin, excludeStatus = false) => {
   const programs: CandidateProgramAdmin[] = candidate.programs ?? []
-  const photos = candidate.media.filter((item) => item.type === 'photo').map((item) => item.url)
+  const photos = candidate.media.filter((item) => item.type === 'photo').map((item) => item.url).filter((url) => url && !url.startsWith('blob:'))
   const pdf = candidate.media.find((item) => item.type === 'pdf')
 
-  return {
+  // Only send photo_url if there's no photo_media_id (backward compatibility)
+  // When photo_media_id exists, the API should use that instead
+  const photoUrl = candidate.photoMediaId ? undefined : (candidate.photoUrl?.startsWith('blob:') ? undefined : candidate.photoUrl)
+
+  const payload: any = {
     number: candidate.number,
     name: candidate.name,
-    photo_url: candidate.photoUrl,
+    photo_url: photoUrl,
+    photo_media_id: candidate.photoMediaId ?? undefined,
     short_bio: candidate.shortBio,
     long_bio: candidate.longBio,
     tagline: candidate.tagline,
@@ -165,8 +174,13 @@ export const buildCandidatePayload = (candidate: CandidateAdmin) => {
       gallery_photos: photos,
       document_manifesto_url: pdf?.url ?? null,
     },
-    status: mapStatusToApi(candidate.status),
   }
+
+  if (!excludeStatus) {
+    payload.status = mapStatusToApi(candidate.status)
+  }
+
+  return payload
 }
 
 export const fetchAdminCandidates = async (token: string, electionId: number = ACTIVE_ELECTION_ID): Promise<CandidateAdmin[]> => {
@@ -180,29 +194,28 @@ export const fetchAdminCandidates = async (token: string, electionId: number = A
 
 export const createAdminCandidate = async (token: string, candidate: CandidateAdmin): Promise<CandidateAdmin> => {
   const payload = buildCandidatePayload(candidate)
-  const response = await apiRequest<{ data: AdminCandidateResponse }>(`/admin/elections/${ACTIVE_ELECTION_ID}/candidates`, {
+  const response = await apiRequest<AdminCandidateResponse>(`/admin/elections/${ACTIVE_ELECTION_ID}/candidates`, {
     method: 'POST',
     token,
     body: payload,
   })
-  return transformCandidateFromApi(response.data)
+  return transformCandidateFromApi(response)
 }
 
-export const updateAdminCandidate = async (token: string, id: string, candidate: Partial<CandidateAdmin>): Promise<CandidateAdmin> => {
-  const payload = buildCandidatePayload(candidate as CandidateAdmin)
-  const response = await apiRequest<{ data: AdminCandidateResponse }>(`/admin/candidates/${id}?election_id=${ACTIVE_ELECTION_ID}`, {
+export const updateAdminCandidate = async (token: string, id: string, candidate: Partial<CandidateAdmin>, excludeStatus = true): Promise<CandidateAdmin> => {
+  const payload = buildCandidatePayload(candidate as CandidateAdmin, excludeStatus)
+  const response = await apiRequest<AdminCandidateResponse>(`/admin/elections/${ACTIVE_ELECTION_ID}/candidates/${id}`, {
     method: 'PUT',
     token,
     body: payload,
   })
-  return transformCandidateFromApi(response.data)
+  return transformCandidateFromApi(response)
 }
 
 export const fetchAdminCandidateDetail = async (token: string, id: string | number): Promise<CandidateAdmin> => {
-  const response = await apiRequest<{ data: AdminCandidateResponse } | AdminCandidateResponse>(
-    `/admin/candidates/${id}?election_id=${ACTIVE_ELECTION_ID}`,
+  const response = await apiRequest<AdminCandidateResponse>(
+    `/admin/elections/${ACTIVE_ELECTION_ID}/candidates/${id}`,
     { token },
   )
-  const payload = (response as any)?.data ?? response
-  return transformCandidateFromApi(payload as AdminCandidateResponse)
+  return transformCandidateFromApi(response)
 }

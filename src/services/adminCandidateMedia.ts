@@ -14,6 +14,14 @@ export const fetchCandidateProfileMedia = async (token: string, candidateId: str
   return URL.createObjectURL(blob)
 }
 
+export const fetchPublicCandidateProfileMedia = async (candidateId: string | number): Promise<string | null> => {
+  const response = await fetch(`${API_BASE_URL.replace('/api/v1', '')}/api/v1/elections/1/candidates/${candidateId}/media/profile?t=${Date.now()}`)
+  if (response.status === 404) return null
+  if (!response.ok) throw new Error('Gagal mengambil foto profil kandidat')
+  const blob = await response.blob()
+  return URL.createObjectURL(blob)
+}
+
 export const uploadCandidateProfileMedia = async (
   token: string,
   candidateId: string | number,

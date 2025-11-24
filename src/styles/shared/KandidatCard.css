@@ -50,6 +50,13 @@
   font-weight: 700;
 }
 
+.kandidat-photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
 .kandidat-nomor-urut {
   display: flex;
   flex-direction: column;

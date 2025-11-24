@@ -62,6 +62,7 @@ type TPSPanelContextValue = {
   syncFromApi: (token: string, tpsId: string) => Promise<void>
   approveCheckinApi: (token: string, tpsId: string, checkinId: string) => Promise<void>
   rejectCheckinApi: (token: string, tpsId: string, checkinId: string, reason?: string) => Promise<void>
+  checkInVoter: () => Promise<boolean>
 }
 
 const TPSPanelContext = createContext<TPSPanelContextValue | undefined>(undefined)
@@ -156,17 +157,17 @@ export const TPSPanelProvider = ({ children }: { children: ReactNode }) => {
   }, [rotateQrToken])
 
   const addQueueEntry = useCallback(
-    (entry: Omit<TPSQueueEntry, 'id' | 'status' | 'token' | 'waktuScan'>) => {
+    (entry: Omit<TPSQueueEntry, 'id' | 'status' | 'checkInToken' | 'waktuCheckIn'>) => {
       const payload: TPSQueueEntry = {
         ...entry,
         id: generateId('queue'),
-        status: 'verified',
-        token: createToken(),
-        waktuScan: new Date().toISOString(),
+        status: 'CHECKED_IN',
+        checkInToken: createToken(),
+        waktuCheckIn: new Date().toISOString(),
       }
       setQueue((prev) => capQueueSize([payload, ...prev]))
-      pushLog(`${payload.nama} tercatat hadir (scan QR)`)
-      pushHistory({ type: 'verification', nim: payload.nim, nama: payload.nama, detail: 'Scan QR tercatat otomatis' })
+      pushLog(`${payload.nama} berhasil check-in`)
+      pushHistory({ type: 'checkin', nim: payload.nim, nama: payload.nama, detail: 'Check-in otomatis via QR' })
     },
     [capQueueSize, pushHistory, pushLog],
   )
@@ -181,51 +182,38 @@ export const TPSPanelProvider = ({ children }: { children: ReactNode }) => {
           return {
             ...item,
             status,
-            verifiedAt: status === 'verified' ? new Date().toISOString() : item.verifiedAt,
-            hasVoted: status === 'verified' ? true : item.hasVoted,
-            rejectionReason: options?.reason ?? item.rejectionReason,
+            voteTime: status === 'VOTED' ? new Date().toISOString() : item.voteTime,
+            hasVoted: status === 'VOTED' ? true : item.hasVoted,
           }
         })
 
         const baseMessage =
-          status === 'verified'
-            ? `${target.nama} diverifikasi dan diarahkan voting`
-            : status === 'rejected'
-              ? `${target.nama} ditolak (${options?.reason ?? 'tanpa alasan'})`
-              : `${target.nama} dikeluarkan dari antrean`
+          status === 'VOTED'
+            ? `${target.nama} telah menyelesaikan voting`
+            : `${target.nama} status diperbarui`
 
         pushLog(baseMessage)
 
         const historyPayload: Omit<TPSHistoryRecord, 'id' | 'timestamp'> = {
-          type: status === 'verified' ? 'verification' : 'rejection',
+          type: status === 'VOTED' ? 'vote' : 'verification',
           nim: target.nim,
           nama: target.nama,
-          detail:
-            status === 'verified'
-              ? 'Diizinkan voting'
-              : options?.reason
-                ? `Ditolak - ${options.reason}`
-                : 'Ditolak',
+          detail: status === 'VOTED' ? 'Voting selesai' : 'Status diperbarui',
         }
         pushHistory(historyPayload)
 
-        if (status === 'verified' && target.status !== 'verified') {
-          setPanelInfo((prevInfo) => ({ ...prevInfo, totalVoters: prevInfo.totalVoters + 1 }))
-        }
-
-        if (options?.notify !== false) {
+        if (options?.notify) {
           showNotification({
-            type: status === 'verified' ? 'success' : 'warning',
-            title: status === 'verified' ? 'Akses Voting Disetujui' : 'Antrean diperbarui',
+            type: status === 'VOTED' ? 'success' : 'info',
+            title: status === 'VOTED' ? 'Voting Selesai' : 'Status Diperbarui',
             message: baseMessage,
-            entryId,
           })
         }
 
-        return capQueueSize(transformed)
+        return transformed
       })
     },
-    [capQueueSize, pushHistory, pushLog, showNotification],
+    [pushHistory, pushLog, showNotification],
   )
 
   const syncFromApi = useCallback(
@@ -291,6 +279,39 @@ export const TPSPanelProvider = ({ children }: { children: ReactNode }) => {
     [pushHistory, pushLog, showNotification],
   )
 
+  const checkInVoter = useCallback(
+    async (): Promise<boolean> => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      try {
+        // Here we would validate the QR code and check-in the voter
+        // For now, simulate the check-in process
+        const mockVoterData = {
+          nim: '21034567',
+          nama: 'Roni Saputra',
+          fakultas: 'Teknik Informatika',
+          prodi: 'Teknik Informatika',
+          angkatan: '2021',
+          statusMahasiswa: 'Aktif',
+          mode: 'mobile' as TPSVotingMode,
+        }
+
+        // Check if voter is already checked in
+        const existing = queue.find((item) => item.nim === mockVoterData.nim)
+        if (existing) {
+          return false // Already checked in
+        }
+
+        // Add to queue as CHECKED_IN
+        addQueueEntry(mockVoterData)
+        return true
+      } catch (error) {
+        console.error('Check-in failed:', error)
+        return false
+      }
+    },
+    [queue, addQueueEntry],
+  )
+
   const fetchQueueSnapshot = useCallback(async () => {
     setQueue((prev) => prev)
   }, [])
@@ -311,6 +332,7 @@ export const TPSPanelProvider = ({ children }: { children: ReactNode }) => {
           nama: nextPayload.nama,
           fakultas: nextPayload.fakultas,
           prodi: nextPayload.prodi,
+          angkatan: nextPayload.angkatan,
           statusMahasiswa: nextPayload.statusMahasiswa,
           mode: nextPayload.mode,
         })
@@ -353,6 +375,7 @@ export const TPSPanelProvider = ({ children }: { children: ReactNode }) => {
       syncFromApi,
       approveCheckinApi,
       rejectCheckinApi,
+      checkInVoter,
       updateQueueStatus,
       addQueueEntry,
       removeFromQueue,
@@ -371,6 +394,7 @@ export const TPSPanelProvider = ({ children }: { children: ReactNode }) => {
       qrToken,
       approveCheckinApi,
       rejectCheckinApi,
+      checkInVoter,
       removeFromQueue,
       rotateQrToken,
       setPanelStatus,

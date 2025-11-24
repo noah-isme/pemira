@@ -3,7 +3,6 @@ import { Link, Navigate } from 'react-router-dom'
 import PageHeader from '../components/shared/PageHeader'
 import { mockCandidates } from '../data/mockCandidates'
 import { useVotingSession } from '../hooks/useVotingSession'
-import { onlineVotingInstructions } from '../data/voting'
 import type { Candidate, VotingReceipt } from '../types/voting'
 import '../styles/VotingOnline.css'
 
@@ -36,9 +35,15 @@ const VotingOnline = (): JSX.Element => {
   }, [hasVoted, step])
 
   const handleSelectKandidat = (kandidat: Candidate) => {
-    setSelectedKandidat(kandidat)
+    if (selectedKandidat?.id === kandidat.id) {
+      setSelectedKandidat(null)
+    } else {
+      setSelectedKandidat(kandidat)
+      setTimeout(() => setStep(2), 300)
+    }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleLanjutKonfirmasi = () => {
     if (!selectedKandidat) return
     setStep(2)
@@ -127,10 +132,23 @@ const VotingOnline = (): JSX.Element => {
 
   return (
     <div className="voting-page">
-      <PageHeader title='Pemungutan Suara' user={mahasiswa} />
+      <PageHeader title='🗳 PEMILIHAN ONLINE - PEMIRA UNIWA' user={mahasiswa} />
 
       <main className="voting-main">
         <div className="voting-container">
+          {step === 1 && (
+            <div className="voting-status-bar">
+              <div className="status-item">
+                <span className="status-label">Status Pemilih:</span>
+                <span className="status-value status-belum">{hasVoted ? 'SUDAH MEMILIH' : 'BELUM MEMILIH'}</span>
+              </div>
+              <div className="status-item">
+                <span className="status-label">Waktu Tersisa:</span>
+                <span className="status-value status-timer">02:31:58</span>
+              </div>
+            </div>
+          )}
+
           <div className="progress-steps">
             <div className={`step-item ${step >= 1 ? 'active' : ''} ${step > 1 ? 'completed' : ''}`}>
               <div className="step-number">1</div>
@@ -151,33 +169,15 @@ const VotingOnline = (): JSX.Element => {
           {step === 1 && (
             <div className="voting-step">
               <div className="step-header">
-                <h1 className="step-title">Pilih Kandidat Anda</h1>
-                <p className="step-subtitle">Step 1/2</p>
-              </div>
-
-              <div className="instruction-box">
-                <div className="instruction-icon">📢</div>
-                <div className="instruction-content">
-                  <strong>Instruksi Penting:</strong>
-                  <ul>
-                    {onlineVotingInstructions.map((instruction) => (
-                      <li key={`${instruction.prefix}-${instruction.emphasis ?? ''}`}>
-                        {instruction.prefix}
-                        {instruction.emphasis ? <strong>{instruction.emphasis}</strong> : null}
-                        {instruction.suffix}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                <h1 className="step-title">Pilih pasangan calon Anda:</h1>
               </div>
 
               <div className="kandidat-voting-grid">
                 {mockCandidates.map((kandidat) => (
                   <div
                     key={kandidat.id}
-                    className={`kandidat-voting-card ${
-                      selectedKandidat?.id === kandidat.id ? 'selected' : ''
-                    }`}
+                    className={`kandidat-voting-card ${selectedKandidat?.id === kandidat.id ? 'selected' : ''
+                      }`}
                     onClick={() => handleSelectKandidat(kandidat)}
                   >
                     <div className="kandidat-hero">
@@ -188,85 +188,54 @@ const VotingOnline = (): JSX.Element => {
                         />
                       </div>
                       <div className="kandidat-info">
-                        <div className="candidate-number">No. Urut {kandidat.nomorUrut}</div>
+                        <div className="candidate-number">PASLON {kandidat.nomorUrut.toString().padStart(2, '0')}</div>
                         <h3>{kandidat.nama}</h3>
-                        <p>{kandidat.fakultas}</p>
-                        <span className="candidate-badge">{kandidat.prodi}</span>
+                        <p className="visi-ringkas">Visi & Misi: Membangun kampus yang inklusif dan berprestasi</p>
                       </div>
                     </div>
                     <button
                       className={`btn-select ${selectedKandidat?.id === kandidat.id ? 'selected' : ''}`}
                       type="button"
                     >
-                      {selectedKandidat?.id === kandidat.id ? 'Dipilih' : 'Pilih Kandidat'}
+                      {selectedKandidat?.id === kandidat.id ? '✓ Dipilih' : 'PILIH'}
                     </button>
                   </div>
                 ))}
               </div>
 
               <div className="voting-actions">
-                <button className="btn-next" onClick={handleLanjutKonfirmasi} disabled={!selectedKandidat}>
-                  Lanjut ke Konfirmasi →
-                </button>
+                <Link to="/dashboard">
+                  <button className="btn-secondary">Kembali ke Dashboard</button>
+                </Link>
               </div>
             </div>
           )}
 
           {step === 2 && selectedKandidat && (
             <div className="voting-step">
-              <div className="step-header">
-                <h1 className="step-title">Konfirmasi Pilihan</h1>
-                <p className="step-subtitle">Step 2/2</p>
-              </div>
-
-              <div className="confirmation-card">
-                <h2>Kandidat yang Anda pilih</h2>
-                <div className="confirmation-body">
-                  <div className="confirmation-photo">
-                    <img
-                      src={`https://ui-avatars.com/api/?name=${encodeURIComponent(selectedKandidat.nama)}&size=240&background=random`}
-                      alt={selectedKandidat.nama}
-                    />
-                  </div>
-                  <div className="confirmation-details">
-                    <div className="detail-item">
-                      <span className="detail-label">Nama</span>
-                      <span className="detail-value">{selectedKandidat.nama}</span>
-                    </div>
-                    <div className="detail-item">
-                      <span className="detail-label">No. Urut</span>
-                      <span className="detail-value">{selectedKandidat.nomorUrut}</span>
-                    </div>
-                    <div className="detail-item">
-                      <span className="detail-label">Fakultas</span>
-                      <span className="detail-value">{selectedKandidat.fakultas}</span>
-                    </div>
-                    <div className="detail-item">
-                      <span className="detail-label">Program Studi</span>
-                      <span className="detail-value">{selectedKandidat.prodi}</span>
-                    </div>
-                  </div>
+              <div className="confirmation-modal">
+                <div className="confirmation-header">
+                  <h2>Konfirmasi Pilihan</h2>
                 </div>
-
-                <label className="confirmation-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={checkboxConfirm}
-                    onChange={(event) => setCheckboxConfirm(event.target.checked)}
-                  />
-                  <span>Saya yakin dengan pilihan saya dan memahami bahwa keputusan ini final.</span>
-                </label>
+                <div className="confirmation-body">
+                  <p className="confirmation-text">
+                    Anda memilih <strong>PASLON {selectedKandidat.nomorUrut.toString().padStart(2, '0')}</strong>.
+                  </p>
+                  <p className="confirmation-warning">
+                    Setelah mengirim, suara tidak dapat diubah.
+                  </p>
+                </div>
 
                 <div className="confirmation-actions">
                   <button className="btn-secondary" onClick={handleKembali}>
-                    ← Kembali
+                    BATAL
                   </button>
                   <button
                     className="btn-primary"
                     onClick={handleKirimSuara}
-                    disabled={!checkboxConfirm || isSubmitting}
+                    disabled={isSubmitting}
                   >
-                    {isSubmitting ? 'Mengirim...' : 'Kirim Suara'}
+                    {isSubmitting ? 'Mengirim...' : 'KIRIM SUARA'}
                   </button>
                 </div>
               </div>

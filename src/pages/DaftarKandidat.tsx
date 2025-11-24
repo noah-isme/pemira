@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef, type JSX } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Header from '../components/Header'
 import KandidatCard from '../components/shared/KandidatCard'
 import { fetchPublicCandidates } from '../services/publicCandidates'
+import { fetchPublicCandidateProfileMedia } from '../services/adminCandidateMedia'
 import type { Candidate } from '../types/voting'
 import '../styles/DaftarKandidat.css'
 
@@ -22,7 +23,14 @@ const DaftarKandidat = (): JSX.Element => {
   const [filterFakultas, setFilterFakultas] = useState<string>('Semua')
   const [sortBy, setSortBy] = useState<SortBy>('nomor_urut')
   const [candidates, setCandidates] = useState<Candidate[]>([])
+  const [photoUrls, setPhotoUrls] = useState<Record<number, string>>({})
   const [error, setError] = useState<string | null>(null)
+  const objectUrlsRef = useRef<string[]>([])
+
+  const registerObjectUrl = (url: string) => {
+    objectUrlsRef.current.push(url)
+    return url
+  }
 
   useEffect(() => {
     const controller = new AbortController()
@@ -33,12 +41,45 @@ const DaftarKandidat = (): JSX.Element => {
         setError(null)
       })
       .catch((err) => {
-        console.error('Gagal memuat kandidat', err)
-        setError('Menampilkan data sementara.')
-        setCandidates([])
+        if (err.name !== 'AbortError') {
+          console.error('Gagal memuat kandidat', err)
+          setError('Menampilkan data sementara.')
+          setCandidates([])
+        }
       })
     return () => controller.abort()
   }, [])
+
+  useEffect(() => {
+    if (candidates.length === 0) return
+
+    // Clear existing photo URLs to force re-fetch when candidates change
+    setPhotoUrls({})
+
+    const loadPhotos = async () => {
+      for (const candidate of candidates) {
+        try {
+          // Use public endpoint - no authentication required
+          const url = await fetchPublicCandidateProfileMedia(candidate.id)
+          if (url) {
+            setPhotoUrls((prev) => ({ ...prev, [candidate.id]: registerObjectUrl(url) }))
+          }
+        } catch (err) {
+          // Silently fail - keep placeholder for candidates without photos
+          console.debug(`Could not fetch photo for candidate ${candidate.id}:`, err)
+        }
+      }
+    }
+    void loadPhotos()
+  }, [candidates])
+
+  useEffect(
+    () => () => {
+      objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url))
+      objectUrlsRef.current = []
+    },
+    [],
+  )
 
   const filteredCandidates = useMemo(() => {
     let filtered: Candidate[] = [...candidates]
@@ -153,7 +194,7 @@ const DaftarKandidat = (): JSX.Element => {
           ) : (
             <div className="kandidat-grid">
               {filteredCandidates.map((candidate, index) => (
-                <KandidatCard key={candidate.id} kandidat={candidate} onClick={goToCandidate} animationDelay={index * 0.1} />
+                <KandidatCard key={candidate.id} kandidat={candidate} onClick={goToCandidate} animationDelay={index * 0.1} photoUrl={photoUrls[candidate.id]} />
               ))}
             </div>
           )}

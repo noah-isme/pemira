@@ -1,0 +1,262 @@
+.jadwal-pemilu-page {
+    min-height: 100vh;
+    background: #f8fafc;
+}
+
+.jadwal-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.jadwal-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.jadwal-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #1a1a1a;
+    margin: 0 0 1rem 0;
+}
+
+.jadwal-subtitle {
+    font-size: 1.125rem;
+    color: #64748b;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.jadwal-timeline {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.timeline-phases {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    position: relative;
+}
+
+.timeline-phases::before {
+    content: '';
+    position: absolute;
+    left: 20px;
+    top: 40px;
+    bottom: 40px;
+    width: 3px;
+    background: #e2e8f0;
+    border-radius: 2px;
+}
+
+.timeline-phase {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+    position: relative;
+    padding: 1.5rem;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.timeline-phase:hover {
+    background: #f8fafc;
+}
+
+.phase-dot {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 4px solid #e2e8f0;
+    background: white;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.timeline-phase.active .phase-dot {
+    background: #667eea;
+    border-color: #667eea;
+}
+
+.timeline-phase.active .phase-dot::after {
+    content: '✓';
+    color: white;
+    font-size: 1.25rem;
+    font-weight: bold;
+}
+
+.timeline-phase.upcoming .phase-dot {
+    background: white;
+    border-color: #cbd5e0;
+}
+
+.phase-content {
+    flex: 1;
+}
+
+.phase-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0 0 0.5rem 0;
+}
+
+.timeline-phase.active .phase-title {
+    color: #667eea;
+}
+
+.phase-desc {
+    font-size: 1rem;
+    color: #64748b;
+    margin: 0 0 1rem 0;
+    line-height: 1.5;
+}
+
+.phase-dates {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    font-size: 0.875rem;
+    color: #475569;
+    font-weight: 500;
+}
+
+.date-range {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.date-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.date-label {
+    font-weight: 600;
+    color: #374151;
+    min-width: 60px;
+}
+
+.date-value {
+    color: #1f2937;
+    font-family: 'Inter', system-ui, sans-serif;
+    background: #f3f4f6;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    border: 1px solid #e5e7eb;
+}
+
+.jadwal-footer {
+    margin-top: 3rem;
+}
+
+.jadwal-note {
+    background: #fef3c7;
+    border: 1px solid #f59e0b;
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.note-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #92400e;
+    margin: 0 0 1rem 0;
+}
+
+.note-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.note-list li {
+    color: #78350f;
+    margin-bottom: 0.5rem;
+    padding-left: 1.5rem;
+    position: relative;
+}
+
+.note-list li::before {
+    content: '⚠️';
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+.note-list li:last-child {
+    margin-bottom: 0;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .jadwal-container {
+        padding: 1rem;
+    }
+
+    .jadwal-title {
+        font-size: 2rem;
+    }
+
+    .jadwal-subtitle {
+        font-size: 1rem;
+    }
+
+    .jadwal-timeline {
+        padding: 1.5rem;
+    }
+
+    .timeline-phases::before {
+        left: 18px;
+    }
+
+    .timeline-phase {
+        padding: 1rem;
+        gap: 1rem;
+    }
+
+    .phase-dot {
+        width: 36px;
+        height: 36px;
+    }
+
+    .phase-title {
+        font-size: 1.125rem;
+    }
+
+    .phase-desc {
+        font-size: 0.875rem;
+    }
+
+    .phase-dates {
+        font-size: 0.8125rem;
+    }
+
+    .date-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+
+    .date-label {
+        min-width: auto;
+        font-size: 0.75rem;
+    }
+
+    .date-value {
+        font-size: 0.8125rem;
+        width: 100%;
+        text-align: center;
+    }
+}

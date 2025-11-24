@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import AdminLayout from '../components/admin/AdminLayout'
 import { useTPSAdminStore } from '../hooks/useTPSAdminStore'
+import { useToast } from '../components/Toast'
 import type { TPSAdmin } from '../types/tpsAdmin'
 import '../styles/AdminTPS.css'
 
@@ -16,6 +17,7 @@ const AdminTPSForm = (): JSX.Element => {
   const [submitting, setSubmitting] = useState(false)
   const kodeAvailable = useMemo(() => isKodeAvailable(formData.kode, editing ? formData.id : undefined), [formData.kode, editing, formData.id, isKodeAvailable])
   const pageTitle = editing ? 'Edit TPS' : 'Tambah TPS'
+  const { showToast } = useToast()
 
   useEffect(() => {
     if (existing) {
@@ -35,24 +37,25 @@ const AdminTPSForm = (): JSX.Element => {
 
   const handleSubmit = async () => {
     if (!formData.nama || !formData.kode || !formData.lokasi) {
-      alert('Nama TPS, Kode, dan lokasi wajib diisi.')
+      showToast('Nama TPS, Kode, dan lokasi wajib diisi.', 'warning')
       return
     }
     if (!kodeAvailable) {
-      alert('Kode TPS sudah digunakan.')
+      showToast('Kode TPS sudah digunakan.', 'warning')
       return
     }
     if (formData.jamBuka && formData.jamTutup && formData.jamBuka >= formData.jamTutup) {
-      alert('Jam buka harus lebih awal dibanding jam tutup.')
+      showToast('Jam buka harus lebih awal dibanding jam tutup.', 'warning')
       return
     }
     try {
       setSubmitting(true)
       const saved = await saveTPS(formData)
+      showToast('TPS berhasil disimpan.', 'success')
       navigate(`/admin/tps/${saved.id}`)
     } catch (err) {
       console.error('Failed to save TPS', err)
-      alert('Gagal menyimpan TPS. Coba lagi atau periksa koneksi ke server API.')
+      showToast('Gagal menyimpan TPS. Coba lagi atau periksa koneksi ke server API.', 'error')
     } finally {
       setSubmitting(false)
     }

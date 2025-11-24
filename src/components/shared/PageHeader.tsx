@@ -1,14 +1,8 @@
 import { useState } from 'react'
 import PemiraLogos from './PemiraLogos'
+import { usePopup } from '../Popup'
 import type { VoterProfile } from '../../types/voting'
 import '../../styles/shared/PageHeader.css'
-
-const fallbackRedirect = () => {
-  if (window.confirm('Yakin ingin keluar?')) {
-    window.sessionStorage.clear()
-    window.location.href = '/'
-  }
-}
 
 type PageHeaderProps = {
   logo?: boolean
@@ -26,14 +20,25 @@ const PageHeader = ({
   onLogout,
 }: PageHeaderProps): JSX.Element => {
   const [showDropdown, setShowDropdown] = useState(false)
+  const { showPopup } = usePopup()
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setShowDropdown(false)
     if (onLogout) {
       onLogout()
       return
     }
-    fallbackRedirect()
+    const confirmed = await showPopup({
+      title: 'Konfirmasi Keluar',
+      message: 'Yakin ingin keluar?',
+      type: 'warning',
+      confirmText: 'Keluar',
+      cancelText: 'Batal',
+    })
+    if (confirmed) {
+      window.sessionStorage.clear()
+      window.location.href = '/'
+    }
   }
 
   return (

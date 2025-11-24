@@ -1,4 +1,4 @@
-import type { KeyboardEvent } from 'react'
+import type { KeyboardEvent, JSX } from 'react'
 import type { Candidate } from '../../types/voting'
 import '../../styles/shared/KandidatCard.css'
 
@@ -7,9 +7,10 @@ type KandidatCardProps = {
   onClick?: (id: number) => void
   variant?: 'full' | 'preview'
   animationDelay?: number
+  photoUrl?: string
 }
 
-const KandidatCard = ({ kandidat, onClick, variant = 'full', animationDelay = 0 }: KandidatCardProps): JSX.Element => {
+const KandidatCard = ({ kandidat, onClick, variant = 'full', animationDelay = 0, photoUrl }: KandidatCardProps): JSX.Element => {
   const handleClick = () => {
     onClick?.(kandidat.id)
   }
@@ -30,16 +31,20 @@ const KandidatCard = ({ kandidat, onClick, variant = 'full', animationDelay = 0 
   }
 
   return (
-    <div 
-      className="kandidat-card" 
-      onClick={handleClick} 
-      role="button" 
-      tabIndex={0} 
+    <div
+      className="kandidat-card"
+      onClick={handleClick}
+      role="button"
+      tabIndex={0}
       onKeyPress={handleKeyPress}
       style={{ animationDelay: `${animationDelay}s` }}
     >
       <div className="kandidat-photo">
-        <div className="photo-placeholder">{kandidat.foto || kandidat.nomorUrut}</div>
+        {photoUrl ? (
+          <img src={photoUrl} alt={kandidat.nama} className="kandidat-photo-img" />
+        ) : (
+          <div className="photo-placeholder">{kandidat.nomorUrut}</div>
+        )}
       </div>
 
       <div className="kandidat-nomor-urut">

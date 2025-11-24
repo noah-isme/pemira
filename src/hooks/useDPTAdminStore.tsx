@@ -115,7 +115,7 @@ export const DPTAdminProvider = ({ children }: { children: ReactNode }) => {
       return
     }
     void refresh()
-  }, [token, refresh])
+  }, [token, refresh, electionId])
 
   useEffect(() => {
     setPage(1)

@@ -1,4 +1,4 @@
-export type CandidateStatus = 'draft' | 'active' | 'hidden' | 'archived'
+export type CandidateStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN'
 
 export type CandidateMediaSlot = 'poster' | 'photo_extra' | 'pdf_program' | 'pdf_visimisi'
 

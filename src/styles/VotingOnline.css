@@ -20,6 +20,49 @@
   gap: 2rem;
 }
 
+/* Status Bar */
+.voting-status-bar {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.status-label {
+  font-size: 0.95rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.status-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+}
+
+.status-belum {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-timer {
+  background: #dbeafe;
+  color: #1e40af;
+  font-family: 'Courier New', monospace;
+}
+
+
 /* Progress Steps */
 .progress-steps {
   background: white;
@@ -712,4 +755,81 @@
     gap: 0.5rem;
     text-align: center;
   }
+}
+
+/* Visi Ringkas */
+.visi-ringkas {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-style: italic;
+  margin-top: 0.5rem;
+}
+
+/* Confirmation Modal */
+.confirmation-modal {
+  background: white;
+  border-radius: 16px;
+  padding: 2.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  max-width: 500px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.confirmation-header h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1a202c;
+  margin: 0 0 1.5rem 0;
+}
+
+.confirmation-body {
+  margin-bottom: 2rem;
+}
+
+.confirmation-text {
+  font-size: 1.125rem;
+  color: #2d3748;
+  margin-bottom: 1rem;
+}
+
+.confirmation-warning {
+  font-size: 0.95rem;
+  color: #e53e3e;
+  font-weight: 600;
+}
+
+.confirmation-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.confirmation-actions button {
+  padding: 0.875rem 2rem;
+  font-size: 1rem;
+  font-weight: 700;
+  border-radius: 8px;
+  cursor: pointer;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.confirmation-actions .btn-secondary {
+  background: #e2e8f0;
+  color: #4a5568;
+}
+
+.confirmation-actions .btn-secondary:hover {
+  background: #cbd5e0;
+}
+
+.confirmation-actions .btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.confirmation-actions .btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
 }

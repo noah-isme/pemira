@@ -1,24 +1,70 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type JSX } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AdminLayout from '../components/admin/AdminLayout'
 import { useCandidateAdminStore } from '../hooks/useCandidateAdminStore'
+import { useAdminAuth } from '../hooks/useAdminAuth'
+import { usePopup } from '../components/Popup'
+import { fetchCandidateProfileMedia } from '../services/adminCandidateMedia'
 import type { CandidateStatus } from '../types/candidateAdmin'
 import '../styles/AdminCandidates.css'
 
 const statusOptions: { value: CandidateStatus | 'all'; label: string }[] = [
   { value: 'all', label: 'Semua Status' },
-  { value: 'active', label: 'Aktif' },
-  { value: 'draft', label: 'Draft' },
-  { value: 'hidden', label: 'Disembunyikan' },
-  { value: 'archived', label: 'Arsip' },
+  { value: 'PENDING', label: 'Menunggu Review' },
+  { value: 'APPROVED', label: 'Disetujui' },
+  { value: 'REJECTED', label: 'Ditolak' },
+  { value: 'WITHDRAWN', label: 'Ditarik' },
 ]
 
 const AdminCandidatesList = (): JSX.Element => {
   const navigate = useNavigate()
+  const { token } = useAdminAuth()
   const { candidates, archiveCandidate, refresh, loading, error } = useCandidateAdminStore()
+  const { showPopup } = usePopup()
   const [search, setSearch] = useState('')
   const [facultyFilter, setFacultyFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState<CandidateStatus | 'all'>('all')
+  const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({})
+  const objectUrlsRef = useRef<string[]>([])
+
+  const registerObjectUrl = (url: string) => {
+    objectUrlsRef.current.push(url)
+    return url
+  }
+
+  const candidatesToFetch = useMemo(
+    () =>
+      candidates.filter(
+        (candidate) => candidate.photoUrl && candidate.photoUrl.startsWith('http') && !photoUrls[candidate.id]
+      ),
+    [candidates, photoUrls]
+  )
+
+  useEffect(() => {
+    if (!token || candidatesToFetch.length === 0) return
+
+    const loadPhotos = async () => {
+      for (const candidate of candidatesToFetch) {
+        try {
+          const url = await fetchCandidateProfileMedia(token, candidate.id)
+          if (url) {
+            setPhotoUrls((prev) => ({ ...prev, [candidate.id]: registerObjectUrl(url) }))
+          }
+        } catch (err) {
+          console.error(`Failed to fetch photo for candidate ${candidate.id}`, err)
+        }
+      }
+    }
+    void loadPhotos()
+  }, [candidatesToFetch, token])
+
+  useEffect(
+    () => () => {
+      objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url))
+      objectUrlsRef.current = []
+    },
+    [],
+  )
 
   const facultyOptions = useMemo(() => {
     const faculties = Array.from(new Set(candidates.map((candidate) => candidate.faculty)))
@@ -34,8 +80,15 @@ const AdminCandidatesList = (): JSX.Element => {
     })
   }, [candidates, facultyFilter, search, statusFilter])
 
-  const handleArchive = (id: string) => {
-    if (!window.confirm('Arsipkan kandidat ini?')) return
+  const handleArchive = async (id: string) => {
+    const confirmed = await showPopup({
+      title: 'Arsipkan Kandidat',
+      message: 'Arsipkan kandidat ini?',
+      type: 'warning',
+      confirmText: 'Arsipkan',
+      cancelText: 'Batal'
+    })
+    if (!confirmed) return
     archiveCandidate(id)
   }
 
@@ -52,18 +105,18 @@ const AdminCandidatesList = (): JSX.Element => {
           </button>
         </div>
 
-      <div className="filters">
-        <div className="status-row">
-          {loading && <span>Memuat kandidat...</span>}
-          {error && <span className="error-text">{error}</span>}
-          <button className="btn-outline" type="button" onClick={() => void refresh()}>
-            Muat ulang
-          </button>
-        </div>
-        <input
-          type="search"
-          placeholder="Cari nama kandidat"
-          value={search}
+        <div className="filters">
+          <div className="status-row">
+            {loading && <span>Memuat kandidat...</span>}
+            {error && <span className="error-text">{error}</span>}
+            <button className="btn-outline" type="button" onClick={() => void refresh()}>
+              Muat ulang
+            </button>
+          </div>
+          <input
+            type="search"
+            placeholder="Cari nama kandidat"
+            value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
           <select value={facultyFilter} onChange={(event) => setFacultyFilter(event.target.value)}>
@@ -108,8 +161,8 @@ const AdminCandidatesList = (): JSX.Element => {
                 return (
                   <tr key={candidate.id}>
                     <td>
-                      {candidate.photoUrl ? (
-                        <img src={candidate.photoUrl} alt={candidate.name} className="candidate-thumb" />
+                      {(candidate.photoUrl && photoUrls[candidate.id]) ? (
+                        <img src={photoUrls[candidate.id]} alt={candidate.name} className="candidate-thumb" />
                       ) : (
                         <div className="candidate-thumb placeholder">?</div>
                       )}
@@ -123,15 +176,15 @@ const AdminCandidatesList = (): JSX.Element => {
                     </td>
                     <td>{candidate.faculty}</td>
                     <td>
-                    <span className={`status-chip ${candidate.status}`}>
-                      {candidate.status === 'active'
-                        ? 'Aktif'
-                        : candidate.status === 'draft'
-                          ? 'Draft'
-                          : candidate.status === 'hidden'
-                            ? 'Disembunyikan'
-                            : 'Arsip'}
-                    </span>
+                      <span className={`status-chip ${candidate.status}`}>
+                        {candidate.status === 'APPROVED'
+                          ? 'Disetujui'
+                          : candidate.status === 'PENDING'
+                            ? 'Menunggu Review'
+                            : candidate.status === 'REJECTED'
+                              ? 'Ditolak'
+                              : 'Ditarik'}
+                      </span>
                     </td>
                     <td>{contentCount} item</td>
                     <td>
