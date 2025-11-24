@@ -1,13 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import {
-  initialTPSHistory,
-  initialTPSLogs,
-  initialTPSQueue,
-  panitiaProfile,
-  tpsPanelInfo,
-  tpsQueueFeed,
-  tpsStaticQRInfo,
-} from '../data/tpsPanel'
+import { panitiaProfile, tpsPanelInfo, tpsStaticQRInfo } from '../data/tpsPanel'
+import { approveTpsCheckin, fetchTpsPanelQueue, fetchTpsPanelSummary, rejectTpsCheckin } from '../services/tpsPanel'
 import type {
   TPSActivityLog,
   TPSHistoryRecord,
@@ -66,21 +59,24 @@ type TPSPanelContextValue = {
   removeFromQueue: (entryId: string) => void
   dismissNotification: () => void
   setPanelMode: (mode: TPSVotingMode) => void
+  syncFromApi: (token: string, tpsId: string) => Promise<void>
+  approveCheckinApi: (token: string, tpsId: string, checkinId: string) => Promise<void>
+  rejectCheckinApi: (token: string, tpsId: string, checkinId: string, reason?: string) => Promise<void>
 }
 
 const TPSPanelContext = createContext<TPSPanelContextValue | undefined>(undefined)
 
 export const TPSPanelProvider = ({ children }: { children: ReactNode }) => {
   const [panelInfo, setPanelInfo] = useState<TPSPanelInfo>(tpsPanelInfo)
-  const [queue, setQueue] = useState<TPSQueueEntry[]>(initialTPSQueue)
-  const [logs, setLogs] = useState<TPSActivityLog[]>(initialTPSLogs)
-  const [historyRecords, setHistoryRecords] = useState<TPSHistoryRecord[]>(initialTPSHistory)
+  const [queue, setQueue] = useState<TPSQueueEntry[]>([])
+  const [logs, setLogs] = useState<TPSActivityLog[]>([])
+  const [historyRecords, setHistoryRecords] = useState<TPSHistoryRecord[]>([])
   const [qrToken, setQrToken] = useState<string>(createToken)
   const [tokenExpiresIn, setTokenExpiresIn] = useState<number>(QR_ROTATION_INTERVAL)
   const [notification, setNotification] = useState<TPSPanelNotification | null>(null)
   const [panelMode, setPanelMode] = useState<TPSVotingMode>('mobile')
 
-  const feedRef = useRef<TPSQueueFeedPayload[]>([...tpsQueueFeed])
+  const feedRef = useRef<TPSQueueFeedPayload[]>([])
 
   const pushLog = useCallback((message: string) => {
     setLogs((prev) => {
@@ -164,21 +160,15 @@ export const TPSPanelProvider = ({ children }: { children: ReactNode }) => {
       const payload: TPSQueueEntry = {
         ...entry,
         id: generateId('queue'),
-        status: 'waiting',
+        status: 'verified',
         token: createToken(),
         waktuScan: new Date().toISOString(),
       }
       setQueue((prev) => capQueueSize([payload, ...prev]))
-      pushLog(`${payload.nama} scan QR dan menunggu verifikasi`)
-      pushHistory({ type: 'open', nim: payload.nim, nama: payload.nama, detail: 'Scan QR TPS' })
-      showNotification({
-        type: 'queue',
-        title: 'Pemilih baru scan QR',
-        message: `${payload.nama} (${payload.nim}) menunggu verifikasi`,
-        entryId: payload.id,
-      })
+      pushLog(`${payload.nama} tercatat hadir (scan QR)`)
+      pushHistory({ type: 'verification', nim: payload.nim, nama: payload.nama, detail: 'Scan QR tercatat otomatis' })
     },
-    [pushHistory, pushLog, showNotification],
+    [capQueueSize, pushHistory, pushLog],
   )
 
   const updateQueueStatus = useCallback(
@@ -238,6 +228,50 @@ export const TPSPanelProvider = ({ children }: { children: ReactNode }) => {
     [capQueueSize, pushHistory, pushLog, showNotification],
   )
 
+  const syncFromApi = useCallback(
+    async (token: string, tpsId: string) => {
+      try {
+        const [summary, items] = await Promise.all([fetchTpsPanelSummary(token, tpsId), fetchTpsPanelQueue(token, tpsId)])
+        setPanelInfo((prev) => ({
+          ...prev,
+          tpsName: summary.name ?? prev.tpsName,
+          tpsCode: summary.code ?? prev.tpsCode,
+          lokasi: summary.location ?? prev.lokasi,
+          status: summary.status?.toUpperCase() === 'ACTIVE' ? 'Aktif' : summary.status ?? prev.status,
+          totalVoters: summary.stats?.total_votes ?? prev.totalVoters,
+        }))
+        setQueue(items)
+        pushLog('Queue disinkron dari API TPS')
+        pushHistory({ type: 'open', detail: 'Sinkronisasi queue dari API' })
+      } catch (err) {
+        const status = (err as { status?: number })?.status
+        if (status === 404) {
+          setQueue([])
+          showNotification({ title: 'TPS tidak ditemukan', message: 'Endpoint panel TPS belum tersedia atau tpsId tidak valid.', type: 'warning' })
+          return
+        }
+        console.error('Failed to sync TPS panel from API', err)
+        showNotification({ title: 'Gagal sinkron data TPS', message: 'Pastikan token admin/operator valid dan TPS ID benar.', type: 'info' })
+      }
+    },
+    [pushHistory, pushLog, showNotification],
+  )
+
+  const approveCheckinApi = useCallback(
+    async (token: string, tpsId: string, checkinId: string) => {
+      await approveTpsCheckin(token, tpsId, checkinId)
+      updateQueueStatus(checkinId, 'verified', { notify: true })
+    },
+    [updateQueueStatus],
+  )
+
+  const rejectCheckinApi = useCallback(
+    async (token: string, tpsId: string, checkinId: string, reason?: string) => {
+      await rejectTpsCheckin(token, tpsId, checkinId, reason)
+      updateQueueStatus(checkinId, 'rejected', { notify: true, reason: reason ?? 'Ditolak' })
+    },
+    [updateQueueStatus],
+  )
   const removeFromQueue = useCallback(
     (entryId: string) => {
       setQueue((prev) => {
@@ -258,40 +292,8 @@ export const TPSPanelProvider = ({ children }: { children: ReactNode }) => {
   )
 
   const fetchQueueSnapshot = useCallback(async () => {
-    try {
-      const response = await fetch(`/api/tpsQueue.json?ts=${Date.now()}`)
-      if (!response.ok) {
-        throw new Error('Failed to fetch snapshot')
-      }
-      const payload = (await response.json()) as QueueSnapshotResponse
-      setQueue(
-        capQueueSize(
-          payload.queue.map((item) => ({
-            ...item,
-            id: item.id ?? generateId('queue'),
-            token: item.token ?? createToken(),
-          })),
-        ),
-      )
-      if (payload.panel) {
-        setPanelInfo((prev) => ({ ...prev, ...payload.panel }))
-      }
-      pushLog('Queue disinkron dari endpoint TPS')
-      pushHistory({ type: 'open', detail: 'Sinkronisasi data queue manual' })
-      showNotification({
-        type: 'info',
-        title: 'Data queue diperbarui',
-        message: 'Daftar pemilih terbaru sudah dimuat.',
-      })
-    } catch (error) {
-      console.error(error)
-      showNotification({
-        type: 'warning',
-        title: 'Refresh gagal',
-        message: 'Tidak dapat mengambil data TPS. Coba lagi beberapa saat.',
-      })
-    }
-  }, [capQueueSize, pushHistory, pushLog, setPanelInfo, showNotification])
+    setQueue((prev) => prev)
+  }, [])
 
   useEffect(() => {
     if (!feedRef.current.length) return
@@ -348,6 +350,9 @@ export const TPSPanelProvider = ({ children }: { children: ReactNode }) => {
       triggerManualRefresh: () => {
         void fetchQueueSnapshot()
       },
+      syncFromApi,
+      approveCheckinApi,
+      rejectCheckinApi,
       updateQueueStatus,
       addQueueEntry,
       removeFromQueue,
@@ -364,9 +369,12 @@ export const TPSPanelProvider = ({ children }: { children: ReactNode }) => {
       panelMode,
       queue,
       qrToken,
+      approveCheckinApi,
+      rejectCheckinApi,
       removeFromQueue,
       rotateQrToken,
       setPanelStatus,
+      syncFromApi,
       tokenExpiresIn,
       updateQueueStatus,
     ],

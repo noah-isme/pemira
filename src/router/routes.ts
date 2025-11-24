@@ -59,6 +59,7 @@ export const appRoutes: RouteDefinition[] = [
   { id: 'tps-panel', path: '/tps-panel', Component: TPSPanelDashboard },
   { id: 'tps-panel-history', path: '/tps-panel/riwayat', Component: TPSPanelHistory },
   { id: 'tps-panel-voting-room', path: '/tps-panel/mode-voting', Component: TPSPanelVotingRoom },
+  { id: 'admin-tps-panel', path: '/admin/tps/panel', Component: TPSPanelDashboard, requiresAdminAuth: true },
   { id: 'admin-dashboard', path: '/admin', Component: AdminDashboard, requiresAdminAuth: true },
   { id: 'admin-candidates', path: '/admin/kandidat', Component: AdminCandidatesList, requiresAdminAuth: true },
   { id: 'admin-candidate-add', path: '/admin/kandidat/tambah', Component: AdminCandidateForm, requiresAdminAuth: true },

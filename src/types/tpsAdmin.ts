@@ -1,32 +1,29 @@
-export type TPSStatus = 'draft' | 'active' | 'closed'
+export type TPSStatus = 'active' | 'inactive'
 
-export type TPSType = 'umum' | 'fakultas'
-
-export type TPSPanitia = {
-  id: string
-  userId?: number
-  nama: string
-  peran: string
+export type TPSOperator = {
+  userId: number
+  username: string
+  name?: string
+  email?: string
 }
 
 export type TPSAdmin = {
   id: string
   kode: string
   nama: string
-  fakultasArea: string
   lokasi: string
-  deskripsi?: string
-  tipe: TPSType
-  tanggalVoting: string
-  jamBuka: string
-  jamTutup: string
   kapasitas: number
-  dptTarget: string[]
-  qrId: string
-  qrStatus: 'aktif' | 'nonaktif'
+  jamBuka?: string
+  jamTutup?: string
+  picNama?: string
+  picKontak?: string
+  catatan?: string
   status: TPSStatus
-  panitia: TPSPanitia[]
-  totalSuara: number
-  totalCheckins?: number
+  qrAktif: boolean
+  qrToken?: string
+  qrPayload?: string
   qrCreatedAt?: string
+  createdAt?: string
+  updatedAt?: string
+  operators?: TPSOperator[]
 }

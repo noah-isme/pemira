@@ -14,8 +14,12 @@ export type MonitoringLiveResponse = {
   tps_stats: Array<{
     tps_id: number
     tps_name: string
+    code?: string
     total_votes: number
+    total_checkins?: number
+    approved_checkins?: number
     pending_checkins?: number
+    last_activity_at?: string
   }>
 }
 

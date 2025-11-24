@@ -1,153 +1,178 @@
 import { ACTIVE_ELECTION_ID } from '../config/env'
-import type { TPSAdmin, TPSPanitia, TPSStatus } from '../types/tpsAdmin'
+import type { TPSAdmin, TPSOperator, TPSStatus } from '../types/tpsAdmin'
 import { apiRequest } from '../utils/apiClient'
 
-type ApiTPSStatus = 'DRAFT' | 'ACTIVE' | 'CLOSED'
-
-const toAppStatus = (status: ApiTPSStatus): TPSStatus => {
-  if (status === 'ACTIVE') return 'active'
-  if (status === 'CLOSED') return 'closed'
-  return 'draft'
-}
-
-const toApiStatus = (status: TPSStatus): ApiTPSStatus => {
-  if (status === 'active') return 'ACTIVE'
-  if (status === 'closed') return 'CLOSED'
-  return 'DRAFT'
-}
-
-type AdminTpsListItem = {
+type AdminTpsDTO = {
   id: number
   code: string
   name: string
   location: string
-  status: ApiTPSStatus
-  voting_date: string
-  open_time: string
-  close_time: string
-  total_votes: number
-  total_checkins: number
+  capacity: number
+  is_active: boolean
+  open_time?: string | null
+  close_time?: string | null
+  pic_name?: string | null
+  pic_phone?: string | null
+  notes?: string | null
+  has_active_qr: boolean
+  created_at: string
+  updated_at: string
 }
 
-type AdminTpsDetail = AdminTpsListItem & {
-  election_id: number
-  capacity_estimate: number
-  area_faculty: { id: number | null; name: string | null }
-  qr?: { id: number; qr_secret_suffix: string; is_active: boolean; created_at: string }
-  stats?: {
-    total_votes: number
-    total_checkins: number
-    pending_checkins: number
-    approved_checkins: number
-    rejected_checkins: number
-  }
-  panitia: { user_id: number; name: string; role: string }[]
+type AdminTpsQrMetadata = {
+  tps_id: number
+  code: string
+  name: string
+  active_qr?: { id: number; qr_token: string; created_at: string } | null
 }
 
-const mapTps = (item: AdminTpsListItem | AdminTpsDetail): TPSAdmin => ({
+type AdminTpsQrPrint = {
+  tps_id: number
+  code: string
+  name: string
+  qr_payload: string
+}
+
+type AdminTpsOperatorDTO = {
+  user_id: number
+  username: string
+  name?: string
+  email?: string
+}
+
+export type CreateTPSOperatorPayload = {
+  username: string
+  password: string
+  name?: string
+  email?: string
+}
+
+const toStatus = (isActive: boolean): TPSStatus => (isActive ? 'active' : 'inactive')
+
+const normalizeText = (value?: string | null) => (value && value.trim() ? value : undefined)
+
+const mapTps = (item: AdminTpsDTO): TPSAdmin => ({
   id: item.id.toString(),
   kode: item.code,
   nama: item.name,
-  fakultasArea: 'area_faculty' in item && item.area_faculty?.name ? item.area_faculty.name : 'Semua Fakultas',
   lokasi: item.location,
-  deskripsi: '',
-  tipe: 'umum',
-  tanggalVoting: item.voting_date,
-  jamBuka: item.open_time,
-  jamTutup: item.close_time,
-  kapasitas: 'capacity_estimate' in item ? item.capacity_estimate : 0,
-  dptTarget: [],
-  qrId: 'qr' in item && item.qr ? item.qr.qr_secret_suffix : '',
-  qrStatus: 'qr' in item && item.qr ? (item.qr.is_active ? 'aktif' : 'nonaktif') : 'nonaktif',
-  status: toAppStatus(item.status),
-  panitia:
-    'panitia' in item
-      ? item.panitia.map((member) => ({
-          id: member.user_id.toString(),
-          userId: member.user_id,
-          nama: member.name,
-          peran: member.role,
-        }))
-      : [],
-  totalSuara: item.total_votes ?? ('stats' in item && item.stats ? item.stats.total_votes : 0),
-  totalCheckins: 'total_checkins' in item ? item.total_checkins : undefined,
-  qrCreatedAt: 'qr' in item && item.qr ? item.qr.created_at : undefined,
+  kapasitas: item.capacity ?? 0,
+  jamBuka: normalizeText(item.open_time),
+  jamTutup: normalizeText(item.close_time),
+  picNama: normalizeText(item.pic_name),
+  picKontak: normalizeText(item.pic_phone),
+  catatan: normalizeText(item.notes),
+  status: toStatus(Boolean(item.is_active)),
+  qrAktif: Boolean(item.has_active_qr),
+  createdAt: item.created_at,
+  updatedAt: item.updated_at,
 })
 
-export const fetchAdminTpsList = async (token: string): Promise<TPSAdmin[]> => {
-  const response = await apiRequest<any>('/admin/tps', { token })
-  const items = Array.isArray(response?.data?.items)
-    ? response.data.items
-    : Array.isArray(response?.items)
-      ? response.items
-      : Array.isArray(response)
-        ? response
-        : null
+const mapOperator = (op: AdminTpsOperatorDTO): TPSOperator => ({
+  userId: op.user_id,
+  username: op.username,
+  name: op.name,
+  email: op.email,
+})
+
+const unwrapItems = (response: any): AdminTpsDTO[] | null => {
+  if (Array.isArray(response)) return response as AdminTpsDTO[]
+  if (Array.isArray(response?.items)) return response.items as AdminTpsDTO[]
+  if (Array.isArray(response?.data?.items)) return response.data.items as AdminTpsDTO[]
+  return null
+}
+
+const withElectionQuery = (path: string, electionId: number | null = ACTIVE_ELECTION_ID) => {
+  if (!electionId) return path
+  const connector = path.includes('?') ? '&' : '?'
+  return `${path}${connector}election_id=${electionId}`
+}
+
+const buildBody = (payload: TPSAdmin) => ({
+  code: payload.kode,
+  name: payload.nama,
+  location: payload.lokasi,
+  capacity: payload.kapasitas,
+  open_time: normalizeText(payload.jamBuka),
+  close_time: normalizeText(payload.jamTutup),
+  pic_name: normalizeText(payload.picNama),
+  pic_phone: normalizeText(payload.picKontak),
+  notes: normalizeText(payload.catatan),
+})
+
+export const fetchAdminTpsList = async (token: string, electionId: number | null = ACTIVE_ELECTION_ID): Promise<TPSAdmin[]> => {
+  const response = await apiRequest<any>(withElectionQuery('/admin/tps', electionId), { token })
+  const items = unwrapItems(response)
   if (!items) {
     throw new Error('Invalid TPS list response')
   }
-  return (items as AdminTpsListItem[]).map(mapTps)
+  return items.map(mapTps)
 }
 
-export const fetchAdminTpsDetail = async (token: string, id: string): Promise<TPSAdmin> => {
-  const response = await apiRequest<any>(`/admin/tps/${id}`, { token })
-  const data = response?.data ?? response
+export const fetchAdminTpsDetail = async (token: string, id: string, electionId: number | null = ACTIVE_ELECTION_ID): Promise<TPSAdmin> => {
+  const response = await apiRequest<any>(withElectionQuery(`/admin/tps/${id}`, electionId), { token })
+  const data = (response?.data ?? response) as AdminTpsDTO | undefined
   if (!data) {
     throw new Error('Invalid TPS detail response')
   }
-  return mapTps(data as AdminTpsDetail)
+  return mapTps(data)
 }
 
-export const createAdminTps = async (token: string, payload: TPSAdmin): Promise<TPSAdmin> => {
-  const body = {
-    election_id: ACTIVE_ELECTION_ID,
-    code: payload.kode,
-    name: payload.nama,
-    location: payload.lokasi,
-    voting_date: payload.tanggalVoting,
-    open_time: payload.jamBuka,
-    close_time: payload.jamTutup,
-    capacity_estimate: payload.kapasitas,
-    status: toApiStatus(payload.status),
+export const createAdminTps = async (token: string, payload: TPSAdmin, electionId: number | null = ACTIVE_ELECTION_ID): Promise<TPSAdmin> => {
+  const body = buildBody(payload)
+  const response = await apiRequest<AdminTpsDTO>('/admin/tps', { method: 'POST', token, body: { ...body, election_id: electionId ?? 1, is_active: payload.status === 'active' } })
+  return mapTps(response)
+}
+
+export const updateAdminTps = async (token: string, id: string, payload: TPSAdmin, electionId: number | null = ACTIVE_ELECTION_ID): Promise<TPSAdmin> => {
+  const body = { ...buildBody(payload), is_active: payload.status === 'active' }
+  const response = await apiRequest<AdminTpsDTO>(withElectionQuery(`/admin/tps/${id}`, electionId), { method: 'PUT', token, body })
+  return mapTps(response)
+}
+
+export const deleteAdminTps = async (token: string, id: string, electionId: number | null = ACTIVE_ELECTION_ID): Promise<void> => {
+  await apiRequest(withElectionQuery(`/admin/tps/${id}`, electionId), { method: 'DELETE', token })
+}
+
+export const fetchAdminTpsQrMetadata = async (token: string, id: string) => {
+  const response = await apiRequest<AdminTpsQrMetadata>(`/admin/tps/${id}/qr`, { token })
+  const active = response?.active_qr
+  return {
+    qrToken: active?.qr_token,
+    qrCreatedAt: active?.created_at,
+    qrAktif: Boolean(active),
   }
-  const response = await apiRequest<{ success: boolean; data: { id: number; status: ApiTPSStatus } }>('/admin/tps', { method: 'POST', token, body })
-  return { ...payload, id: response.data.id.toString(), status: toAppStatus(response.data.status) }
 }
 
-export const updateAdminTps = async (token: string, id: string, payload: TPSAdmin): Promise<TPSAdmin> => {
-  const body = {
-    code: payload.kode,
-    name: payload.nama,
-    location: payload.lokasi,
-    voting_date: payload.tanggalVoting,
-    open_time: payload.jamBuka,
-    close_time: payload.jamTutup,
-    capacity_estimate: payload.kapasitas,
-    status: toApiStatus(payload.status),
+export const rotateAdminTpsQr = async (token: string, id: string) => {
+  const response = await apiRequest<AdminTpsQrMetadata>(`/admin/tps/${id}/qr/rotate`, { method: 'POST', token })
+  const active = response?.active_qr
+  return {
+    qrToken: active?.qr_token,
+    qrCreatedAt: active?.created_at,
+    qrAktif: Boolean(active),
   }
-  const response = await apiRequest<{ success: boolean; data: { id: number; status: ApiTPSStatus } }>(`/admin/tps/${id}`, {
-    method: 'PUT',
-    token,
-    body,
-  })
-  return { ...payload, id: response.data.id.toString(), status: toAppStatus(response.data.status) }
 }
 
-export const assignPanitiaTps = async (token: string, id: string, panitia: TPSPanitia[]) => {
-  const members = panitia
-    .map((member) => ({
-      user_id: member.userId,
-      role: member.peran,
-    }))
-    .filter((member) => member.user_id !== undefined)
-  if (members.length === 0) return
-  await apiRequest(`/admin/tps/${id}/panitia`, { method: 'PUT', token, body: { members } })
+export const fetchAdminTpsQrForPrint = async (token: string, id: string) => {
+  const response = await apiRequest<AdminTpsQrPrint>(`/admin/tps/${id}/qr/print`, { token })
+  return response.qr_payload
 }
 
-export const regenerateQrTps = async (token: string, id: string) => {
-  const response = await apiRequest<{ success: boolean; data: { qr: { payload: string; created_at: string } } }>(`/admin/tps/${id}/qr/regenerate`, {
+export const fetchAdminTpsOperators = async (token: string, id: string): Promise<TPSOperator[]> => {
+  const response = await apiRequest<AdminTpsOperatorDTO[]>(`/admin/tps/${id}/operators`, { token })
+  return response.map(mapOperator)
+}
+
+export const createAdminTpsOperator = async (token: string, id: string, payload: CreateTPSOperatorPayload): Promise<TPSOperator> => {
+  const response = await apiRequest<AdminTpsOperatorDTO>(`/admin/tps/${id}/operators`, {
     method: 'POST',
     token,
+    body: payload,
   })
-  return response.data.qr
+  return mapOperator(response)
+}
+
+export const deleteAdminTpsOperator = async (token: string, tpsId: string, userId: number): Promise<void> => {
+  await apiRequest(`/admin/tps/${tpsId}/operators/${userId}`, { method: 'DELETE', token })
 }

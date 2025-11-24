@@ -9,19 +9,15 @@ const AdminTPSList = (): JSX.Element => {
   const navigate = useNavigate()
   const { tpsList, refresh, loading, error } = useTPSAdminStore()
   const [search, setSearch] = useState('')
-  const [areaFilter, setAreaFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState<TPSStatus | 'all'>('all')
-
-  const areaOptions = useMemo(() => ['all', ...new Set(tpsList.map((tps) => tps.fakultasArea))], [tpsList])
 
   const filteredList = useMemo(() => {
     return tpsList.filter((tps) => {
       const matchesSearch = [tps.nama, tps.kode, tps.lokasi].some((field) => field.toLowerCase().includes(search.toLowerCase()))
-      const matchesArea = areaFilter === 'all' || tps.fakultasArea === areaFilter
       const matchesStatus = statusFilter === 'all' || tps.status === statusFilter
-      return matchesSearch && matchesArea && matchesStatus
+      return matchesSearch && matchesStatus
     })
-  }, [areaFilter, search, statusFilter, tpsList])
+  }, [search, statusFilter, tpsList])
 
   return (
     <AdminLayout title="TPS Management">
@@ -45,18 +41,10 @@ const AdminTPSList = (): JSX.Element => {
           </button>
         </div>
         <input type="search" placeholder="Cari nama TPS / lokasi / kode" value={search} onChange={(event) => setSearch(event.target.value)} />
-        <select value={areaFilter} onChange={(event) => setAreaFilter(event.target.value)}>
-          {areaOptions.map((option) => (
-            <option key={option} value={option}>
-              {option === 'all' ? 'Semua Fakultas / Area' : option}
-            </option>
-          ))}
-        </select>
         <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as TPSStatus | 'all')}>
           <option value="all">Semua Status</option>
-          <option value="draft">Draft</option>
           <option value="active">Aktif</option>
-          <option value="closed">Ditutup</option>
+          <option value="inactive">Tidak aktif</option>
         </select>
       </div>
 
@@ -68,8 +56,10 @@ const AdminTPSList = (): JSX.Element => {
                 <th>Kode</th>
                 <th>Lokasi</th>
                 <th>Jam</th>
+                <th>Kapasitas</th>
+                <th>PIC</th>
+                <th>QR</th>
                 <th>Status</th>
-                <th>Suara</th>
                 <th>Aksi</th>
               </tr>
             </thead>
@@ -85,19 +75,20 @@ const AdminTPSList = (): JSX.Element => {
                 <tr key={tps.id}>
                   <td>
                     <strong>{tps.nama}</strong>
-                    <p>{tps.fakultasArea}</p>
                   </td>
                   <td>{tps.kode}</td>
                   <td>{tps.lokasi}</td>
                   <td>
-                    {tps.jamBuka} – {tps.jamTutup}
+                    {tps.jamBuka || '—'} – {tps.jamTutup || '—'}
                   </td>
+                  <td>{tps.kapasitas?.toLocaleString('id-ID') ?? '-'}</td>
+                  <td>{tps.picNama || '-'}</td>
+                  <td>{tps.qrAktif ? 'Aktif' : 'Belum ada'}</td>
                   <td>
                     <span className={`status-chip ${tps.status}`}>
-                      {tps.status === 'active' ? 'Aktif' : tps.status === 'draft' ? 'Draft' : 'Ditutup'}
+                      {tps.status === 'active' ? 'Aktif' : 'Tidak aktif'}
                     </span>
                   </td>
-                  <td>{tps.totalSuara.toLocaleString('id-ID')}</td>
                   <td>
                     <div className="table-actions">
                       <button className="btn-table" type="button" onClick={() => navigate(`/admin/tps/${tps.id}`)}>

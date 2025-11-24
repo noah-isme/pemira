@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import TPSPanelHeader from '../components/TPSPanelHeader'
 import TPSPanelVerificationPanel from '../components/TPSPanelVerificationPanel'
 import { securityChecklist } from '../data/tpsPanel'
 import { useTPSPanelStore } from '../hooks/useTPSPanelStore'
+import { useAdminAuth } from '../hooks/useAdminAuth'
 import type { TPSQueueEntry } from '../types/tpsPanel'
 import '../styles/TPSPanel.css'
 
@@ -18,6 +19,9 @@ const formatTime = (value: string) => timeFormatter.format(new Date(value))
 
 const TPSPanelDashboard = (): JSX.Element => {
   const navigate = useNavigate()
+  const { token } = useAdminAuth()
+  const [searchParams] = useSearchParams()
+  const tpsIdParam = searchParams.get('tpsId') ?? undefined
   const {
     panelInfo,
     panitia,
@@ -31,9 +35,15 @@ const TPSPanelDashboard = (): JSX.Element => {
     dismissNotification,
     setPanelMode,
     setPanelStatus,
+    syncFromApi,
   } = useTPSPanelStore()
   const [selectedEntry, setSelectedEntry] = useState<TPSQueueEntry | null>(null)
-  const [panelModeView, setPanelModeView] = useState<'approve' | 'reject' | 'detail'>('approve')
+
+  useEffect(() => {
+    if (token && tpsIdParam) {
+      void syncFromApi(token, tpsIdParam)
+    }
+  }, [syncFromApi, token, tpsIdParam])
 
   const stats = useMemo(() => {
     return queue.reduce(
@@ -49,14 +59,7 @@ const TPSPanelDashboard = (): JSX.Element => {
 
   const highlightEntryId = notification?.type === 'queue' ? notification.entryId : undefined
 
-  const openPanel = (entry: TPSQueueEntry, mode: 'approve' | 'reject' | 'detail' = 'approve') => {
-    setSelectedEntry(entry)
-    setPanelModeView(mode)
-  }
-
-  const handleVerify = (entry: TPSQueueEntry) => openPanel(entry, 'approve')
-  const handleReject = (entry: TPSQueueEntry) => openPanel(entry, 'reject')
-  const handleDetail = (entry: TPSQueueEntry) => openPanel(entry, 'detail')
+  const handleDetail = (entry: TPSQueueEntry) => setSelectedEntry(entry)
 
   const handleCloseTPS = () => {
     if (panelInfo.status !== 'Aktif') return
@@ -77,6 +80,11 @@ const TPSPanelDashboard = (): JSX.Element => {
   return (
     <div className="tps-panel-page">
       <div className="panel-shell">
+        <div className="panel-topbar">
+          <button className="btn-ghost" type="button" onClick={() => window.history.back()}>
+            ← Kembali
+          </button>
+        </div>
         <TPSPanelHeader
           panitia={panitia}
           locationLabel={`${panelInfo.tpsName} (${panelInfo.tpsCode})`}
@@ -111,7 +119,14 @@ const TPSPanelDashboard = (): JSX.Element => {
                     <button className="btn-danger" type="button" disabled={panelInfo.status !== 'Aktif'} onClick={handleCloseTPS}>
                       Tutup TPS
                     </button>
-                    <button className="btn-ghost" type="button" onClick={triggerManualRefresh}>
+                    <button
+                      className="btn-ghost"
+                      type="button"
+                      onClick={() => {
+                        if (token && tpsIdParam) void syncFromApi(token, tpsIdParam)
+                        else triggerManualRefresh()
+                      }}
+                    >
                       Refresh
                     </button>
                   </div>
@@ -204,8 +219,7 @@ const TPSPanelDashboard = (): JSX.Element => {
                     <th>NIM</th>
                     <th>Nama</th>
                     <th>Prodi / Fakultas</th>
-                    <th>Hak Suara</th>
-                    <th>Aksi</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -217,12 +231,12 @@ const TPSPanelDashboard = (): JSX.Element => {
                     </tr>
                   )}
                   {queue.map((entry) => {
-                    const isWaiting = entry.status === 'waiting'
                     const hakSuara = hakSuaraLabel(entry)
                     return (
                       <tr
                         key={entry.id}
                         className={`${entry.id === highlightEntryId ? 'highlight' : ''} ${entry.hasVoted ? 'done' : ''}`.trim()}
+                        onClick={() => handleDetail(entry)}
                       >
                         <td>{formatTime(entry.waktuScan)}</td>
                         <td>{entry.nim}</td>
@@ -237,25 +251,7 @@ const TPSPanelDashboard = (): JSX.Element => {
                           <span className="faculty-label">{entry.fakultas}</span>
                         </td>
                         <td>
-                          <span className={`status-pill ${hakSuara.toLowerCase()}`}>{hakSuara}</span>
-                        </td>
-                        <td>
-                          <div className="queue-actions">
-                            {isWaiting ? (
-                              <>
-                                <button className="btn-table primary" type="button" onClick={() => handleVerify(entry)}>
-                                  ✓ Verifikasi
-                                </button>
-                                <button className="btn-table danger" type="button" onClick={() => handleReject(entry)}>
-                                  ✕ Tolak
-                                </button>
-                              </>
-                            ) : (
-                              <button className="btn-table" type="button" onClick={() => handleDetail(entry)}>
-                                Detail
-                              </button>
-                            )}
-                          </div>
+                          <span className={`status-pill ${entry.status}`}>{hakSuara}</span>
                         </td>
                       </tr>
                     )

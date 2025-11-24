@@ -41,6 +41,11 @@ const TPSPanelVotingRoom = (): JSX.Element => {
   return (
     <div className="tps-panel-page">
       <div className="panel-shell">
+        <div className="panel-topbar">
+          <button className="btn-ghost" type="button" onClick={() => window.history.back()}>
+            ← Kembali
+          </button>
+        </div>
         <TPSPanelHeader panitia={panitia} locationLabel={`${panelInfo.tpsName} (${panelInfo.tpsCode})`} subtitle="Mode Voting TPS" />
 
         <div className="panel-body">

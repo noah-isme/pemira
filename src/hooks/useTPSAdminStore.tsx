@@ -1,40 +1,42 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { assignPanitiaTps, createAdminTps, fetchAdminTpsDetail, fetchAdminTpsList, regenerateQrTps, updateAdminTps } from '../services/adminTps'
-import type { TPSAdmin, TPSPanitia, TPSStatus } from '../types/tpsAdmin'
+import {
+  createAdminTps,
+  fetchAdminTpsDetail,
+  fetchAdminTpsList,
+  fetchAdminTpsQrForPrint,
+  fetchAdminTpsQrMetadata,
+  deleteAdminTps,
+  rotateAdminTpsQr,
+  updateAdminTps,
+} from '../services/adminTps'
+import type { TPSAdmin } from '../types/tpsAdmin'
 import { useAdminAuth } from './useAdminAuth'
-
-const generateId = () => Math.random().toString(36).slice(2, 8)
 
 const initialForm: TPSAdmin = {
   id: '',
   kode: '',
   nama: '',
-  fakultasArea: 'Semua Fakultas',
   lokasi: '',
-  deskripsi: '',
-  tipe: 'umum',
-  tanggalVoting: '2024-06-12',
-  jamBuka: '08:00',
-  jamTutup: '16:00',
   kapasitas: 0,
-  dptTarget: [],
-  qrId: '',
-  qrStatus: 'aktif',
-  status: 'draft',
-  panitia: [],
-  totalSuara: 0,
+  jamBuka: '08:00',
+  jamTutup: '17:00',
+  picNama: '',
+  picKontak: '',
+  catatan: '',
+  status: 'active',
+  qrAktif: false,
 }
 
 const TPSAdminContext = createContext<{
   tpsList: TPSAdmin[]
   getById: (id: string) => TPSAdmin | undefined
   createEmpty: () => TPSAdmin
-  saveTPS: (payload: TPSAdmin, mode: TPSStatus) => Promise<TPSAdmin>
-  updatePanitia: (tpsId: string, panitia: TPSPanitia[]) => Promise<void>
+  saveTPS: (payload: TPSAdmin) => Promise<TPSAdmin>
   isKodeAvailable: (kode: string, excludeId?: string) => boolean
   refresh: () => Promise<void>
   loadDetail: (id: string) => Promise<TPSAdmin | undefined>
-  regenerateQr: (id: string) => Promise<void>
+  rotateQr: (id: string) => Promise<TPSAdmin | undefined>
+  deleteTPS: (id: string) => Promise<void>
   loading: boolean
   error?: string
 } | null>(null)
@@ -47,7 +49,7 @@ export const TPSAdminProvider = ({ children }: { children: ReactNode }) => {
 
   const getById = useCallback((id: string) => tpsList.find((tps) => tps.id === id), [tpsList])
 
-  const createEmpty = useCallback(() => ({ ...initialForm, id: `tps-${generateId()}` }), [])
+  const createEmpty = useCallback(() => ({ ...initialForm }), [])
 
   const refresh = useCallback(async () => {
     if (!token) return
@@ -73,10 +75,13 @@ export const TPSAdminProvider = ({ children }: { children: ReactNode }) => {
   }, [refresh])
 
   const saveTPS = useCallback(
-    async (payload: TPSAdmin, mode: TPSStatus) => {
-      const prepared = { ...payload, status: mode }
+    async (payload: TPSAdmin) => {
       if (!token) throw new Error('Admin token diperlukan untuk menyimpan TPS')
-      const saved = payload.id && tpsList.some((tps) => tps.id === payload.id) ? await updateAdminTps(token, payload.id, prepared) : await createAdminTps(token, prepared)
+      const isUpdate = Boolean(payload.id && tpsList.some((tps) => tps.id === payload.id))
+      let saved = isUpdate ? await updateAdminTps(token, payload.id, payload) : await createAdminTps(token, payload)
+      if (!isUpdate && payload.status === 'inactive' && saved.status !== 'inactive') {
+        saved = await updateAdminTps(token, saved.id, { ...saved, status: 'inactive' })
+      }
       setTPSList((prev) => {
         const exists = prev.some((tps) => tps.id === saved.id)
         if (exists) return prev.map((tps) => (tps.id === saved.id ? saved : tps))
@@ -87,47 +92,81 @@ export const TPSAdminProvider = ({ children }: { children: ReactNode }) => {
     [tpsList, token],
   )
 
-  const updatePanitia = useCallback(
-    async (tpsId: string, panitia: TPSPanitia[]) => {
-      if (!token) throw new Error('Admin token diperlukan untuk mengatur panitia TPS')
-      await assignPanitiaTps(token, tpsId, panitia)
-      setTPSList((prev) => prev.map((tps) => (tps.id === tpsId ? { ...tps, panitia } : tps)))
-    },
-    [token],
-  )
-
   const loadDetail = useCallback(
     async (id: string) => {
-      if (!token) return getById(id)
+      if (!token) return undefined
+      if (!/^\d+$/.test(id)) {
+        setError('ID TPS tidak valid')
+        return undefined
+      }
+      setLoading(true)
+      setError(undefined)
       try {
-        const detail = await fetchAdminTpsDetail(token, id)
+        const [detail, qrMeta] = await Promise.all([
+          fetchAdminTpsDetail(token, id),
+          fetchAdminTpsQrMetadata(token, id).catch(() => undefined),
+        ])
+        const qrPayload = qrMeta?.qrAktif ? await fetchAdminTpsQrForPrint(token, id).catch(() => undefined) : undefined
+        const merged: TPSAdmin = {
+          ...detail,
+          qrAktif: qrMeta?.qrAktif ?? detail.qrAktif,
+          qrToken: qrMeta?.qrToken ?? detail.qrToken,
+          qrCreatedAt: qrMeta?.qrCreatedAt ?? detail.qrCreatedAt,
+          qrPayload: qrPayload ?? detail.qrPayload,
+        }
         setTPSList((prev) => {
-          const exists = prev.some((tps) => tps.id === detail.id)
-          if (exists) return prev.map((tps) => (tps.id === detail.id ? detail : tps))
-          return [detail, ...prev]
+          const exists = prev.some((tps) => tps.id === merged.id)
+          if (exists) return prev.map((tps) => (tps.id === merged.id ? merged : tps))
+          return [merged, ...prev]
         })
-        return detail
+        return merged
       } catch (err) {
         console.error('Failed to load TPS detail', err)
         setError((err as { message?: string })?.message ?? 'Gagal memuat detail TPS')
         return undefined
+      } finally {
+        setLoading(false)
       }
     },
-    [getById, token],
+    [token],
   )
 
-  const regenerateQr = useCallback(
+  const rotateQr = useCallback(
     async (id: string) => {
       if (!token) throw new Error('Admin token diperlukan untuk generate ulang QR')
       try {
-        await regenerateQrTps(token, id)
-        await loadDetail(id)
+        const rotated = await rotateAdminTpsQr(token, id)
+        const payload = rotated.qrAktif ? await fetchAdminTpsQrForPrint(token, id).catch(() => undefined) : undefined
+        setTPSList((prev) =>
+          prev.map((tps) =>
+            tps.id === id
+              ? {
+                  ...tps,
+                  qrAktif: rotated.qrAktif,
+                  qrToken: rotated.qrToken ?? tps.qrToken,
+                  qrCreatedAt: rotated.qrCreatedAt ?? tps.qrCreatedAt,
+                  qrPayload: payload ?? tps.qrPayload,
+                }
+              : tps,
+          ),
+        )
+        return await loadDetail(id)
       } catch (err) {
         console.error('Failed to regenerate QR', err)
         setError((err as { message?: string })?.message ?? 'Gagal generate ulang QR')
+        return undefined
       }
     },
     [loadDetail, token],
+  )
+
+  const deleteTPS = useCallback(
+    async (id: string) => {
+      if (!token) throw new Error('Admin token diperlukan untuk menghapus TPS')
+      await deleteAdminTps(token, id)
+      setTPSList((prev) => prev.filter((tps) => tps.id !== id))
+    },
+    [token],
   )
 
   const isKodeAvailable = useCallback(
@@ -141,15 +180,15 @@ export const TPSAdminProvider = ({ children }: { children: ReactNode }) => {
       getById,
       createEmpty,
       saveTPS,
-      updatePanitia,
       isKodeAvailable,
       refresh,
       loadDetail,
-      regenerateQr,
+      rotateQr,
+      deleteTPS,
       loading,
       error,
     }),
-    [createEmpty, error, getById, isKodeAvailable, loadDetail, loading, refresh, regenerateQr, saveTPS, tpsList, updatePanitia],
+    [createEmpty, deleteTPS, error, getById, isKodeAvailable, loadDetail, loading, refresh, rotateQr, saveTPS, tpsList],
   )
 
   return <TPSAdminContext.Provider value={value}>{children}</TPSAdminContext.Provider>
