@@ -75,3 +75,7 @@ export const registerLecturerOrStaff = (payload: {
 export const refreshToken = (refreshTokenValue: string) => {
   return apiRequest<AuthTokens>('/auth/refresh', { method: 'POST', body: { refresh_token: refreshTokenValue } })
 }
+
+export const fetchAuthMe = (token: string, options?: { signal?: AbortSignal }) => {
+  return apiRequest<AuthUser>('/auth/me', { token, signal: options?.signal })
+}

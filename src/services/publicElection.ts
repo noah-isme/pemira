@@ -17,6 +17,7 @@ export type PublicElection = {
   name: string
   slug: string
   status: ElectionStatus
+  current_phase?: string
   voting_start_at?: string | null
   voting_end_at?: string | null
   online_enabled: boolean
@@ -28,6 +29,14 @@ export type PublicElection = {
     start_at?: string | null
     end_at?: string | null
   }>
+}
+
+export type PublicPhase = {
+  key?: string
+  phase?: string
+  label?: string
+  start_at?: string | null
+  end_at?: string | null
 }
 
 const unwrapList = (payload: any): PublicElection[] | null => {
@@ -91,4 +100,19 @@ export const fetchCurrentElection = async (options?: { signal?: AbortSignal }): 
     }
     throw err
   }
+}
+
+export const fetchPublicPhases = async (electionId: number, options?: { signal?: AbortSignal }): Promise<PublicPhase[]> => {
+  const { signal } = options ?? {}
+  const response = await apiRequest<any>(`/elections/${electionId}/phases`, { signal }).catch(() => apiRequest<any>(`/elections/${electionId}/timeline`, { signal }))
+  const items = Array.isArray(response?.data?.phases)
+    ? response.data.phases
+    : Array.isArray(response?.phases)
+      ? response.phases
+      : Array.isArray(response?.items)
+        ? response.items
+        : Array.isArray(response)
+          ? response
+          : []
+  return items as PublicPhase[]
 }

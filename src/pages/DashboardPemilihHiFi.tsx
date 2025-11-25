@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useVotingSession } from '../hooks/useVotingSession'
+import { useDashboardPemilih, type PemiraStage } from '../hooks/useDashboardPemilih'
 import '../styles/DashboardPemilihHiFi.css'
 
-type PemiraStage = 'registration' | 'verification' | 'campaign' | 'silence' | 'voting' | 'rekapitulasi'
 type VoterMode = 'ONLINE' | 'OFFLINE'
 type VoterStatus = 'NOT_VOTED' | 'VOTED' | 'CHECKED_IN'
 
@@ -26,41 +26,97 @@ interface VoterData {
 const DashboardPemilihHiFi = (): JSX.Element => {
   const navigate = useNavigate()
   const { session, mahasiswa } = useVotingSession()
-  
-  // Mock data - replace with actual API calls
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [currentStage, setCurrentStage] = useState<PemiraStage>('campaign')
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [voterData, setVoterData] = useState<VoterData>({
-    nama: mahasiswa?.nama || 'Roni Saputra',
-    nim: mahasiswa?.nim || '21034567',
-    mode: 'ONLINE', // or 'OFFLINE'
-    status: 'NOT_VOTED',
-    qrCode: 'QR_CODE_DATA_HERE',
-    qrId: 'OLF-98S7A1'
-  })
+  const dashboardData = useDashboardPemilih(session?.accessToken || null)
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const currentStage = dashboardData.currentStage
+
+  const voterData: VoterData = useMemo(() => {
+    const status = dashboardData.voterStatus
+    const qr = dashboardData.qrData
+    
+    return {
+      nama: dashboardData.user?.profile?.name || mahasiswa?.nama || 'Pemilih',
+      nim: dashboardData.user?.username || mahasiswa?.nim || '-',
+      mode: status?.preferred_method === 'TPS' ? 'OFFLINE' : 'ONLINE',
+      status: status?.has_voted ? 'VOTED' : 'NOT_VOTED',
+      qrCode: qr?.qr_token || '',
+      qrId: qr?.qr_token?.substring(0, 10) || '-',
+    }
+  }, [dashboardData, mahasiswa])
+
   const [countdown, setCountdown] = useState({
-    days: 1,
-    hours: 3,
-    minutes: 24
+    days: 0,
+    hours: 0,
+    minutes: 0
   })
 
-  const timelineStages: TimelineStage[] = [
-    { id: 'registration', label: 'Pendaftaran', status: 'completed', icon: '📝' },
-    { id: 'verification', label: 'Verifikasi Berkas', status: 'completed', icon: '✓' },
-    { id: 'campaign', label: 'Masa Kampanye', status: currentStage === 'campaign' ? 'active' : 'completed', icon: '📣' },
-    { id: 'silence', label: 'Masa Tenang', status: currentStage === 'silence' ? 'active' : 'upcoming', icon: '🤫' },
-    { id: 'voting', label: 'Voting', status: currentStage === 'voting' ? 'active' : 'upcoming', icon: '🗳️' },
-    { id: 'rekapitulasi', label: 'Rekapitulasi', status: 'upcoming', icon: '📊' }
-  ]
+  useEffect(() => {
+    if (!dashboardData.election?.voting_start_at) return
 
-  const notifications = [
-    { time: '10:12', message: 'Verifikasi berkas Anda telah disetujui.' },
-    { time: 'Hari ini', message: 'Masa kampanye resmi dimulai.' },
-    { time: 'Besok', message: 'Tahap voting akan dibuka pukul 08.00 WIB.' }
-  ]
+    const updateCountdown = () => {
+      const now = new Date().getTime()
+      const votingStart = new Date(dashboardData.election!.voting_start_at!).getTime()
+      const distance = votingStart - now
+
+      if (distance < 0) {
+        setCountdown({ days: 0, hours: 0, minutes: 0 })
+        return
+      }
+
+      setCountdown({
+        days: Math.floor(distance / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60))
+      })
+    }
+
+    updateCountdown()
+    const interval = setInterval(updateCountdown, 60000)
+
+    return () => clearInterval(interval)
+  }, [dashboardData.election])
+
+  const timelineStages: TimelineStage[] = useMemo(() => {
+    const stages: PemiraStage[] = ['registration', 'verification', 'campaign', 'silence', 'voting', 'rekapitulasi']
+    const currentIndex = stages.indexOf(currentStage)
+    
+    return [
+      { id: 'registration', label: 'Pendaftaran', status: currentIndex > 0 ? 'completed' : currentIndex === 0 ? 'active' : 'upcoming', icon: '📝' },
+      { id: 'verification', label: 'Verifikasi Berkas', status: currentIndex > 1 ? 'completed' : currentIndex === 1 ? 'active' : 'upcoming', icon: '✓' },
+      { id: 'campaign', label: 'Masa Kampanye', status: currentIndex > 2 ? 'completed' : currentIndex === 2 ? 'active' : 'upcoming', icon: '📣' },
+      { id: 'silence', label: 'Masa Tenang', status: currentIndex > 3 ? 'completed' : currentIndex === 3 ? 'active' : 'upcoming', icon: '🤫' },
+      { id: 'voting', label: 'Voting', status: currentIndex > 4 ? 'completed' : currentIndex === 4 ? 'active' : 'upcoming', icon: '🗳️' },
+      { id: 'rekapitulasi', label: 'Rekapitulasi', status: currentIndex >= 5 ? 'active' : 'upcoming', icon: '📊' }
+    ]
+  }, [currentStage])
+
+  const notifications = useMemo(() => {
+    const notifs = []
+    
+    if (dashboardData.voterStatus?.eligible) {
+      notifs.push({ time: 'Hari ini', message: 'Anda terdaftar sebagai pemilih yang sah.' })
+    }
+    
+    if (currentStage === 'campaign') {
+      notifs.push({ time: 'Hari ini', message: 'Masa kampanye sedang berlangsung.' })
+    }
+    
+    if (currentStage === 'silence') {
+      notifs.push({ time: 'Hari ini', message: 'Masa tenang telah dimulai.' })
+    }
+    
+    if (currentStage === 'voting' && !voterData.status) {
+      notifs.push({ time: 'Sekarang', message: 'Voting telah dibuka! Silakan berikan suara Anda.' })
+    }
+    
+    if (voterData.status === 'VOTED') {
+      notifs.push({ time: 'Selesai', message: 'Terima kasih telah memberikan suara.' })
+    }
+    
+    return notifs.length > 0 ? notifs : [
+      { time: '-', message: 'Tidak ada notifikasi baru.' }
+    ]
+  }, [dashboardData, currentStage, voterData])
 
   useEffect(() => {
     if (!session) {
@@ -82,12 +138,28 @@ const DashboardPemilihHiFi = (): JSX.Element => {
   }
 
   const handleDownloadQR = () => {
-    // Implement QR download
-    alert('QR Code akan diunduh')
+    if (!voterData.qrCode) {
+      alert('QR Code tidak tersedia')
+      return
+    }
+    
+    // Create a simple text file with QR token for now
+    // In production, you should generate actual QR code image
+    const qrText = `PEMIRA UNIWA - QR Code Pemilih\n\nID: ${voterData.qrId}\nToken: ${voterData.qrCode}\n\nTunjukkan kode ini di TPS`
+    const blob = new Blob([qrText], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `qr-pemilih-${voterData.qrId}.txt`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   const handlePrintQR = () => {
-    // Implement QR print
+    if (!voterData.qrCode) {
+      alert('QR Code tidak tersedia')
+      return
+    }
     window.print()
   }
 
@@ -148,7 +220,11 @@ const DashboardPemilihHiFi = (): JSX.Element => {
                 <p className="qr-label">Tunjukkan QR pendaftaran berikut:</p>
                 <div className="qr-code-box">
                   <div className="qr-placeholder">
-                    [QR CODE]
+                    {voterData.qrCode ? (
+                      <div style={{ padding: '20px', background: 'white', fontSize: '10px', wordBreak: 'break-all', fontFamily: 'monospace' }}>
+                        {voterData.qrCode}
+                      </div>
+                    ) : '[QR CODE]'}
                   </div>
                   <div className="qr-id">ID: {voterData.qrId}</div>
                 </div>
@@ -260,7 +336,11 @@ const DashboardPemilihHiFi = (): JSX.Element => {
             <p className="qr-section-label">QR Pendaftaran Anda:</p>
             <div className="qr-code-display">
               <div className="qr-placeholder-small">
-                [QR CODE]
+                {voterData.qrCode ? (
+                  <div style={{ padding: '10px', background: 'white', fontSize: '8px', wordBreak: 'break-all', fontFamily: 'monospace' }}>
+                    {voterData.qrCode}
+                  </div>
+                ) : '[QR CODE]'}
               </div>
               <div className="qr-info">
                 <span className="qr-id-label">ID:</span>
@@ -280,6 +360,25 @@ const DashboardPemilihHiFi = (): JSX.Element => {
         </div>
       )
     }
+  }
+
+  if (dashboardData.loading) {
+    return (
+      <div className="dashboard-pemilih-page" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <div>Memuat data...</div>
+      </div>
+    )
+  }
+
+  if (dashboardData.error) {
+    return (
+      <div className="dashboard-pemilih-page" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <div>
+          <p>Error: {dashboardData.error}</p>
+          <button onClick={() => window.location.reload()}>Muat Ulang</button>
+        </div>
+      </div>
+    )
   }
 
   return (

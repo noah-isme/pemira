@@ -30,6 +30,7 @@ const statusLabelMap: Record<string, string> = {
   VOTING_OPEN: 'Voting dibuka',
   VOTING_CLOSED: 'Voting ditutup',
   RECAPITULATION: 'Rekapitulasi hasil',
+  RECAP: 'Rekapitulasi hasil',
   CLOSED: 'Pemilu selesai',
   ARCHIVED: 'Arsip',
 }
@@ -100,7 +101,10 @@ const HeroSection = ({ election, loading = false, error }: Props): JSX.Element =
   const hasElection = Boolean(election)
   const isNoActiveElectionError = error?.toLowerCase().includes('pemilu aktif')
   const showNoElectionState = !hasElection && !loading
-  const statusLabel = loading ? 'Memuat status...' : hasElection ? statusLabelMap[election?.status ?? ''] ?? 'Pemilu aktif' : 'Belum ada pemilu aktif'
+  
+  // Use current_phase from backend (calculated) instead of status
+  const effectivePhase = election?.current_phase ?? election?.status
+  const statusLabel = loading ? 'Memuat status...' : hasElection ? statusLabelMap[effectivePhase ?? ''] ?? 'Pemilu aktif' : 'Belum ada pemilu aktif'
   const votingPhase = useMemo(() => {
     const phases = (election as any)?.phases as
       | Array<{ phase?: string; key?: string; start_at?: string | null; end_at?: string | null }>
@@ -180,56 +184,6 @@ const HeroSection = ({ election, loading = false, error }: Props): JSX.Element =
     [targetDate],
   )
 
-  // Determine current phase based on timeline
-  const getCurrentPhase = (): string => {
-    if (loading) return 'Memuat status...'
-    if (!hasElection) return 'Belum ada pemilu aktif'
-    
-    const phases = (election as any)?.phases as
-      | Array<{ phase?: string; key?: string; start_at?: string | null; end_at?: string | null }>
-      | undefined
-    
-    if (!phases?.length) {
-      // Fallback to old logic
-      if (isBeforeVoting) return 'Persiapan pemilihan'
-      if (isVotingWindow) return 'Voting dibuka'
-      if (isAfterVoting) return 'Voting ditutup'
-      return statusLabel
-    }
-    
-    // Find current phase based on timeline
-    const now = Date.now()
-    for (const phase of phases) {
-      const startTime = parseDate(phase.start_at ?? (phase as any).startAt)?.getTime()
-      const endTime = parseDate(phase.end_at ?? (phase as any).endAt)?.getTime()
-      
-      if (startTime && endTime && now >= startTime && now <= endTime) {
-        const phaseKey = (phase.phase || phase.key || '').toString().toLowerCase()
-        
-        // Map phase keys to display labels
-        if (phaseKey.includes('pendaftaran') || phaseKey.includes('registration')) return 'Pendaftaran pemilih'
-        if (phaseKey.includes('verifikasi')) return 'Verifikasi berkas'
-        if (phaseKey.includes('kampanye') || phaseKey.includes('campaign')) return 'Masa kampanye'
-        if (phaseKey.includes('tenang')) return 'Masa tenang'
-        if (phaseKey.includes('voting')) return 'Voting dibuka'
-        if (phaseKey.includes('rekapitulasi')) return 'Rekapitulasi hasil'
-        
-        return phase.phase || phase.key || 'Pemilu berlangsung'
-      }
-    }
-    
-    // If before all phases
-    if (phases[0]) {
-      const firstPhaseStart = parseDate(phases[0].start_at ?? (phases[0] as any).startAt)?.getTime()
-      if (firstPhaseStart && now < firstPhaseStart) return 'Persiapan pemilihan'
-    }
-    
-    // If after all phases
-    return 'Pemilu selesai'
-  }
-
-  const effectiveStatusLabel = getCurrentPhase()
-
   const displayCountdownTitle = derivedState === 'voting' ? 'Sisa waktu voting' : 'Menuju hari voting'
   const displayCountdownCaption =
     derivedState === 'voting' ? 'Pemilihan akan ditutup otomatis setelah waktu habis.' : 'Voting dimulai pada tanggal yang tertera.'
@@ -248,7 +202,7 @@ const HeroSection = ({ election, loading = false, error }: Props): JSX.Element =
 
           <div className="hero-badge">
             <span className="badge-status-dot">●</span>
-            <span className="badge-status-text">{effectiveStatusLabel}</span>
+            <span className="badge-status-text">{statusLabel}</span>
           </div>
 
           {showNoElectionState ? (
