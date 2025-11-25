@@ -22,33 +22,41 @@ const AdminTPSList = (): JSX.Element => {
   return (
     <AdminLayout title="TPS Management">
       <div className="admin-tps-page">
-        <div className="page-header">
-          <div>
+        <section className="card page-hero">
+          <div className="page-header">
             <h1>Manajemen TPS</h1>
             <p>Kelola seluruh Tempat Pemungutan Suara (TPS) untuk PEMIRA UNIWA.</p>
           </div>
-          <button className="btn-primary" type="button" onClick={() => navigate('/admin/tps/tambah')}>
-            + Tambah TPS
-          </button>
-        </div>
+          <div className="actions">
+            <button className="btn-outline" type="button" onClick={() => void refresh()}>
+              Muat ulang
+            </button>
+            <button className="btn-primary" type="button" onClick={() => navigate('/admin/tps/tambah')}>
+              + Tambah TPS
+            </button>
+          </div>
+        </section>
 
-      <div className="filters">
-        <div className="status-row">
-          {loading && <span>Memuat data TPS...</span>}
-          {error && <span className="error-text">{error}</span>}
-          <button className="btn-outline" type="button" onClick={() => void refresh()}>
-            Muat ulang
-          </button>
-        </div>
-        <input type="search" placeholder="Cari nama TPS / lokasi / kode" value={search} onChange={(event) => setSearch(event.target.value)} />
-        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as TPSStatus | 'all')}>
-          <option value="all">Semua Status</option>
-          <option value="active">Aktif</option>
-          <option value="inactive">Tidak aktif</option>
-        </select>
-      </div>
+        <section className="filters card">
+          <div className="status-row">
+            {loading && <span>Memuat data TPS...</span>}
+            {error && <span className="error-text">{error}</span>}
+          </div>
+          <label>
+            Cari TPS
+            <input type="search" placeholder="Nama TPS / lokasi / kode" value={search} onChange={(event) => setSearch(event.target.value)} />
+          </label>
+          <label>
+            Status
+            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as TPSStatus | 'all')}>
+              <option value="all">Semua Status</option>
+              <option value="active">Aktif</option>
+              <option value="inactive">Tidak aktif</option>
+            </select>
+          </label>
+        </section>
 
-        <div className="table-wrapper">
+        <div className="table-wrapper card">
           <table>
             <thead>
               <tr>

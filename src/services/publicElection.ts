@@ -1,3 +1,4 @@
+import { ACTIVE_ELECTION_ID } from '../config/env'
 import { apiRequest } from '../utils/apiClient'
 
 export type ElectionStatus =
@@ -20,8 +21,74 @@ export type PublicElection = {
   voting_end_at?: string | null
   online_enabled: boolean
   tps_enabled: boolean
+  phases?: Array<{
+    key?: string
+    phase?: string
+    label?: string
+    start_at?: string | null
+    end_at?: string | null
+  }>
+}
+
+const unwrapList = (payload: any): PublicElection[] | null => {
+  if (Array.isArray(payload)) return payload as PublicElection[]
+  if (Array.isArray(payload?.data?.items)) return payload.data.items as PublicElection[]
+  if (Array.isArray(payload?.items)) return payload.items as PublicElection[]
+  if (Array.isArray(payload?.data)) return payload.data as PublicElection[]
+  return null
+}
+
+const pickActiveElection = (items: PublicElection[]): PublicElection | null => {
+  if (!items.length) return null
+  const statusPriority: ElectionStatus[] = ['VOTING_OPEN', 'VOTING_CLOSED', 'CAMPAIGN', 'REGISTRATION_OPEN', 'REGISTRATION', 'DRAFT']
+  const byPriority = statusPriority
+    .map((status) => items.find((item) => item.status === status))
+    .find(Boolean)
+  if (byPriority) return byPriority
+
+  const now = Date.now()
+  const withFutureStart = items
+    .map((item) => ({
+      item,
+      start: item.voting_start_at ? new Date(item.voting_start_at).getTime() : Number.POSITIVE_INFINITY,
+    }))
+    .filter(({ start }) => !Number.isNaN(start) && start >= now)
+    .sort((a, b) => a.start - b.start)
+  if (withFutureStart[0]) return withFutureStart[0].item
+
+  return items[0]
+}
+
+const fetchElectionListFallback = async (signal?: AbortSignal): Promise<PublicElection> => {
+  const response = await apiRequest<any>('/elections', { signal })
+  const items = unwrapList(response)
+  if (!items || !items.length) throw new Error('Tidak ada pemilu aktif')
+  const picked = pickActiveElection(items)
+  if (!picked) throw new Error('Tidak ada pemilu aktif')
+  return picked
 }
 
 export const fetchCurrentElection = async (options?: { signal?: AbortSignal }): Promise<PublicElection> => {
-  return apiRequest<PublicElection>('/elections/current', { signal: options?.signal })
+  const signal = options?.signal
+  try {
+    return await apiRequest<PublicElection>('/elections/current', { signal })
+  } catch (err: any) {
+    if (err?.status === 404) {
+      try {
+        return await apiRequest<PublicElection>('/elections/current', { signal })
+      } catch (legacyErr: any) {
+        if (legacyErr?.status === 404) {
+          try {
+            const settings = await apiRequest<any>(`/admin/elections/${ACTIVE_ELECTION_ID}/settings`, { signal })
+            if ((settings as any)?.election) return (settings as any).election as PublicElection
+          } catch {
+            // ignore and continue to list fallback
+          }
+          return fetchElectionListFallback(signal)
+        }
+        throw legacyErr
+      }
+    }
+    throw err
+  }
 }

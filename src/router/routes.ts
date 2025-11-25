@@ -13,6 +13,7 @@ import TPSVoting from '../pages/TPSVoting'
 import VotingOnline from '../pages/VotingOnline'
 import VotingTPS from '../pages/VotingTPS'
 import TPSPanelDashboard from '../pages/TPSPanelDashboard'
+import AdminTPSPanel from '../pages/AdminTPSPanel'
 import TPSPanelHistory from '../pages/TPSPanelHistory'
 import TPSPanelVotingRoom from '../pages/TPSPanelVotingRoom'
 import TPSQRScanner from '../pages/TPSQRScanner'
@@ -74,7 +75,7 @@ export const appRoutes: RouteDefinition[] = [
   { id: 'tps-panel-checkin-success', path: '/tps-panel/checkin-success', Component: TPSCheckInSuccess },
   { id: 'tps-panel-voter-detail', path: '/tps-panel/detail/:id', Component: TPSVoterDetail },
   { id: 'tps-panel-settings', path: '/tps-panel/settings', Component: TPSPanelSettings },
-  { id: 'admin-tps-panel', path: '/admin/tps/panel', Component: TPSPanelDashboard, requiresAdminAuth: true },
+  { id: 'admin-tps-panel', path: '/admin/tps/panel', Component: AdminTPSPanel, requiresAdminAuth: true },
   { id: 'admin-dashboard', path: '/admin', Component: AdminDashboard, requiresAdminAuth: true },
   { id: 'admin-candidates', path: '/admin/kandidat', Component: AdminCandidatesList, requiresAdminAuth: true },
   { id: 'admin-candidate-add', path: '/admin/kandidat/tambah', Component: AdminCandidateForm, requiresAdminAuth: true },

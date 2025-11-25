@@ -33,6 +33,24 @@ type QueueResponse = {
   }>
 }
 
+type CreateCheckinResponse = {
+  id: number
+  status: string
+  scan_at?: string
+  has_voted?: boolean
+  voter: {
+    nim: string
+    name: string
+    faculty: string
+    study_program: string
+  }
+}
+
+export type CreateCheckinPayload = {
+  qr_payload?: string
+  registration_code?: string
+}
+
 const mapStatus = (status: string): TPSQueueEntry['status'] => {
   const normalized = status.toUpperCase()
   if (normalized === 'APPROVED') return 'verified'
@@ -58,6 +76,28 @@ export const fetchTpsPanelQueue = async (token: string, tpsId: string, status = 
     waktuScan: item.scan_at,
     hasVoted: item.has_voted,
   }))
+}
+
+export const createTpsCheckin = async (token: string, tpsId: string, payload: CreateCheckinPayload): Promise<TPSQueueEntry> => {
+  const response = await apiRequest<CreateCheckinResponse>(`/api/v1/tps/${tpsId}/checkins`, {
+    method: 'POST',
+    token,
+    body: payload,
+  })
+  return {
+    id: response.id?.toString() ?? `checkin-${Date.now()}`,
+    nim: response.voter.nim,
+    nama: response.voter.name,
+    fakultas: response.voter.faculty,
+    prodi: response.voter.study_program,
+    angkatan: '-',
+    statusMahasiswa: '-',
+    mode: 'mobile',
+    status: mapStatus(response.status),
+    waktuCheckIn: response.scan_at ?? new Date().toISOString(),
+    hasVoted: response.has_voted,
+    voteTime: response.has_voted ? response.scan_at : undefined,
+  }
 }
 
 export const approveTpsCheckin = async (token: string, tpsId: string, checkinId: string) => {

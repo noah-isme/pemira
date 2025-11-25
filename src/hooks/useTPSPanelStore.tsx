@@ -281,7 +281,6 @@ export const TPSPanelProvider = ({ children }: { children: ReactNode }) => {
 
   const checkInVoter = useCallback(
     async (): Promise<boolean> => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       try {
         // Here we would validate the QR code and check-in the voter
         // For now, simulate the check-in process

@@ -6,6 +6,8 @@ export type AdminElectionResponse = {
   year: number
   name: string
   slug: string
+  description?: string
+  academic_year?: string
   status: string
   registration_start_at?: string | null
   registration_end_at?: string | null
@@ -29,6 +31,8 @@ export type AdminElectionUpdatePayload = Partial<{
   year: number
   name: string
   slug: string
+  description: string
+  academic_year: string
   online_enabled: boolean
   tps_enabled: boolean
   registration_start_at: string | null
@@ -44,6 +48,32 @@ export type AdminElectionUpdatePayload = Partial<{
   voting_start_at: string | null
   voting_end_at: string | null
 }>
+
+export type ElectionPhase = {
+  phase: 'registration' | 'verification' | 'campaign' | 'quiet' | 'voting' | 'recap'
+  start_at?: string | null
+  end_at?: string | null
+}
+
+export type ElectionModeSettings = {
+  online_enabled: boolean
+  tps_enabled: boolean
+}
+
+export type ElectionSummary = {
+  total_candidates: number
+  total_voters: number
+  online_voters: number
+  tps_voters: number
+  active_tps: number
+}
+
+export type AdminElectionSettingsResponse = {
+  election: AdminElectionResponse
+  phases?: { phases?: ElectionPhase[] } | ElectionPhase[]
+  mode_settings?: ElectionModeSettings
+  branding?: { primary_logo_id?: string | null; secondary_logo_id?: string | null }
+}
 
 const unwrap = <T>(payload: { data?: T } | T): T => {
   if (payload && typeof payload === 'object' && 'data' in payload) {
@@ -61,6 +91,38 @@ export const fetchAdminElection = async (token: string, electionId: number = ACT
 
 export const updateAdminElection = async (token: string, payload: AdminElectionUpdatePayload, electionId: number = ACTIVE_ELECTION_ID): Promise<AdminElectionResponse> => {
   const response = await apiRequest<AdminElectionResponse | { data: AdminElectionResponse }>(`/admin/elections/${electionId}`, {
+    method: 'PATCH',
+    token,
+    body: payload,
+  })
+  return unwrap(response)
+}
+
+export const fetchElectionPhases = async (token: string, electionId: number = ACTIVE_ELECTION_ID): Promise<ElectionPhase[]> => {
+  const response = await apiRequest<ElectionPhase[] | { data: ElectionPhase[] }>(`/admin/elections/${electionId}/phases`, {
+    token,
+  })
+  return unwrap(response)
+}
+
+export const updateElectionPhases = async (token: string, phases: ElectionPhase[], electionId: number = ACTIVE_ELECTION_ID): Promise<ElectionPhase[]> => {
+  const response = await apiRequest<ElectionPhase[] | { data: ElectionPhase[] }>(`/admin/elections/${electionId}/phases`, {
+    method: 'PUT',
+    token,
+    body: { phases },
+  })
+  return unwrap(response)
+}
+
+export const fetchElectionMode = async (token: string, electionId: number = ACTIVE_ELECTION_ID): Promise<ElectionModeSettings> => {
+  const response = await apiRequest<ElectionModeSettings | { data: ElectionModeSettings }>(`/admin/elections/${electionId}/settings/mode`, {
+    token,
+  })
+  return unwrap(response)
+}
+
+export const updateElectionMode = async (token: string, payload: ElectionModeSettings, electionId: number = ACTIVE_ELECTION_ID): Promise<ElectionModeSettings> => {
+  const response = await apiRequest<ElectionModeSettings | { data: ElectionModeSettings }>(`/admin/elections/${electionId}/settings/mode`, {
     method: 'PUT',
     token,
     body: payload,
@@ -69,7 +131,7 @@ export const updateAdminElection = async (token: string, payload: AdminElectionU
 }
 
 export const openAdminElectionVoting = async (token: string, electionId: number = ACTIVE_ELECTION_ID): Promise<AdminElectionResponse> => {
-  const response = await apiRequest<AdminElectionResponse | { data: AdminElectionResponse }>(`/admin/elections/${electionId}/open-voting`, {
+  const response = await apiRequest<AdminElectionResponse | { data: AdminElectionResponse }>(`/admin/elections/${electionId}/actions/open-voting`, {
     method: 'POST',
     token,
   })
@@ -77,9 +139,68 @@ export const openAdminElectionVoting = async (token: string, electionId: number 
 }
 
 export const closeAdminElectionVoting = async (token: string, electionId: number = ACTIVE_ELECTION_ID): Promise<AdminElectionResponse> => {
-  const response = await apiRequest<AdminElectionResponse | { data: AdminElectionResponse }>(`/admin/elections/${electionId}/close-voting`, {
+  const response = await apiRequest<AdminElectionResponse | { data: AdminElectionResponse }>(`/admin/elections/${electionId}/actions/close-voting`, {
     method: 'POST',
     token,
   })
+  return unwrap(response)
+}
+
+export const archiveAdminElection = async (token: string, electionId: number = ACTIVE_ELECTION_ID): Promise<AdminElectionResponse> => {
+  const response = await apiRequest<AdminElectionResponse | { data: AdminElectionResponse }>(`/admin/elections/${electionId}/actions/archive`, {
+    method: 'POST',
+    token,
+  })
+  return unwrap(response)
+}
+
+export const fetchElectionSummary = async (token: string, electionId: number = ACTIVE_ELECTION_ID): Promise<ElectionSummary> => {
+  const readPayload = (input: any): ElectionSummary => {
+    const payload = unwrap(input as any)
+    const raw = (payload as any)?.summary ?? (payload as any)?.data ?? payload
+    const toNumber = (value: any) => (value === null || value === undefined ? 0 : Number(value) || 0)
+
+    const total_candidates =
+      toNumber(raw?.total_candidates) ||
+      toNumber(raw?.candidates_count) ||
+      toNumber(raw?.candidate_count) ||
+      toNumber(raw?.candidate_total)
+    const total_voters = toNumber(raw?.total_voters) || toNumber(raw?.voters_total) || toNumber(raw?.voters_count)
+    const online_voters = toNumber(raw?.online_voters) || toNumber(raw?.voters_online) || toNumber(raw?.online_count)
+    const tps_voters = toNumber(raw?.tps_voters) || toNumber(raw?.voters_tps) || toNumber(raw?.tps_count)
+    const active_tps = toNumber(raw?.active_tps) || toNumber(raw?.tps_active) || toNumber(raw?.total_tps)
+
+    return {
+      total_candidates,
+      total_voters,
+      online_voters,
+      tps_voters,
+      active_tps,
+    }
+  }
+
+  try {
+    const response = await apiRequest<ElectionSummary | { data: ElectionSummary } | { summary?: ElectionSummary }>(
+      `/api/v1/admin/elections/${electionId}/summary`,
+      {
+        token,
+      },
+    )
+    return readPayload(response)
+  } catch {
+    const legacy = await apiRequest<ElectionSummary | { data: ElectionSummary } | { summary?: ElectionSummary }>(`/admin/elections/${electionId}/summary`, {
+      token,
+    })
+    return readPayload(legacy)
+  }
+}
+
+export const fetchAdminElectionSettings = async (token: string, electionId: number = ACTIVE_ELECTION_ID): Promise<AdminElectionSettingsResponse> => {
+  const response = await apiRequest<AdminElectionSettingsResponse | { data: AdminElectionSettingsResponse }>(
+    `/api/v1/admin/elections/${electionId}/settings`,
+    {
+      token,
+    },
+  )
   return unwrap(response)
 }

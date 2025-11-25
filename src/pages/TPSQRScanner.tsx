@@ -1,8 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { BrowserQRCodeReader } from '@zxing/library'
 import { useAdminAuth } from '../hooks/useAdminAuth'
 import { useTPSPanelStore } from '../hooks/useTPSPanelStore'
+import { createTpsCheckin } from '../services/tpsPanel'
 import '../styles/TPSPanel.css'
 
 const TPSQRScanner = (): JSX.Element => {
@@ -10,21 +11,76 @@ const TPSQRScanner = (): JSX.Element => {
     const { token } = useAdminAuth()
     const [searchParams] = useSearchParams()
     const tpsIdParam = searchParams.get('tpsId') ?? undefined
-    const { panelInfo, checkInVoter } = useTPSPanelStore()
+    const { panelInfo, addQueueEntry } = useTPSPanelStore()
 
     const videoRef = useRef<HTMLVideoElement>(null)
+    const restartRef = useRef<() => Promise<void>>()
     const [isScanning, setIsScanning] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [manualCode, setManualCode] = useState('')
 
-    useEffect(() => {
-        startScanning()
-        return () => {
-            stopScanning()
+    const stopScanning = useCallback(() => {
+        setIsScanning(false)
+        if (videoRef.current && videoRef.current.srcObject) {
+            const stream = videoRef.current.srcObject as MediaStream
+            stream.getTracks().forEach(track => track.stop())
         }
     }, [])
 
-    const startScanning = async () => {
+    const mapError = (message: string) => {
+        const upper = message.toUpperCase()
+        if (upper.includes('INVALID_REGISTRATION_QR')) return 'QR tidak valid untuk TPS ini.'
+        if (upper.includes('NOT_TPS_VOTER')) return 'Pemilih tidak dialokasikan ke TPS ini.'
+        if (upper.includes('ALREADY_VOTED')) return 'Pemilih sudah memberikan suara.'
+        if (upper.includes('CHECKIN_EXISTS')) return 'Pemilih sudah check-in.'
+        if (upper.includes('TPS_MISMATCH')) return 'QR tidak sesuai TPS.'
+        return message
+    }
+
+    const handleCheckin = useCallback(
+        async (payload: { qr_payload?: string; registration_code?: string }) => {
+            if (!token || !tpsIdParam) {
+                setError('Token admin atau TPS tidak ditemukan.')
+                return
+            }
+            try {
+                const entry = await createTpsCheckin(token, tpsIdParam, payload)
+                addQueueEntry({
+                    nim: entry.nim,
+                    nama: entry.nama,
+                    fakultas: entry.fakultas,
+                    prodi: entry.prodi,
+                    angkatan: entry.angkatan,
+                    statusMahasiswa: entry.statusMahasiswa,
+                    mode: entry.mode,
+                })
+                navigate('/tps-panel/checkin-success')
+            } catch (err: any) {
+                const msg = mapError((err?.message as string) ?? 'Gagal melakukan check-in.')
+                setError(msg)
+                setTimeout(() => void restartRef.current?.(), 3000)
+            }
+        },
+        [addQueueEntry, navigate, tpsIdParam, token],
+    )
+
+    const handleQRCode = useCallback(async (qrPayload?: string) => {
+        try {
+            stopScanning()
+            if (!qrPayload) {
+                setError('QR code tidak terbaca. Coba ulangi.')
+                setTimeout(() => void restartRef.current?.(), 2000)
+                return
+            }
+            await handleCheckin({ qr_payload: qrPayload })
+        } catch (err) {
+            console.error('Check-in error:', err)
+            setError('Gagal melakukan check-in. Silakan coba lagi.')
+            setTimeout(() => void restartRef.current?.(), 3000)
+        }
+    }, [handleCheckin, stopScanning])
+
+    const startScanning = useCallback(async () => {
         if (!videoRef.current) return
 
         try {
@@ -35,47 +91,26 @@ const TPSQRScanner = (): JSX.Element => {
             const result = await codeReader.decodeOnceFromVideoDevice(undefined, videoRef.current)
 
             if (result) {
-                await handleQRCode()
+                await handleQRCode(result.getText())
             }
         } catch (err) {
             console.error('QR scan error:', err)
             setError('Gagal mengakses kamera. Pastikan izin kamera diberikan.')
             setIsScanning(false)
         }
-    }
+    }, [handleQRCode])
 
-    const stopScanning = () => {
-        setIsScanning(false)
-        if (videoRef.current && videoRef.current.srcObject) {
-            const stream = videoRef.current.srcObject as MediaStream
-            stream.getTracks().forEach(track => track.stop())
-        }
-    }
-
-    const handleQRCode = async () => {
-        try {
+    useEffect(() => {
+        restartRef.current = startScanning
+        startScanning()
+        return () => {
             stopScanning()
-
-            // Validate QR format and check-in voter
-            if (token && tpsIdParam) {
-                const success = await checkInVoter()
-                if (success) {
-                    navigate('/tps-panel/checkin-success')
-                } else {
-                    setError('QR code tidak valid atau pemilih sudah check-in.')
-                    setTimeout(() => startScanning(), 3000)
-                }
-            }
-        } catch (err) {
-            console.error('Check-in error:', err)
-            setError('Gagal melakukan check-in. Silakan coba lagi.')
-            setTimeout(() => startScanning(), 3000)
         }
-    }
+    }, [startScanning, stopScanning])
 
     const handleManualSubmit = async () => {
         if (!manualCode.trim()) return
-        await handleQRCode(manualCode.trim())
+        await handleCheckin({ registration_code: manualCode.trim() })
     }
 
     return (

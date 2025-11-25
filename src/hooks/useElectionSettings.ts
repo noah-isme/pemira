@@ -1,12 +1,39 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { electionStatusOptions, initialBranding, initialElectionStatus, initialRules, initialTimeline, initialVotingMode } from '../data/electionSettings'
 import { ACTIVE_ELECTION_ID } from '../config/env'
-import { fetchAdminElection, updateAdminElection, type AdminElectionResponse, type AdminElectionUpdatePayload } from '../services/adminElection'
+import {
+  archiveAdminElection,
+  closeAdminElectionVoting,
+  fetchAdminElection,
+  fetchAdminElectionSettings,
+  fetchElectionMode,
+  fetchElectionPhases,
+  fetchElectionSummary,
+  openAdminElectionVoting,
+  updateAdminElection,
+  updateElectionMode,
+  updateElectionPhases,
+  type AdminElectionResponse,
+  type AdminElectionUpdatePayload,
+  type ElectionPhase,
+  type ElectionSummary,
+} from '../services/adminElection'
+import { fetchAdminCandidates } from '../services/adminCandidates'
+import { fetchAdminDpt } from '../services/adminDpt'
+import { fetchAdminTpsList } from '../services/adminTps'
 import { deleteBrandingLogo, fetchBranding, fetchBrandingLogo, uploadBrandingLogo, type BrandingMetadata } from '../services/adminBranding'
 import { fetchCurrentElection } from '../services/publicElection'
 import type { BrandingSettings, ElectionRules, ElectionStatus, TimelineStage, VotingMode } from '../types/electionSettings'
 import type { ApiError } from '../utils/apiClient'
 import { useAdminAuth } from './useAdminAuth'
+
+type BasicElectionInfo = {
+  name: string
+  slug: string
+  year: string
+  academicYear: string
+  description: string
+}
 
 const formatTimestamp = (value: string) => new Date(value).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })
 
@@ -30,6 +57,30 @@ const mapModeToFlags = (mode: VotingMode) => {
   return { online_enabled: true, tps_enabled: false }
 }
 
+const phaseToTimelineId: Record<string, TimelineStage['id']> = {
+  registration: 'pendaftaran',
+  verification: 'pemeriksaan',
+  campaign: 'kampanye',
+  quiet: 'masa_tenang',
+  quiet_period: 'masa_tenang',
+  voting: 'voting_dibuka',
+  recap: 'rekapitulasi',
+}
+
+const timelineIdToPhase: Record<TimelineStage['id'], ElectionPhase['phase']> = {
+  pendaftaran: 'registration',
+  pemeriksaan: 'verification',
+  verifikasi: 'verification',
+  kampanye: 'campaign',
+  masa_tenang: 'quiet',
+  voting_dibuka: 'voting',
+  voting: 'voting',
+  rekapitulasi: 'recap',
+  selesai: 'recap',
+}
+
+const normalizePhaseKey = (value?: string | null) => (value ? value.toLowerCase() : '')
+
 const mapStatusFromApi = (status?: string): ElectionStatus => {
   switch ((status ?? '').toUpperCase()) {
     case 'REGISTRATION_OPEN':
@@ -38,47 +89,20 @@ const mapStatusFromApi = (status?: string): ElectionStatus => {
       return 'pendaftaran'
     case 'CAMPAIGN':
       return 'kampanye'
+    case 'QUIET':
+    case 'QUIET_PERIOD':
+      return 'masa_tenang'
     case 'VOTING_OPEN':
       return 'voting_dibuka'
     case 'VOTING_CLOSED':
     case 'CLOSED':
     case 'ARCHIVED':
       return 'voting_ditutup'
+    case 'RECAP':
+      return 'rekapitulasi'
     default:
       return 'kampanye'
   }
-}
-
-type TimelineFieldKey =
-  | 'registration_start_at'
-  | 'registration_end_at'
-  | 'verification_start_at'
-  | 'verification_end_at'
-  | 'campaign_start_at'
-  | 'campaign_end_at'
-  | 'quiet_start_at'
-  | 'quiet_end_at'
-  | 'recap_start_at'
-  | 'recap_end_at'
-  | 'voting_start_at'
-  | 'voting_end_at'
-
-const stageFieldMap: Record<
-  TimelineStage['id'],
-  {
-    start?: TimelineFieldKey
-    end?: TimelineFieldKey
-  }
-> = {
-  pendaftaran: { start: 'registration_start_at', end: 'registration_end_at' },
-  pemeriksaan: { start: 'verification_start_at', end: 'verification_end_at' },
-  verifikasi: { start: 'verification_start_at', end: 'verification_end_at' },
-  kampanye: { start: 'campaign_start_at', end: 'campaign_end_at' },
-  masa_tenang: { start: 'quiet_start_at', end: 'quiet_end_at' },
-  voting_dibuka: { start: 'voting_start_at', end: 'voting_end_at' },
-  voting: { start: 'voting_start_at', end: 'voting_end_at' },
-  rekapitulasi: { start: 'recap_start_at', end: 'recap_end_at' },
-  selesai: {},
 }
 
 const toIsoOrNull = (value: string): string | null => {
@@ -90,6 +114,14 @@ const toIsoOrNull = (value: string): string | null => {
 
 export const useElectionSettings = () => {
   const { token } = useAdminAuth()
+  const thisYear = new Date().getFullYear()
+  const [basicInfo, setBasicInfo] = useState<BasicElectionInfo>({
+    name: 'Pemira Kampus',
+    slug: 'pemira-kampus',
+    year: thisYear.toString(),
+    academicYear: `${thisYear - 1}/${thisYear}`,
+    description: 'Pemilihan Ketua & Wakil BEM serta anggota MPM Universitas Wijaya Kusuma.',
+  })
   const [currentElectionId, setCurrentElectionId] = useState<number>(ACTIVE_ELECTION_ID)
   const [status, setStatus] = useState<ElectionStatus>(initialElectionStatus)
   const [mode, setMode] = useState<VotingMode>(initialVotingMode)
@@ -99,6 +131,13 @@ export const useElectionSettings = () => {
   const [brandingUploads, setBrandingUploads] = useState<{ primary?: File; secondary?: File }>({})
   const [brandingRemoval, setBrandingRemoval] = useState<{ primary: boolean; secondary: boolean }>({ primary: false, secondary: false })
   const [security, setSecurity] = useState({ lockVoting: false })
+  const [summary, setSummary] = useState<ElectionSummary>({
+    total_candidates: 0,
+    total_voters: 0,
+    online_voters: 0,
+    tps_voters: 0,
+    active_tps: 0,
+  })
   const [saving, setSaving] = useState<{ section: string | null }>({ section: null })
   const [lastUpdated, setLastUpdated] = useState('12 Juni 10:32 oleh Admin Dwi')
   const [loading, setLoading] = useState(false)
@@ -112,17 +151,39 @@ export const useElectionSettings = () => {
     setStatus(mapStatusFromApi(election.status))
     setMode(mapModeFromFlags(election.online_enabled, election.tps_enabled))
     setLastUpdated(formatTimestamp(election.updated_at ?? election.created_at ?? new Date().toISOString()))
+    setBasicInfo((prev) => ({
+      ...prev,
+      name: election.name ?? prev.name,
+      slug: election.slug ?? prev.slug,
+      year: election.year ? election.year.toString() : prev.year,
+      academicYear: election.academic_year ?? (prev.academicYear || (election.year ? `${election.year - 1}/${election.year}` : prev.academicYear)),
+      description: election.description ?? prev.description,
+    }))
+  }, [])
+
+  const setTimelineFromPhases = useCallback((phasesPayload: ElectionPhase[] | { phases?: ElectionPhase[]; items?: ElectionPhase[] } | null | undefined) => {
+    const phases = Array.isArray(phasesPayload)
+      ? phasesPayload
+      : Array.isArray((phasesPayload as any)?.phases)
+        ? ((phasesPayload as { phases: ElectionPhase[] }).phases ?? [])
+        : Array.isArray((phasesPayload as any)?.items)
+          ? ((phasesPayload as { items: ElectionPhase[] }).items ?? [])
+          : []
 
     setTimeline((prev) =>
       prev.map((stage) => {
-        const fields = stageFieldMap[stage.id]
-        if (!fields) return stage
-        const startVal = fields.start ? formatInputDateTime(election[fields.start]) : ''
-        const endVal = fields.end ? formatInputDateTime(election[fields.end]) : ''
+        const targetPhase = phases.find((item) => {
+          const key = normalizePhaseKey((item as any).phase ?? (item as any).key)
+          const mapped = phaseToTimelineId[key]
+          if (mapped === stage.id) return true
+          return stage.id === 'verifikasi' && mapped === 'pemeriksaan'
+        })
+        const startValue = targetPhase ? (targetPhase as any).start_at ?? (targetPhase as any).startAt : undefined
+        const endValue = targetPhase ? (targetPhase as any).end_at ?? (targetPhase as any).endAt : undefined
         return {
           ...stage,
-          start: startVal ?? '',
-          end: endVal ?? '',
+          start: targetPhase ? formatInputDateTime(startValue) ?? '' : '',
+          end: targetPhase ? formatInputDateTime(endValue) ?? '' : '',
         }
       }),
     )
@@ -238,16 +299,63 @@ export const useElectionSettings = () => {
     setLoading(true)
     setError(undefined)
     try {
-      const election = await fetchElectionWithFallback(currentElectionId || ACTIVE_ELECTION_ID)
-      applyElectionData(election)
-      await refreshBranding(election.id)
+      const electionId = currentElectionId || ACTIVE_ELECTION_ID
+      let resolvedElectionId = electionId
+
+      try {
+        const settings = await fetchAdminElectionSettings(token, electionId)
+        if (settings?.election) {
+          applyElectionData(settings.election as AdminElectionResponse)
+          resolvedElectionId = settings.election.id
+        }
+        if (settings?.phases) setTimelineFromPhases(settings.phases as ElectionPhase[] | { phases?: ElectionPhase[] })
+        if (settings?.mode_settings) setMode(mapModeFromFlags(settings.mode_settings.online_enabled, settings.mode_settings.tps_enabled))
+      } catch (settingsErr) {
+        console.warn('Fallback to legacy settings endpoints', settingsErr)
+        const election = await fetchElectionWithFallback(electionId)
+        applyElectionData(election)
+        resolvedElectionId = election.id
+        const phases = await fetchElectionPhases(token, election.id).catch(() => null)
+        if (phases) setTimelineFromPhases(phases)
+        const modeSettings = await fetchElectionMode(token, election.id).catch(() => null)
+        if (modeSettings) setMode(mapModeFromFlags(modeSettings.online_enabled, modeSettings.tps_enabled))
+      }
+
+      const summaryData = await fetchElectionSummary(token, resolvedElectionId).catch(() => null)
+      if (summaryData) {
+        setSummary(summaryData)
+      } else {
+        setSummary((prev) => prev)
+      }
+
+      // Fallback counts if summary missing/zero
+      if (!summaryData || !summaryData.total_candidates || !summaryData.total_voters || !summaryData.active_tps) {
+        try {
+          const [candidates, dptSummary, tpsList] = await Promise.all([
+            fetchAdminCandidates(token, resolvedElectionId).catch(() => []),
+            fetchAdminDpt(token, new URLSearchParams({ limit: '1', page: '1' }), resolvedElectionId).catch(() => ({ total: 0 })),
+            fetchAdminTpsList(token, resolvedElectionId).catch(() => []),
+          ])
+          setSummary({
+            total_candidates: candidates.length || summary.total_candidates,
+            total_voters: (dptSummary as any).total ?? summary.total_voters,
+            online_voters: summary.online_voters,
+            tps_voters: summary.tps_voters,
+            active_tps: tpsList.filter((tps) => tps.status === 'active').length || summary.active_tps,
+          })
+        } catch {
+          // ignore fallback errors
+        }
+      }
+
+      await refreshBranding(resolvedElectionId)
     } catch (err) {
       console.error('Failed to load election settings', err)
       setError((err as { message?: string })?.message ?? 'Gagal memuat pengaturan pemilu')
     } finally {
       setLoading(false)
     }
-  }, [applyElectionData, currentElectionId, fetchElectionWithFallback, refreshBranding, token])
+  }, [applyElectionData, currentElectionId, fetchElectionWithFallback, refreshBranding, setTimelineFromPhases, token])
 
   useEffect(() => {
     void refreshElection()
@@ -290,6 +398,26 @@ export const useElectionSettings = () => {
     return true
   }, [timeline])
 
+  const updateBasicInfo = useCallback(<K extends keyof BasicElectionInfo>(field: K, value: BasicElectionInfo[K]) => {
+    setBasicInfo((prev) => ({ ...prev, [field]: value }))
+  }, [])
+
+  const buildPhasesPayload = useCallback((): ElectionPhase[] => {
+    const phaseOrder: ElectionPhase['phase'][] = ['registration', 'verification', 'campaign', 'quiet', 'voting', 'recap']
+    const collected = new Map<ElectionPhase['phase'], ElectionPhase>()
+
+    timeline.forEach((stage) => {
+      const phaseKey = timelineIdToPhase[stage.id]
+      if (!phaseKey) return
+      const existing = collected.get(phaseKey) ?? { phase: phaseKey }
+      if (stage.start) existing.start_at = toIsoOrNull(stage.start)
+      if (stage.end) existing.end_at = toIsoOrNull(stage.end)
+      collected.set(phaseKey, existing)
+    })
+
+    return phaseOrder.map((phase) => collected.get(phase) ?? { phase, start_at: null, end_at: null })
+  }, [timeline])
+
   const saveSection = useCallback(async (section: string, callback: () => Promise<void> | void) => {
     setSaving({ section })
     setError(undefined)
@@ -305,29 +433,41 @@ export const useElectionSettings = () => {
     }
   }, [])
 
+  const saveBasicInfo = useCallback(async () => {
+    await saveSection('info', async () => {
+      if (!token) return
+      const payload: AdminElectionUpdatePayload = {
+        name: basicInfo.name,
+        slug: basicInfo.slug,
+        description: basicInfo.description,
+        academic_year: basicInfo.academicYear,
+      }
+      const parsedYear = Number.parseInt(basicInfo.year, 10)
+      if (!Number.isNaN(parsedYear)) {
+        payload.year = parsedYear
+      }
+      const updated = await updateAdminElection(token, payload, currentElectionId || ACTIVE_ELECTION_ID)
+      applyElectionData(updated)
+    })
+  }, [applyElectionData, basicInfo.name, basicInfo.slug, basicInfo.year, currentElectionId, saveSection, token])
+
   const saveMode = useCallback(async () => {
     await saveSection('mode', async () => {
       if (!token) return
       const payload = mapModeToFlags(mode)
-      const updated = await updateAdminElection(token, payload, currentElectionId || ACTIVE_ELECTION_ID)
-      applyElectionData(updated)
+      const updated = await updateElectionMode(token, payload, currentElectionId || ACTIVE_ELECTION_ID)
+      setMode(mapModeFromFlags(updated.online_enabled, updated.tps_enabled))
     })
-  }, [applyElectionData, currentElectionId, mode, saveSection, token])
+  }, [currentElectionId, mode, saveSection, token])
 
   const saveTimeline = useCallback(async () => {
     await saveSection('timeline', async () => {
       if (!token) return
-      const payload: AdminElectionUpdatePayload = {}
-      timeline.forEach((stage) => {
-        const fields = stageFieldMap[stage.id]
-        if (!fields) return
-        if (fields.start) payload[fields.start] = toIsoOrNull(stage.start)
-        if (fields.end) payload[fields.end] = toIsoOrNull(stage.end)
-      })
-      const updated = await updateAdminElection(token, payload, currentElectionId || ACTIVE_ELECTION_ID)
-      applyElectionData(updated)
+      const phasesPayload = buildPhasesPayload()
+      const updatedPhases = await updateElectionPhases(token, phasesPayload, currentElectionId || ACTIVE_ELECTION_ID)
+      setTimelineFromPhases(updatedPhases)
     })
-  }, [applyElectionData, currentElectionId, saveSection, timeline, token])
+  }, [buildPhasesPayload, currentElectionId, saveSection, setTimelineFromPhases, token])
 
   const saveRules = useCallback(async () => {
     await saveSection('rules', async () => {
@@ -365,11 +505,38 @@ export const useElectionSettings = () => {
     setBrandingRemoval({ primary: false, secondary: false })
   }, [brandingRemoval.primary, brandingRemoval.secondary, brandingUploads.primary, brandingUploads.secondary, currentElectionId, refreshBranding, saveSection, token])
 
+  const openVoting = useCallback(async () => {
+    await saveSection('voting-control', async () => {
+      if (!token) return
+      const updated = await openAdminElectionVoting(token, currentElectionId || ACTIVE_ELECTION_ID)
+      applyElectionData(updated)
+    })
+  }, [applyElectionData, currentElectionId, saveSection, token])
+
+  const closeVoting = useCallback(async () => {
+    await saveSection('voting-control', async () => {
+      if (!token) return
+      const updated = await closeAdminElectionVoting(token, currentElectionId || ACTIVE_ELECTION_ID)
+      applyElectionData(updated)
+    })
+  }, [applyElectionData, currentElectionId, saveSection, token])
+
+  const archiveElection = useCallback(async () => {
+    await saveSection('archive', async () => {
+      if (!token) return
+      const updated = await archiveAdminElection(token, currentElectionId || ACTIVE_ELECTION_ID)
+      applyElectionData(updated)
+    })
+  }, [applyElectionData, currentElectionId, saveSection, token])
+
   const timelineValid = validateTimeline()
 
   const statusLabel = useMemo(() => electionStatusOptions.find((option) => option.value === status)?.label ?? '', [status])
 
   return {
+    basicInfo,
+    updateBasicInfo,
+    saveBasicInfo,
     status,
     statusLabel,
     setStatus,
@@ -387,9 +554,14 @@ export const useElectionSettings = () => {
     resetBrandingDraft,
     security,
     setSecurity,
+    summary,
     savingSection: saving.section,
     lastUpdated,
     isModeChangeDisabled,
+    isVotingOpen: status === 'voting_dibuka',
+    openVoting,
+    closeVoting,
+    archiveElection,
     saveMode,
     saveTimeline,
     saveRules,

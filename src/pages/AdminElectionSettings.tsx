@@ -1,11 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AdminLayout from '../components/admin/AdminLayout'
-import PemiraLogos from '../components/shared/PemiraLogos'
 import { useElectionSettings } from '../hooks/useElectionSettings'
 import { useToast } from '../components/Toast'
 import { usePopup } from '../components/Popup'
-import type { ElectionRules, VotingMode } from '../types/electionSettings'
+import type { VotingMode } from '../types/electionSettings'
 import '../styles/AdminElectionSettings.css'
 
 const votingModeLabels: Record<VotingMode, string> = {
@@ -14,14 +13,34 @@ const votingModeLabels: Record<VotingMode, string> = {
   hybrid: 'Hybrid (Online + TPS)',
 }
 
-type BrandingKey = 'primaryLogo' | 'secondaryLogo'
+const tabs: { id: 'info' | 'timeline' | 'mode' | 'relations'; label: string }[] = [
+  { id: 'info', label: 'Informasi Umum' },
+  { id: 'timeline', label: 'Tahapan & Jadwal' },
+  { id: 'mode', label: 'Mode Pemilihan' },
+  { id: 'relations', label: 'Keterkaitan Data' },
+]
+
+const quickLinks = [
+  { label: 'Kelola Kandidat', path: '/admin/kandidat' },
+  { label: 'Kelola DPT', path: '/admin/dpt' },
+  { label: 'Kelola TPS', path: '/admin/tps' },
+  { label: 'Lihat Hasil Sementara', path: '/admin/monitoring' },
+]
 
 const AdminElectionSettings = (): JSX.Element => {
   const navigate = useNavigate()
-  const [brandingError, setBrandingError] = useState<string | undefined>(undefined)
+  const [activeTab, setActiveTab] = useState<typeof tabs[number]['id']>('info')
+  const [onlineLoginUrl, setOnlineLoginUrl] = useState('https://pemira.uniwa.ac.id')
+  const [maxOnlineSessions, setMaxOnlineSessions] = useState(3)
+  const [tpsActiveCount, setTpsActiveCount] = useState(5)
+
   const { showToast } = useToast()
   const { showPopup } = usePopup()
   const {
+    basicInfo,
+    updateBasicInfo,
+    saveBasicInfo,
+    status,
     statusLabel,
     mode,
     setMode,
@@ -30,413 +49,481 @@ const AdminElectionSettings = (): JSX.Element => {
     timelineValid,
     rules,
     setRules,
-    branding,
-    queueBrandingUpload,
-    markBrandingRemoval,
-    resetBrandingDraft,
-    security,
-    setSecurity,
+    summary,
     savingSection,
     lastUpdated,
     isModeChangeDisabled,
+    isVotingOpen,
+    openVoting,
+    closeVoting,
+    archiveElection,
     saveMode,
     saveTimeline,
-    saveRules,
-    saveBranding,
     loading,
     error,
   } = useElectionSettings()
 
-  const updateRule = <K extends keyof ElectionRules>(field: K, value: ElectionRules[K]) => {
-    setRules((prev) => ({ ...prev, [field]: value }))
+  const allowOnline = mode === 'online' || mode === 'hybrid'
+  const allowTPS = mode === 'tps' || mode === 'hybrid'
+
+  const statusTone = useMemo(() => {
+    if (status === 'voting_dibuka') return 'success'
+    if (status === 'voting_ditutup' || status === 'rekapitulasi' || status === 'selesai') return 'muted'
+    if (status === 'masa_tenang') return 'warning'
+    return 'info'
+  }, [status])
+
+  useEffect(() => {
+    if (summary?.active_tps !== undefined && summary.active_tps !== null) {
+      setTpsActiveCount(summary.active_tps)
+    }
+  }, [summary.active_tps])
+
+  const formatNumber = (value?: number) => {
+    if (value === undefined || value === null) return '0'
+    return value.toLocaleString('id-ID')
   }
 
-  const handleSaveMode = () => {
-    void saveMode()
+  const formatRange = (start?: string, end?: string) => {
+    const format = (value?: string) => {
+      if (!value) return ''
+      const parsed = new Date(value)
+      if (Number.isNaN(parsed.getTime())) return ''
+      return parsed.toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+    }
+    const startLabel = format(start)
+    const endLabel = format(end)
+    if (startLabel && endLabel) return `${startLabel} - ${endLabel}`
+    return startLabel || endLabel || 'Belum diatur'
   }
 
-  const handleSaveTimeline = () => {
+  const toggleModeCheckbox = (target: 'online' | 'tps', checked: boolean) => {
+    if (target === 'online') {
+      if (checked && allowTPS) setMode('hybrid')
+      else if (checked) setMode('online')
+      else if (allowTPS) setMode('tps')
+    } else {
+      if (checked && allowOnline) setMode('hybrid')
+      else if (checked) setMode('tps')
+      else if (allowOnline) setMode('online')
+    }
+  }
+
+  const handleSaveInfo = async () => {
+    try {
+      await saveBasicInfo()
+      showToast('Informasi pemilu berhasil disimpan.', 'success')
+    } catch (err) {
+      console.error(err)
+      showToast('Gagal menyimpan informasi pemilu.', 'error')
+    }
+  }
+
+  const handleSaveTimeline = async () => {
     if (!timelineValid) {
       showToast('Periksa kembali jadwal. Pastikan tidak ada tanggal yang tumpang tindih.', 'warning')
       return
     }
-    void saveTimeline()
-  }
-
-  const handleSaveRules = () => {
-    void saveRules()
-  }
-
-  const handleSaveBranding = () => {
-    setBrandingError(undefined)
-    void saveBranding()
-  }
-
-  const toSlot = (field: BrandingKey): 'primary' | 'secondary' => (field === 'primaryLogo' ? 'primary' : 'secondary')
-
-  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>, field: BrandingKey) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-    if (file.size > 2 * 1024 * 1024) {
-      setBrandingError('Ukuran logo maksimal 2MB.')
-      return
-    }
-    const reader = new FileReader()
-    reader.onload = () => {
-      queueBrandingUpload(toSlot(field), reader.result as string, file)
-      setBrandingError(undefined)
-      event.target.value = ''
-    }
-    reader.readAsDataURL(file)
-  }
-
-  const handleResetBranding = () => {
-    resetBrandingDraft()
-    setBrandingError(undefined)
-  }
-
-  const handleLockVoting = () => {
-    setSecurity((prev) => ({ ...prev, lockVoting: !prev.lockVoting }))
-  }
-
-  const handleResetTPS = async () => {
-    const confirmed = await showPopup({
-      title: 'Reset Queue TPS',
-      message: 'Reset queue TPS? Semua antrean akan hilang.',
-      type: 'warning',
-      confirmText: 'Reset',
-      cancelText: 'Batal',
-    })
-    if (confirmed) {
-      showToast('Queue TPS berhasil direset (simulasi).', 'success')
+    try {
+      await saveTimeline()
+      showToast('Jadwal pemilu diperbarui.', 'success')
+    } catch (err) {
+      console.error(err)
+      showToast('Gagal menyimpan jadwal pemilu.', 'error')
     }
   }
 
-  const handleResetElection = async () => {
-    const inputText = window.prompt('Ketik "RESET PEMIRA" untuk melanjutkan.')
-    if (inputText === 'RESET PEMIRA') {
+  const handleSaveMode = async () => {
+    try {
+      await saveMode()
+      showToast('Pengaturan mode pemilihan disimpan.', 'success')
+    } catch (err) {
+      console.error(err)
+      showToast('Gagal menyimpan mode pemilihan.', 'error')
+    }
+  }
+
+  const handleArchive = () => {
+    void (async () => {
       const confirmed = await showPopup({
-        title: 'Reset Pemilu',
-        message: 'Yakin ingin reset seluruh suara dan data pemilu? Aksi ini tidak dapat dibatalkan.',
+        title: 'Arsipkan Pemilu',
+        message: 'Yakin mengarsipkan pemilu ini? Aksi tidak dapat dibatalkan.',
         type: 'warning',
-        confirmText: 'Reset Semua',
+        confirmText: 'Arsipkan',
+        cancelText: 'Batal',
+      })
+      if (!confirmed) return
+      try {
+        await archiveElection()
+        showToast('Pemilu berhasil diarsipkan.', 'success')
+      } catch (err) {
+        console.error(err)
+        showToast('Gagal mengarsipkan pemilu.', 'error')
+      }
+    })()
+  }
+
+  const handleVotingControl = async () => {
+    if (isVotingOpen) {
+      const confirmed = await showPopup({
+        title: 'Tutup Voting Sekarang',
+        message: 'Yakin menutup voting? Tindakan ini tidak dapat dibatalkan dan pemilih tidak bisa memberikan suara.',
+        type: 'warning',
+        confirmText: 'Tutup Voting',
         cancelText: 'Batal',
       })
       if (confirmed) {
-        showToast('Pemilu direset (simulasi).', 'success')
+        try {
+          await closeVoting()
+          showToast('Voting berhasil ditutup.', 'success')
+        } catch (err) {
+          console.error(err)
+          showToast('Gagal menutup voting.', 'error')
+        }
+      }
+      return
+    }
+
+    const confirmed = await showPopup({
+      title: 'Buka Voting Sekarang',
+      message: 'Buka voting sesuai jadwal yang telah ditentukan?',
+      type: 'info',
+      confirmText: 'Buka Voting',
+      cancelText: 'Nanti saja',
+    })
+    if (confirmed) {
+      try {
+        await openVoting()
+        showToast('Voting dibuka.', 'success')
+      } catch (err) {
+        console.error(err)
+        showToast('Gagal membuka voting.', 'error')
       }
     }
+  }
+
+  const quickAction = (path: string) => {
+    navigate(path)
   }
 
   return (
     <AdminLayout title="Pengaturan Pemilu">
       <div className="admin-settings-page">
-        <header className="settings-sticky">
-          <div className="settings-top">
-            <a className="back-link" href="/admin">
-              ◀ Pengaturan Pemilu
-            </a>
-            <div className="settings-actions">
-              <div className="status-chip">
-                <span className="dot live" />
-                <span>{statusLabel || 'Aktif'}</span>
+        <header className="settings-hero">
+          <div className="hero-left">
+            <button className="back-link" type="button" onClick={() => navigate('/admin')}>
+              ◀ Kembali ke daftar pemilu
+            </button>
+            <div className="hero-title">
+              <div className="hero-text">
+                <p className="eyebrow">Pemira</p>
+                <h1>{basicInfo.name || 'Pemilu Aktif'}</h1>
+                <div className="meta-row">
+                  <span className="meta-chip">Tahun: {basicInfo.year || '-'}</span>
+                  <span className="meta-chip">Slug: {basicInfo.slug || '-'}</span>
+                  <span className={`status-chip badge-${statusTone}`}>{statusLabel || 'Status pemilu'}</span>
+                </div>
+                <p className="sub-label">Mode: {votingModeLabels[mode]}</p>
+                <p className="sub-label">Terakhir diubah: {lastUpdated}</p>
+                {loading && <p className="sub-label">Memuat pengaturan...</p>}
+                {error && <p className="error-text">{error}</p>}
               </div>
-              <button className="btn-outline" type="button" onClick={() => navigate('/admin/pengaturan/panduan')}>
-                Panduan Alur Pemilihan
-              </button>
             </div>
           </div>
-          <p className="sub-label">Mode: {votingModeLabels[mode]}</p>
-          {loading && <p className="sub-label">Memuat pengaturan...</p>}
-          {error && <p className="error-text">{error}</p>}
+          <div className="hero-actions">
+            <button className="btn-outline" type="button" onClick={() => navigate('/admin/pengaturan/panduan')}>
+              Panduan Alur Pemilihan
+            </button>
+          </div>
         </header>
 
-        <div className="settings-grid">
-          <div className="settings-col">
-            <section className="card schedule-card" id="jadwal">
-              <div className="card-head">
-                <h2>Jadwal Pemilu</h2>
-                <small>Terakhir diubah: {lastUpdated}</small>
-              </div>
-              <div className="schedule-grid">
-                {timeline.map((stage) => (
-                  <div key={stage.id} className="schedule-row">
-                    <label>{stage.label}</label>
-                    <input
-                      className="time-input"
-                      type="datetime-local"
-                      value={stage.start}
-                      onChange={(event) => handleTimelineChange(stage.id, 'start', event.target.value)}
-                    />
-                    <input
-                      className="time-input"
-                      type="datetime-local"
-                      value={stage.end}
-                      onChange={(event) => handleTimelineChange(stage.id, 'end', event.target.value)}
-                    />
-                  </div>
-                ))}
-              </div>
-              {!timelineValid && <p className="warning">Cek kembali jadwal. Ada tanggal yang bertumpuk.</p>}
-              <div className="card-actions">
-                <button className="btn-primary" type="button" onClick={handleSaveTimeline} disabled={savingSection === 'timeline'}>
-                  {savingSection === 'timeline' ? 'Menyimpan...' : 'Simpan Jadwal'}
-                </button>
-              </div>
-            </section>
+        <div className="tabs-card">
+          <div className="tab-list">
+            {tabs.map((tab) => (
+              <button key={tab.id} className={`tab-item ${activeTab === tab.id ? 'active' : ''}`} type="button" onClick={() => setActiveTab(tab.id)}>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
-            <section className="card rules-card">
-              <h2>Hak Suara & Bobot</h2>
-              <div className="rules-stack">
-                <div className="rule-block">
-                  <h3>Hak Suara</h3>
+        <div className="settings-layout">
+          <div className="settings-main">
+            {activeTab === 'info' && (
+              <>
+                <section className="card info-card" id="informasi-umum">
+                  <div className="card-head">
+                    <div>
+                      <p className="eyebrow">Informasi Umum</p>
+                      <h2>Pengaturan Dasar Pemilu</h2>
+                    </div>
+                    <span className={`status-chip badge-${statusTone}`}>{statusLabel || 'Status tidak diketahui'}</span>
+                  </div>
+
+                  <div className="info-grid">
+                    <label>
+                      Nama Pemilu
+                      <input type="text" value={basicInfo.name} onChange={(event) => updateBasicInfo('name', event.target.value)} placeholder="Contoh: PEMIRA UNIWA 2025" />
+                    </label>
+                    <label>
+                      Deskripsi Singkat
+                      <textarea value={basicInfo.description} onChange={(event) => updateBasicInfo('description', event.target.value)} placeholder="Pemilihan Ketua & Wakil BEM ..." />
+                    </label>
+                    <div className="split-field">
+                      <label>
+                        Tahun Akademik
+                        <input type="text" value={basicInfo.academicYear} onChange={(event) => updateBasicInfo('academicYear', event.target.value)} placeholder="2024/2025" />
+                      </label>
+                      <label>
+                        Tahun
+                        <input type="number" value={basicInfo.year} onChange={(event) => updateBasicInfo('year', event.target.value)} placeholder="2025" />
+                      </label>
+                    </div>
+                    <div className="split-field">
+                      <label>
+                        Slug
+                        <input type="text" value={basicInfo.slug} onChange={(event) => updateBasicInfo('slug', event.target.value)} placeholder="pemira-uniwa-2025" />
+                      </label>
+                      <label>
+                        Status Pemilu
+                        <div className="readonly-field">
+                          <span className={`status-chip badge-${statusTone}`}>{statusLabel || 'Status pemilu'}</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="card-actions">
+                    <button className="btn-primary" type="button" onClick={handleSaveInfo} disabled={savingSection === 'info'}>
+                      {savingSection === 'info' ? 'Menyimpan...' : 'Simpan Perubahan'}
+                    </button>
+                    <button className="btn-outline danger" type="button" onClick={handleArchive} disabled={savingSection === 'archive'}>
+                      Arsipkan Pemilu
+                    </button>
+                  </div>
+                </section>
+
+                <section className="card quick-links">
+                  <div className="card-head">
+                    <div>
+                      <p className="eyebrow">Akses Cepat</p>
+                      <h2>Modul Terkait</h2>
+                    </div>
+                  </div>
+                  <div className="quick-links-grid">
+                    {quickLinks.map((link) => (
+                      <button key={link.label} className="quick-link" type="button" onClick={() => quickAction(link.path)}>
+                        <span>{link.label}</span>
+                        <span className="arrow">→</span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              </>
+            )}
+
+            {activeTab === 'timeline' && (
+              <>
+                <section className="card timeline-card">
+                  <div className="card-head">
+                    <div>
+                      <p className="eyebrow">Tahapan & Jadwal</p>
+                      <h2>Timeline Pemira</h2>
+                    </div>
+                    <small>Terakhir diubah: {lastUpdated}</small>
+                  </div>
+
+                  <div className="timeline-rail">
+                    {timeline.map((stage, index) => (
+                      <div key={stage.id} className="timeline-node">
+                        <div className={`node-dot ${index === 0 ? 'start' : ''} ${index === timeline.length - 1 ? 'end' : ''}`} />
+                        <div className="node-label">
+                          <p className="label">{stage.label}</p>
+                          <p className="range">{formatRange(stage.start, stage.end)}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="timeline-table">
+                    <div className="table-head">
+                      <span>Tahap</span>
+                      <span>Mulai</span>
+                      <span>Selesai</span>
+                    </div>
+                    {timeline.map((stage) => (
+                      <div key={stage.id} className="table-row">
+                        <span className="stage-name">{stage.label}</span>
+                        <input
+                          className="time-input"
+                          type="datetime-local"
+                          value={stage.start}
+                          onChange={(event) => handleTimelineChange(stage.id, 'start', event.target.value)}
+                        />
+                        <input className="time-input" type="datetime-local" value={stage.end} onChange={(event) => handleTimelineChange(stage.id, 'end', event.target.value)} />
+                      </div>
+                    ))}
+                  </div>
+                  {!timelineValid && <p className="warning">Cek kembali jadwal. Ada tanggal yang bertumpuk.</p>}
+                  <div className="card-actions">
+                    <button className="btn-primary" type="button" onClick={handleSaveTimeline} disabled={savingSection === 'timeline'}>
+                      {savingSection === 'timeline' ? 'Menyimpan...' : 'Simpan Jadwal'}
+                    </button>
+                  </div>
+                </section>
+
+                <section className="card notes-card">
+                  <h3>Catatan Sistem</h3>
+                  <ul>
+                    <li>Tahapan bergeser otomatis mengikuti waktu sekarang.</li>
+                    <li>Voting hanya bisa dibuka saat waktu masuk range Voting.</li>
+                  </ul>
+                </section>
+              </>
+            )}
+
+            {activeTab === 'mode' && (
+              <section className="card mode-card">
+                <div className="card-head">
+                  <div>
+                    <p className="eyebrow">Mode Pemilihan</p>
+                    <h2>Online / TPS / Hybrid</h2>
+                  </div>
+                  <span className="mode-label">{votingModeLabels[mode]}</span>
+                </div>
+
+                <div className="mode-options">
                   <label className="check-row">
                     <input
                       type="checkbox"
-                      checked={rules.allowActiveStudents}
-                      onChange={(event) => updateRule('allowActiveStudents', event.target.checked)}
+                      checked={allowOnline}
+                      disabled={isModeChangeDisabled}
+                      onChange={(event) => toggleModeCheckbox('online', event.target.checked)}
                     />
-                    Mahasiswa aktif
+                    Online (via platform web)
                   </label>
                   <label className="check-row">
-                    <input
-                      type="checkbox"
-                      checked={rules.allowLeaveStudents}
-                      onChange={(event) => updateRule('allowLeaveStudents', event.target.checked)}
-                    />
-                    Mahasiswa cuti
-                  </label>
-                  <label className="check-row">
-                    <input type="checkbox" checked={rules.allowAlumni} onChange={(event) => updateRule('allowAlumni', event.target.checked)} />
-                    Alumni
+                    <input type="checkbox" checked={allowTPS} disabled={isModeChangeDisabled} onChange={(event) => toggleModeCheckbox('tps', event.target.checked)} />
+                    Offline via TPS (QR Pendaftaran + Surat Suara)
                   </label>
                 </div>
 
-                <div className="rule-block">
-                  <h3>Bobot Suara</h3>
-                  <div className="weight-row">
+                <div className="mode-panels">
+                  <div className="mode-panel">
+                    <h3>Pengaturan Online</h3>
                     <label>
-                      DPT Umum
-                      <input
-                        type="number"
-                        min={1}
-                        max={5}
-                        value={rules.publicWeight}
-                        onChange={(event) => updateRule('publicWeight', Number(event.target.value))}
-                      />
+                      URL Login Pemilih Online
+                      <input type="text" value={onlineLoginUrl} onChange={(event) => setOnlineLoginUrl(event.target.value)} />
                     </label>
                     <label>
-                      DPT Khusus
+                      Max sesi login per pemilih
+                      <input type="number" min={1} value={maxOnlineSessions} onChange={(event) => setMaxOnlineSessions(Number(event.target.value || 0))} />
+                    </label>
+                    <label className="check-row">
+                      <input type="checkbox" checked={rules.singleDeviceOnly} onChange={(event) => setRules((prev) => ({ ...prev, singleDeviceOnly: event.target.checked }))} />
+                      Batasi hanya 1 perangkat
+                    </label>
+                    <label className="check-row">
+                      <input type="checkbox" checked={rules.geolocationRequired} onChange={(event) => setRules((prev) => ({ ...prev, geolocationRequired: event.target.checked }))} />
+                      Lokasi wajib saat login
+                    </label>
+                  </div>
+
+                  <div className="mode-panel">
+                    <div className="panel-head">
+                      <h3>Pengaturan TPS</h3>
+                      <button className="btn-link" type="button" onClick={() => quickAction('/admin/tps')}>
+                        Kelola TPS
+                      </button>
+                    </div>
+                    <label>
+                      Jumlah TPS aktif
+                      <input type="number" min={0} value={tpsActiveCount} onChange={(event) => setTpsActiveCount(Number(event.target.value || 0))} />
+                    </label>
+                    <label className="check-row">
                       <input
-                        type="number"
-                        min={1}
-                        max={5}
-                        value={rules.specialWeight}
-                        onChange={(event) => updateRule('specialWeight', Number(event.target.value))}
+                        type="checkbox"
+                        checked={rules.requirePanitiaVerification}
+                        onChange={(event) => setRules((prev) => ({ ...prev, requirePanitiaVerification: event.target.checked }))}
                       />
+                      Pemilih sudah check-in
+                    </label>
+                    <label className="check-row">
+                      <input type="checkbox" checked={rules.tpsMode === 'dynamic'} onChange={(event) => setRules((prev) => ({ ...prev, tpsMode: event.target.checked ? 'dynamic' : 'static' }))} />
+                      QR paslon valid dan terekam (mode rotasi)
                     </label>
                   </div>
                 </div>
-              </div>
-              <div className="card-actions">
-                <button className="btn-primary" type="button" onClick={handleSaveRules} disabled={savingSection === 'rules'}>
-                  {savingSection === 'rules' ? 'Menyimpan...' : 'Simpan Aturan'}
-                </button>
-              </div>
-            </section>
 
-            <section className="card checklist-card">
-              <h2>Syarat Suara Sah</h2>
-              <ul className="checklist">
-                <li>
-                  <span className="dot" /> Pilih satu kandidat
-                </li>
-                <li>
-                  <span className="dot" /> Konfirmasi final dilakukan
-                </li>
-                <li>
-                  <span className="dot" /> Tidak ada duplikasi perangkat
-                </li>
-              </ul>
-            </section>
+                <div className="card-actions">
+                  <button className="btn-primary" type="button" onClick={handleSaveMode} disabled={savingSection === 'mode'}>
+                    {savingSection === 'mode' ? 'Menyimpan...' : 'Simpan Pengaturan Mode'}
+                  </button>
+                </div>
+              </section>
+            )}
+
+            {activeTab === 'relations' && (
+              <section className="card relations-card">
+                <div className="card-head">
+                  <div>
+                    <p className="eyebrow">Keterkaitan Data</p>
+                    <h2>Ringkasan Modul</h2>
+                  </div>
+                </div>
+                <div className="relations-grid">
+                  <div className="relation-tile">
+                    <div className="tile-head">
+                      <p className="label">Kandidat</p>
+                      <button className="btn-link" type="button" onClick={() => quickAction('/admin/kandidat')}>
+                        Kelola
+                      </button>
+                    </div>
+                    <p className="stat">{formatNumber(summary.total_candidates)} Kandidat</p>
+                  </div>
+                  <div className="relation-tile">
+                    <div className="tile-head">
+                      <p className="label">DPT</p>
+                      <button className="btn-link" type="button" onClick={() => quickAction('/admin/dpt')}>
+                        Kelola
+                      </button>
+                    </div>
+                    <p className="stat">{formatNumber(summary.total_voters)} Pemilih</p>
+                    <p className="sub-stat">
+                      Mode Online: {formatNumber(summary.online_voters)} | TPS: {formatNumber(summary.tps_voters)}
+                    </p>
+                  </div>
+                  <div className="relation-tile">
+                    <div className="tile-head">
+                      <p className="label">TPS</p>
+                      <button className="btn-link" type="button" onClick={() => quickAction('/admin/tps')}>
+                        Kelola
+                      </button>
+                    </div>
+                    <p className="stat">TPS Aktif: {formatNumber(tpsActiveCount)}</p>
+                  </div>
+                </div>
+              </section>
+            )}
           </div>
 
-          <div className="settings-col">
-            <section className="card branding-card" id="branding">
+          <aside className="settings-aside">
+            <div className="card voting-control">
               <div className="card-head">
                 <div>
-                  <h2>Branding & Logo</h2>
-                  <p className="sub-label">Upload logo terbaru untuk tampilan publik.</p>
-                </div>
-                <button className="btn-outline" type="button" onClick={handleResetBranding}>
-                  Reset Default
-                </button>
-              </div>
-              {brandingError && <p className="error-text">{brandingError}</p>}
-              <div className="logo-upload-grid">
-                <div className="logo-upload">
-                  <p className="label">Logo Utama</p>
-                  <div className="logo-preview-box">
-                    {branding.primaryLogo ? (
-                      <img src={branding.primaryLogo} alt="Logo utama" />
-                    ) : (
-                      <span className="logo-placeholder">Logo utama belum dipilih</span>
-                    )}
-                  </div>
-                  <label className="upload-control">
-                    <input type="file" accept="image/*" onChange={(event) => handleLogoUpload(event, 'primaryLogo')} />
-                    <span>Unggah Logo Utama</span>
-                  </label>
-                  <button className="btn-link" type="button" onClick={() => markBrandingRemoval('primary')}>
-                    Hapus logo utama
-                  </button>
-                  <p className="upload-hint">PNG/JPG, maks 2MB</p>
-                </div>
-                <div className="logo-upload">
-                  <p className="label">Logo Sekunder</p>
-                  <div className="logo-preview-box">
-                    {branding.secondaryLogo ? (
-                      <img src={branding.secondaryLogo} alt="Logo sekunder" />
-                    ) : (
-                      <span className="logo-placeholder">Opsional, ditampilkan berdampingan</span>
-                    )}
-                  </div>
-                  <label className="upload-control">
-                    <input type="file" accept="image/*" onChange={(event) => handleLogoUpload(event, 'secondaryLogo')} />
-                    <span>Unggah Logo Sekunder</span>
-                  </label>
-                  <button className="btn-link" type="button" onClick={() => markBrandingRemoval('secondary')}>
-                    Hapus logo sekunder
-                  </button>
-                  <p className="upload-hint">Rekomendasi rasio persegi</p>
+                  <p className="eyebrow">Kontrol Voting</p>
+                  <h3>Status Voting</h3>
                 </div>
               </div>
-              <div className="branding-preview">
-                <p className="label">Preview</p>
-                <div className="branding-preview-box">
-                  {([branding.primaryLogo, branding.secondaryLogo].filter(Boolean) as string[]).length ? (
-                    <PemiraLogos size="md" stacked customLogos={([branding.primaryLogo, branding.secondaryLogo].filter(Boolean) as string[])} />
-                  ) : (
-                    <span className="logo-placeholder">Belum ada logo yang diunggah</span>
-                  )}
-                </div>
+              <div className="voting-status">
+                <span className={`status-chip badge-${isVotingOpen ? 'success' : 'muted'}`}>{isVotingOpen ? 'VOTING_OPEN' : 'BELUM DIBUKA'}</span>
               </div>
-              <div className="card-actions">
-                <button className="btn-primary" type="button" onClick={handleSaveBranding} disabled={savingSection === 'branding'}>
-                  {savingSection === 'branding' ? 'Menyimpan...' : 'Simpan Branding'}
-                </button>
-              </div>
-            </section>
-
-            <section className="card mode-card" id="mode-voting">
-              <h2>Voting Online</h2>
-              <div className="field-stack">
-                <p className="label">Mode Voting</p>
-                <label className="radio-row">
-                  <input
-                    type="radio"
-                    name="voting-mode"
-                    checked={mode === 'hybrid'}
-                    disabled={isModeChangeDisabled}
-                    onChange={() => setMode('hybrid')}
-                  />
-                  Hybrid (Online + TPS)
-                </label>
-                <label className="radio-row">
-                  <input
-                    type="radio"
-                    name="voting-mode"
-                    checked={mode === 'online'}
-                    disabled={isModeChangeDisabled}
-                    onChange={() => setMode('online')}
-                  />
-                  Online saja
-                </label>
-                <label className="radio-row">
-                  <input
-                    type="radio"
-                    name="voting-mode"
-                    checked={mode === 'tps'}
-                    disabled={isModeChangeDisabled}
-                    onChange={() => setMode('tps')}
-                  />
-                  TPS saja
-                </label>
-              </div>
-              <div className="field-stack">
-                <p className="label">Perangkat</p>
-                <label className="radio-row">
-                  <input type="radio" name="device" checked={rules.singleDeviceOnly} onChange={() => updateRule('singleDeviceOnly', true)} />
-                  Hanya 1 perangkat
-                </label>
-                <label className="radio-row">
-                  <input type="radio" name="device" checked={!rules.singleDeviceOnly} onChange={() => updateRule('singleDeviceOnly', false)} />
-                  Multi perangkat
-                </label>
-              </div>
-              <div className="field-stack">
-                <p className="label">Lokasi</p>
-                <label className="radio-row">
-                  <input
-                    type="radio"
-                    name="geolocation"
-                    checked={!rules.geolocationRequired}
-                    onChange={() => updateRule('geolocationRequired', false)}
-                  />
-                  Lokasi tidak wajib
-                </label>
-                <label className="radio-row">
-                  <input type="radio" name="geolocation" checked={rules.geolocationRequired} onChange={() => updateRule('geolocationRequired', true)} />
-                  Lokasi wajib
-                </label>
-              </div>
-              <div className="card-actions">
-                <button className="btn-primary" type="button" onClick={handleSaveMode} disabled={savingSection === 'mode'}>
-                  {savingSection === 'mode' ? 'Menyimpan...' : 'Simpan Mode'}
-                </button>
-              </div>
-            </section>
-
-            <section className="card tps-card">
-              <h2>Pengaturan TPS</h2>
-              <div className="field-stack">
-                <p className="label">QR Mode</p>
-                <label className="radio-row">
-                  <input type="radio" name="tps-mode" checked={rules.tpsMode === 'static'} onChange={() => updateRule('tpsMode', 'static')} />
-                  Statis + Verifikasi Panitia
-                </label>
-                <label className="radio-row">
-                  <input type="radio" name="tps-mode" checked={rules.tpsMode === 'dynamic'} onChange={() => updateRule('tpsMode', 'dynamic')} />
-                  Dinamis (Auto Rotate 30s)
-                </label>
-              </div>
-              <label className="check-row">
-                <input
-                  type="checkbox"
-                  checked={rules.requirePanitiaVerification}
-                  onChange={(event) => updateRule('requirePanitiaVerification', event.target.checked)}
-                />
-                Verifikasi panitia wajib
-              </label>
-            </section>
-
-            <section className="card danger-card">
-              <h2>⚠ Zona Bahaya (Critical)</h2>
-              <label className="check-row danger-check">
-                <input type="checkbox" checked={security.lockVoting} onChange={handleLockVoting} />
-                Lock Voting
-              </label>
-              <div className="card-actions danger-actions">
-                <button className="btn-outline danger" type="button" onClick={handleResetTPS}>
-                  Reset Queue TPS
-                </button>
-                <button className="btn-danger" type="button" onClick={handleResetElection}>
-                  Reset Seluruh Suara & Data Pemilu
-                </button>
-                <p className="danger-note">Hanya untuk keadaan darurat.</p>
-              </div>
-            </section>
-          </div>
+              <button className={`btn-${isVotingOpen ? 'danger' : 'primary'}`} type="button" onClick={handleVotingControl} disabled={savingSection === 'voting-control'}>
+                {savingSection === 'voting-control' ? 'Memproses...' : isVotingOpen ? 'Tutup Voting Sekarang' : 'Buka Voting Sekarang'}
+              </button>
+              <p className="hint">Voting hanya dapat dibuka ketika jadwal Voting aktif.</p>
+            </div>
+          </aside>
         </div>
       </div>
     </AdminLayout>

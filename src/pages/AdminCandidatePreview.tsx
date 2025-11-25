@@ -23,7 +23,6 @@ const AdminCandidatePreview = (): JSX.Element => {
   useEffect(() => {
     if (!candidate || !token) return
     if (candidate.photoUrl && candidate.photoUrl.startsWith('http')) {
-      // If we have a direct HTTP URL, fetch it with auth
       const loadPhoto = async () => {
         try {
           const url = await fetchCandidateProfileMedia(token, candidate.id)
@@ -36,7 +35,7 @@ const AdminCandidatePreview = (): JSX.Element => {
       }
       void loadPhoto()
     }
-  }, [candidate?.id, candidate?.photoUrl, token])
+  }, [candidate, token])
 
   useEffect(
     () => () => {

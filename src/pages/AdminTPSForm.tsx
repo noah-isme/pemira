@@ -64,18 +64,20 @@ const AdminTPSForm = (): JSX.Element => {
   return (
     <AdminLayout title={pageTitle}>
       <div className="admin-tps-page">
-        <div className="page-header">
-          <div>
+        <section className="card page-hero">
+          <div className="page-header">
             <h1>{editing ? `Edit TPS – ${formData.nama}` : 'Tambah TPS Baru'}</h1>
             <p>Atur informasi dan akses TPS agar sinkron dengan backend.</p>
           </div>
-          <button className="btn-link" type="button" onClick={() => navigate('/admin/tps')}>
-            ← Kembali ke daftar
-          </button>
-        </div>
+          <div className="actions">
+            <button className="btn-link" type="button" onClick={() => navigate('/admin/tps')}>
+              ← Kembali ke daftar
+            </button>
+          </div>
+        </section>
 
         <form className="tps-form" onSubmit={(event) => event.preventDefault()}>
-          <section>
+          <section className="card form-section">
             <h2>Informasi Dasar</h2>
             <div className="form-grid">
               <label>
@@ -94,7 +96,7 @@ const AdminTPSForm = (): JSX.Element => {
             </label>
           </section>
 
-          <section>
+          <section className="card form-section">
             <h2>Jam Operasional</h2>
             <div className="form-grid">
               <label>
@@ -108,7 +110,7 @@ const AdminTPSForm = (): JSX.Element => {
             </div>
           </section>
 
-          <section>
+          <section className="card form-section">
             <h2>Kapasitas & Catatan</h2>
             <label>
               Perkiraan Kapasitas
@@ -124,11 +126,11 @@ const AdminTPSForm = (): JSX.Element => {
             </label>
             <label>
               Catatan Internal
-              <textarea value={formData.catatan ?? ''} onChange={(event) => updateField('catatan', event.target.value)} placeholder="Contoh: Dekat lobi, butuh colokan tambahan" />
+            <textarea value={formData.catatan ?? ''} onChange={(event) => updateField('catatan', event.target.value)} placeholder="Contoh: Dekat lobi, butuh colokan tambahan" />
             </label>
           </section>
 
-          <section>
+          <section className="card form-section">
             <h2>Status TPS</h2>
             <div className="status-options">
               <label>
