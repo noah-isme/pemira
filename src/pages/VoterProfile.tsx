@@ -25,6 +25,14 @@ const VoterProfile = (): JSX.Element => {
   const [isEditMode, setIsEditMode] = useState(false)
   const [editEmail, setEditEmail] = useState('')
   const [editPhone, setEditPhone] = useState('')
+  const [editFaculty, setEditFaculty] = useState('')
+  const [editProgram, setEditProgram] = useState('')
+  const [editSemester, setEditSemester] = useState('')
+  const [editCohortYear, setEditCohortYear] = useState('')
+  const [editDepartment, setEditDepartment] = useState('')
+  const [editUnit, setEditUnit] = useState('')
+  const [editPosition, setEditPosition] = useState('')
+  const [editTitle, setEditTitle] = useState('')
   const [saving, setSaving] = useState(false)
   
   // Password change states
@@ -58,25 +66,29 @@ const VoterProfile = (): JSX.Element => {
           throw new Error('Invalid profile data structure')
         }
         
-        // Set default voter_type jika belum ada
-        if (!profileData.personal_info.voter_type) {
-          // Detect voter type dari field yang ada
-          if (profileData.personal_info.study_program_name || profileData.personal_info.semester) {
-            profileData.personal_info.voter_type = 'STUDENT'
-          } else if (profileData.personal_info.nidn || profileData.personal_info.department) {
-            profileData.personal_info.voter_type = 'LECTURER'
-          } else if (profileData.personal_info.nip || profileData.personal_info.unit) {
-            profileData.personal_info.voter_type = 'STAFF'
-          } else {
-            // Default to STUDENT if can't detect
-            profileData.personal_info.voter_type = 'STUDENT'
-          }
+        const normalizeVoterType = () => {
+          const raw = (profileData.personal_info.voter_type || '').toUpperCase()
+          if (raw === 'STUDENT' || raw === 'LECTURER' || raw === 'STAFF') return raw
+          if (profileData.personal_info.nidn || profileData.personal_info.department) return 'LECTURER'
+          if (profileData.personal_info.nip || profileData.personal_info.unit || profileData.personal_info.position) return 'STAFF'
+          if (profileData.personal_info.study_program_name || profileData.personal_info.semester) return 'STUDENT'
+          return 'STUDENT'
         }
+
+        profileData.personal_info.voter_type = normalizeVoterType()
         
         setProfile(profileData)
         setStats(statsData)
         setEditEmail(profileData.personal_info?.email || '')
         setEditPhone(profileData.personal_info?.phone || '')
+        setEditFaculty(profileData.personal_info?.faculty_name || '')
+        setEditProgram(profileData.personal_info?.study_program_name || '')
+        setEditSemester(profileData.personal_info?.semester || '')
+        setEditCohortYear(profileData.personal_info?.cohort_year ? String(profileData.personal_info.cohort_year) : '')
+        setEditDepartment(profileData.personal_info?.department || '')
+        setEditUnit(profileData.personal_info?.unit || '')
+        setEditPosition(profileData.personal_info?.position || '')
+        setEditTitle(profileData.personal_info?.title || '')
         setError(null)
       })
       .catch((err) => {
@@ -100,10 +112,27 @@ const VoterProfile = (): JSX.Element => {
     
     setSaving(true)
     try {
-      await updateProfile(session.accessToken, {
+      const payload: any = {
         email: editEmail || undefined,
         phone: editPhone || undefined,
-      })
+      }
+
+      if (profile?.personal_info.voter_type === 'STUDENT') {
+        payload.faculty_name = editFaculty || undefined
+        payload.study_program_name = editProgram || undefined
+        payload.semester = editSemester || undefined
+        const parsedCohort = Number.parseInt(editCohortYear, 10)
+        payload.cohort_year = Number.isNaN(parsedCohort) ? undefined : parsedCohort
+      } else if (profile?.personal_info.voter_type === 'LECTURER') {
+        payload.faculty_name = editFaculty || undefined
+        payload.department = editDepartment || undefined
+        payload.title = editTitle || undefined
+      } else if (profile?.personal_info.voter_type === 'STAFF') {
+        payload.unit = editUnit || undefined
+        payload.position = editPosition || undefined
+      }
+
+      await updateProfile(session.accessToken, payload)
       
       // Refresh profile
       const updatedProfile = await fetchCompleteProfile(session.accessToken)
@@ -189,6 +218,9 @@ const VoterProfile = (): JSX.Element => {
   }
 
   const { personal_info, voting_info, participation, account_info } = profile
+  const isStudent = personal_info.voter_type === 'STUDENT'
+  const isLecturer = personal_info.voter_type === 'LECTURER'
+  const isStaff = personal_info.voter_type === 'STAFF'
 
   return (
     <div className="voter-profile-page">
@@ -263,28 +295,68 @@ const VoterProfile = (): JSX.Element => {
                 {personal_info.faculty_name && (
                   <div className="info-item">
                     <span className="info-label">Fakultas</span>
-                    <span className="info-value">{personal_info.faculty_name}</span>
+                    {isEditMode ? (
+                      <input
+                        className="form-input"
+                        type="text"
+                        value={editFaculty}
+                        onChange={(e) => setEditFaculty(e.target.value)}
+                        placeholder="Fakultas"
+                      />
+                    ) : (
+                      <span className="info-value">{personal_info.faculty_name}</span>
+                    )}
                   </div>
                 )}
                 
                 {personal_info.study_program_name && (
                   <div className="info-item">
                     <span className="info-label">Program Studi</span>
-                    <span className="info-value">{personal_info.study_program_name}</span>
+                    {isEditMode ? (
+                      <input
+                        className="form-input"
+                        type="text"
+                        value={editProgram}
+                        onChange={(e) => setEditProgram(e.target.value)}
+                        placeholder="Program Studi"
+                      />
+                    ) : (
+                      <span className="info-value">{personal_info.study_program_name}</span>
+                    )}
                   </div>
                 )}
                 
                 {personal_info.cohort_year && (
                   <div className="info-item">
                     <span className="info-label">Angkatan</span>
-                    <span className="info-value">{personal_info.cohort_year}</span>
+                    {isEditMode ? (
+                      <input
+                        className="form-input"
+                        type="number"
+                        value={editCohortYear}
+                        onChange={(e) => setEditCohortYear(e.target.value)}
+                        placeholder="2021"
+                      />
+                    ) : (
+                      <span className="info-value">{personal_info.cohort_year}</span>
+                    )}
                   </div>
                 )}
                 
                 {personal_info.semester && (
                   <div className="info-item">
                     <span className="info-label">Semester</span>
-                    <span className="info-value">{personal_info.semester}</span>
+                    {isEditMode ? (
+                      <input
+                        className="form-input"
+                        type="text"
+                        value={editSemester}
+                        onChange={(e) => setEditSemester(e.target.value)}
+                        placeholder="Semester"
+                      />
+                    ) : (
+                      <span className="info-value">{personal_info.semester}</span>
+                    )}
                   </div>
                 )}
               </>
@@ -296,21 +368,51 @@ const VoterProfile = (): JSX.Element => {
                 {personal_info.title && (
                   <div className="info-item">
                     <span className="info-label">Gelar</span>
-                    <span className="info-value">{personal_info.title}</span>
+                    {isEditMode ? (
+                      <input
+                        className="form-input"
+                        type="text"
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        placeholder="Gelar akademik"
+                      />
+                    ) : (
+                      <span className="info-value">{personal_info.title}</span>
+                    )}
                   </div>
                 )}
                 
                 {personal_info.department && (
                   <div className="info-item">
                     <span className="info-label">Unit Kerja</span>
-                    <span className="info-value">{personal_info.department}</span>
+                    {isEditMode ? (
+                      <input
+                        className="form-input"
+                        type="text"
+                        value={editDepartment}
+                        onChange={(e) => setEditDepartment(e.target.value)}
+                        placeholder="Departemen/Prodi"
+                      />
+                    ) : (
+                      <span className="info-value">{personal_info.department}</span>
+                    )}
                   </div>
                 )}
                 
                 {personal_info.faculty_name && (
                   <div className="info-item">
                     <span className="info-label">Fakultas</span>
-                    <span className="info-value">{personal_info.faculty_name}</span>
+                    {isEditMode ? (
+                      <input
+                        className="form-input"
+                        type="text"
+                        value={editFaculty}
+                        onChange={(e) => setEditFaculty(e.target.value)}
+                        placeholder="Fakultas"
+                      />
+                    ) : (
+                      <span className="info-value">{personal_info.faculty_name}</span>
+                    )}
                   </div>
                 )}
               </>
@@ -322,14 +424,34 @@ const VoterProfile = (): JSX.Element => {
                 {personal_info.position && (
                   <div className="info-item">
                     <span className="info-label">Jabatan</span>
-                    <span className="info-value">{personal_info.position}</span>
+                    {isEditMode ? (
+                      <input
+                        className="form-input"
+                        type="text"
+                        value={editPosition}
+                        onChange={(e) => setEditPosition(e.target.value)}
+                        placeholder="Jabatan"
+                      />
+                    ) : (
+                      <span className="info-value">{personal_info.position}</span>
+                    )}
                   </div>
                 )}
                 
                 {personal_info.unit && (
                   <div className="info-item">
                     <span className="info-label">Unit Kerja</span>
-                    <span className="info-value">{personal_info.unit}</span>
+                    {isEditMode ? (
+                      <input
+                        className="form-input"
+                        type="text"
+                        value={editUnit}
+                        onChange={(e) => setEditUnit(e.target.value)}
+                        placeholder="Unit"
+                      />
+                    ) : (
+                      <span className="info-value">{personal_info.unit}</span>
+                    )}
                   </div>
                 )}
               </>
@@ -339,9 +461,7 @@ const VoterProfile = (): JSX.Element => {
             <div className="info-item full-width">
               <span className="info-label">Tipe Pemilih</span>
               <span className="info-value voter-type-badge">
-                {personal_info.voter_type === 'STUDENT' ? '🎓 Mahasiswa' :
-                 personal_info.voter_type === 'LECTURER' ? '👨‍🏫 Dosen' :
-                 '👔 Staf Administrasi'}
+                {isStudent ? '🎓 Mahasiswa' : isLecturer ? '👨‍🏫 Dosen' : '👔 Staf Administrasi'}
               </span>
             </div>
           </div>
@@ -385,6 +505,14 @@ const VoterProfile = (): JSX.Element => {
                     setIsEditMode(false)
                     setEditEmail(personal_info.email || '')
                     setEditPhone(personal_info.phone || '')
+                    setEditFaculty(personal_info.faculty_name || '')
+                    setEditProgram(personal_info.study_program_name || '')
+                    setEditSemester(personal_info.semester || '')
+                    setEditCohortYear(personal_info.cohort_year ? String(personal_info.cohort_year) : '')
+                    setEditDepartment(personal_info.department || '')
+                    setEditUnit(personal_info.unit || '')
+                    setEditPosition(personal_info.position || '')
+                    setEditTitle(personal_info.title || '')
                   }}
                   disabled={saving}
                 >

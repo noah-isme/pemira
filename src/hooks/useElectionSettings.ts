@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { electionStatusOptions, initialBranding, initialElectionStatus, initialRules, initialTimeline, initialVotingMode } from '../data/electionSettings'
+import { BRANDING_STORAGE_KEY, electionStatusOptions, initialBranding, initialElectionStatus, initialRules, initialTimeline, initialVotingMode } from '../data/electionSettings'
 import {
   archiveAdminElection,
   closeAdminElectionVoting,
@@ -152,20 +152,27 @@ export const useElectionSettings = () => {
 
   const isModeChangeDisabled = status === 'voting_dibuka' || status === 'voting_ditutup'
 
-  const applyElectionData = useCallback((election: AdminElectionResponse) => {
-    setCurrentElectionId(election.id)
-    setStatus(mapStatusFromApi(election.status))
-    setMode(mapModeFromFlags(election.online_enabled, election.tps_enabled))
-    setLastUpdated(formatTimestamp(election.updated_at ?? election.created_at ?? new Date().toISOString()))
-    setBasicInfo((prev) => ({
-      ...prev,
-      name: election.name ?? prev.name,
-      slug: election.slug ?? prev.slug,
-      year: election.year ? election.year.toString() : prev.year,
-      academicYear: election.academic_year ?? (prev.academicYear || (election.year ? `${election.year - 1}/${election.year}` : prev.academicYear)),
-      description: election.description ?? prev.description,
-    }))
-  }, [])
+  const applyElectionData = useCallback(
+    (election: AdminElectionResponse, options?: { preserveStatus?: boolean; preserveMode?: boolean }) => {
+      setCurrentElectionId(election.id)
+      if (!options?.preserveStatus) {
+        setStatus(mapStatusFromApi(election.status))
+      }
+      if (!options?.preserveMode) {
+        setMode(mapModeFromFlags(election.online_enabled, election.tps_enabled))
+      }
+      setLastUpdated(formatTimestamp(election.updated_at ?? election.created_at ?? new Date().toISOString()))
+      setBasicInfo((prev) => ({
+        ...prev,
+        name: election.name ?? prev.name,
+        slug: election.slug ?? prev.slug,
+        year: election.year ? election.year.toString() : prev.year,
+        academicYear: election.academic_year ?? (prev.academicYear || (election.year ? `${election.year - 1}/${election.year}` : prev.academicYear)),
+        description: election.description ?? prev.description,
+      }))
+    },
+    [],
+  )
 
   const setTimelineFromPhases = useCallback((phasesPayload: ElectionPhase[] | { phases?: ElectionPhase[]; items?: ElectionPhase[] } | null | undefined) => {
     const phases = Array.isArray(phasesPayload)
@@ -292,6 +299,15 @@ export const useElectionSettings = () => {
         const electionId = targetId || resolveElectionId()
         const meta = await fetchBranding(token, electionId)
         await loadBrandingLogos(meta, electionId)
+        const stored = {
+          primaryLogo: brandingObjectUrlRef.current.primary,
+          secondaryLogo: brandingObjectUrlRef.current.secondary,
+        }
+        try {
+          window.localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(stored))
+        } catch {
+          // ignore storage errors
+        }
       } catch (err) {
         console.error('Failed to load branding', err)
         setError((err as { message?: string })?.message ?? 'Gagal memuat branding')
@@ -312,10 +328,10 @@ export const useElectionSettings = () => {
         try {
           const settings = await fetchAdminElectionSettings(token, electionId)
           if (settings?.election) {
-            applyElectionData(settings.election as AdminElectionResponse)
-            resolvedElectionId = settings.election.id
-            setCurrentElectionId(settings.election.id)
-          }
+          applyElectionData(settings.election as AdminElectionResponse)
+          resolvedElectionId = settings.election.id
+          setCurrentElectionId(settings.election.id)
+        }
           if (settings?.phases) setTimelineFromPhases(settings.phases as ElectionPhase[] | { phases?: ElectionPhase[] })
           if (settings?.mode_settings) setMode(mapModeFromFlags(settings.mode_settings.online_enabled, settings.mode_settings.tps_enabled))
         } catch (settingsErr) {
@@ -467,7 +483,7 @@ export const useElectionSettings = () => {
         payload.year = parsedYear
       }
       const updated = await updateAdminElection(token, payload, electionId)
-      applyElectionData(updated)
+      applyElectionData(updated, { preserveStatus: true, preserveMode: true })
     })
   }, [applyElectionData, basicInfo.academicYear, basicInfo.description, basicInfo.name, basicInfo.slug, basicInfo.year, resolveElectionId, saveSection, token])
 

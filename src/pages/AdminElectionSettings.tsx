@@ -74,6 +74,11 @@ const AdminElectionSettings = (): JSX.Element => {
     loading,
     error,
     refreshElection,
+    branding,
+    queueBrandingUpload,
+    markBrandingRemoval,
+    saveBranding,
+    resetBrandingDraft,
   } = useElectionSettings()
 
   const allowOnline = mode === 'online' || mode === 'hybrid'
@@ -267,6 +272,23 @@ const AdminElectionSettings = (): JSX.Element => {
     } catch (err) {
       console.error(err)
       showToast('Gagal membuat pemilu baru.', 'error')
+    }
+  }
+
+  const handleLogoChange = (slot: 'primary' | 'secondary', fileList: FileList | null) => {
+    const file = fileList?.[0]
+    if (!file) return
+    const preview = URL.createObjectURL(file)
+    queueBrandingUpload(slot, preview, file)
+  }
+
+  const handleSaveBranding = async () => {
+    try {
+      await saveBranding()
+      showToast('Branding berhasil disimpan.', 'success')
+    } catch (err) {
+      console.error(err)
+      showToast('Gagal menyimpan branding.', 'error')
     }
   }
 
@@ -481,6 +503,56 @@ const AdminElectionSettings = (): JSX.Element => {
                         <span className="arrow">→</span>
                       </button>
                     ))}
+                  </div>
+                </section>
+
+                <section className="card branding-card">
+                  <div className="card-head">
+                    <div>
+                      <p className="eyebrow">Identitas Pemilu</p>
+                      <h2>Logo & Branding</h2>
+                    </div>
+                    <span className="sub-label">Terakhir diubah: {lastUpdated}</span>
+                  </div>
+                  <div className="branding-grid">
+                    <div className="logo-panel">
+                      <p className="label">Logo Utama</p>
+                      <div className="logo-preview">
+                        {branding.primaryLogo ? <img src={branding.primaryLogo} alt="Logo utama" /> : <span className="placeholder">Belum ada logo</span>}
+                      </div>
+                      <label className="btn-upload">
+                        Upload Logo
+                        <input type="file" accept="image/*" onChange={(event) => handleLogoChange('primary', event.target.files)} />
+                      </label>
+                      {branding.primaryLogo && (
+                        <button className="btn-outline" type="button" onClick={() => markBrandingRemoval('primary')}>
+                          Hapus Logo
+                        </button>
+                      )}
+                    </div>
+                    <div className="logo-panel">
+                      <p className="label">Logo Sekunder</p>
+                      <div className="logo-preview">
+                        {branding.secondaryLogo ? <img src={branding.secondaryLogo} alt="Logo sekunder" /> : <span className="placeholder">Belum ada logo</span>}
+                      </div>
+                      <label className="btn-upload">
+                        Upload Logo
+                        <input type="file" accept="image/*" onChange={(event) => handleLogoChange('secondary', event.target.files)} />
+                      </label>
+                      {branding.secondaryLogo && (
+                        <button className="btn-outline" type="button" onClick={() => markBrandingRemoval('secondary')}>
+                          Hapus Logo
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="card-actions">
+                    <button className="btn-primary" type="button" onClick={handleSaveBranding} disabled={savingSection === 'branding'}>
+                      {savingSection === 'branding' ? 'Menyimpan...' : 'Simpan Branding'}
+                    </button>
+                    <button className="btn-outline" type="button" onClick={() => resetBrandingDraft()} disabled={savingSection === 'branding'}>
+                      Reset Draft
+                    </button>
                   </div>
                 </section>
               </>

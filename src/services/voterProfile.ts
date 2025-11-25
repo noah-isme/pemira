@@ -48,6 +48,14 @@ export type UpdateProfileRequest = {
   email?: string
   phone?: string
   photo_url?: string
+  faculty_name?: string
+  study_program_name?: string
+  semester?: string
+  cohort_year?: number
+  department?: string
+  unit?: string
+  position?: string
+  title?: string
 }
 
 export type ChangePasswordRequest = {

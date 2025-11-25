@@ -23,14 +23,13 @@ export const fetchBranding = async (token: string, electionId: number = getActiv
 
 export const fetchBrandingLogo = async (token: string, slot: 'primary' | 'secondary', electionId: number = getActiveElectionId()): Promise<string | null> => {
   const url = `${API_BASE_URL}/admin/elections/${electionId}/branding/logo/${slot}`
-  const response = await fetch(url, { headers: buildAuthHeaders(token) })
+  const response = await fetch(url, { headers: buildAuthHeaders(token), redirect: 'follow' })
   if (response.status === 404) return null
   if (!response.ok) {
     const message = `Gagal mengambil logo ${slot}`
     throw new Error(message)
   }
-  const blob = await response.blob()
-  return URL.createObjectURL(blob)
+  return response.url
 }
 
 export const uploadBrandingLogo = async (
