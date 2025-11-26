@@ -16,6 +16,12 @@ import {
 import type { CandidateAdmin, CandidateMediaSlot, CandidateProgramAdmin, CandidateStatus } from '../types/candidateAdmin'
 import '../styles/AdminCandidates.css'
 
+const isNumericId = (value?: string | number) => {
+  if (value === null || value === undefined) return false
+  const str = String(value)
+  return /^\d+$/.test(str)
+}
+
 const statusLabels: Record<CandidateStatus, string> = {
   PENDING: 'Menunggu Review',
   APPROVED: 'Disetujui',
@@ -293,7 +299,7 @@ const AdminCandidateForm = (): JSX.Element => {
     if (slot === 'photo') {
       setPendingProfile({ file, preview })
       setFormData((prev) => ({ ...prev, photoUrl: preview }))
-      if (token && formData.id) {
+      if (token && isNumericId(formData.id)) {
         try {
           setMediaLoading(true)
           const uploaded = await uploadCandidateProfileMedia(token, formData.id, file)
@@ -321,7 +327,7 @@ const AdminCandidateForm = (): JSX.Element => {
     const mediaEntry = { id: tempId, slot: candidateSlot, type, url: preview, label }
     setFormData((prev) => ({ ...prev, media: [...prev.media, mediaEntry] }))
 
-    if (token && formData.id) {
+    if (token && isNumericId(formData.id)) {
       try {
         setMediaLoading(true)
         const uploaded = await uploadCandidateMedia(token, formData.id, candidateSlot, file)
@@ -351,7 +357,7 @@ const AdminCandidateForm = (): JSX.Element => {
     if (formData.photoUrl) {
       setFormData((prev) => ({ ...prev, photoUrl: '', photoMediaId: null }))
     }
-    if (token && formData.id && formData.photoMediaId) {
+    if (token && isNumericId(formData.id) && formData.photoMediaId) {
       try {
         await deleteCandidateProfileMedia(token, formData.id)
       } catch (err) {
