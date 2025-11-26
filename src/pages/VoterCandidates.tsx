@@ -4,6 +4,7 @@ import { useVotingSession } from '../hooks/useVotingSession'
 import { useDashboardPemilih } from '../hooks/useDashboardPemilih'
 import { fetchPublicCandidates } from '../services/publicCandidates'
 import type { Candidate } from '../types/voting'
+import { LucideIcon } from '../components/LucideIcon'
 import '../styles/VoterCandidates.css'
 
 const VoterCandidates = (): JSX.Element => {
@@ -49,7 +50,7 @@ const VoterCandidates = (): JSX.Element => {
       <header className="candidates-header">
         <div className="header-top">
           <button className="back-button" onClick={handleBack}>
-            <span className="back-icon">←</span>
+            <LucideIcon name="arrowLeft" className="back-icon" size={20} />
           </button>
           <h1 className="header-title">Kandidat</h1>
           <div className="header-spacer"></div>
@@ -72,14 +73,14 @@ const VoterCandidates = (): JSX.Element => {
 
         {error && (
           <div className="candidates-error">
-            <span className="error-icon">⚠️</span>
+            <LucideIcon name="alertCircle" className="error-icon" size={48} />
             <p>{error}</p>
           </div>
         )}
 
         {!loading && !error && candidates.length === 0 && (
           <div className="candidates-empty">
-            <span className="empty-icon">👥</span>
+            <LucideIcon name="users" className="empty-icon" size={64} />
             <h3>Belum Ada Kandidat</h3>
             <p>Kandidat akan ditampilkan setelah masa pendaftaran selesai</p>
           </div>
@@ -88,7 +89,7 @@ const VoterCandidates = (): JSX.Element => {
         {!loading && !error && candidates.length > 0 && (
           <div className="candidates-grid">
             <div className="candidates-count">
-              <span className="count-icon">👥</span>
+              <LucideIcon name="users" className="count-icon" size={20} />
               <span className="count-text">{candidates.length} Kandidat Terdaftar</span>
             </div>
 
@@ -126,7 +127,7 @@ const VoterCandidates = (): JSX.Element => {
 
                 {candidate.tagline && (
                   <div className="candidate-tagline">
-                    <span className="tagline-icon">💡</span>
+                    <LucideIcon name="lightbulb" className="tagline-icon" size={16} />
                     <p className="tagline-text">"{candidate.tagline}"</p>
                   </div>
                 )}
@@ -136,7 +137,7 @@ const VoterCandidates = (): JSX.Element => {
                   onClick={() => handleViewDetail(candidate.id)}
                 >
                   <span className="button-text">Lihat Detail</span>
-                  <span className="button-icon">→</span>
+                  <LucideIcon name="arrowRight" className="button-icon" size={18} />
                 </button>
               </div>
             ))}
@@ -148,23 +149,23 @@ const VoterCandidates = (): JSX.Element => {
       <footer className="candidates-footer">
         <nav className="footer-nav">
           <button className="nav-item" onClick={handleBack}>
-            <span className="nav-icon">🏠</span>
+            <LucideIcon name="home" className="nav-icon" size={24} />
             <span className="nav-label">Beranda</span>
           </button>
           <button className="nav-item active">
-            <span className="nav-icon">👥</span>
+            <LucideIcon name="users" className="nav-icon" size={24} />
             <span className="nav-label">Kandidat</span>
           </button>
           <button className="nav-item" onClick={() => navigate('/dashboard/riwayat')}>
-            <span className="nav-icon">📜</span>
+            <LucideIcon name="scroll" className="nav-icon" size={24} />
             <span className="nav-label">Riwayat</span>
           </button>
           <button className="nav-item" onClick={() => navigate('/dashboard/bantuan')}>
-            <span className="nav-icon">❓</span>
+            <LucideIcon name="helpCircle" className="nav-icon" size={24} />
             <span className="nav-label">Bantuan</span>
           </button>
           <button className="nav-item" onClick={() => navigate('/dashboard/profil')}>
-            <span className="nav-icon">👤</span>
+            <LucideIcon name="user" className="nav-icon" size={24} />
             <span className="nav-label">Profil</span>
           </button>
         </nav>

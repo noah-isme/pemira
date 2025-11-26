@@ -2,15 +2,18 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import AdminLayout from '../components/admin/AdminLayout'
 import { useAdminAuth } from '../hooks/useAdminAuth'
+import { useActiveElection } from '../hooks/useActiveElection'
 import { fetchAdminDptVoterById, updateAdminDptVoter, mapFrontendToApiVoterType } from '../services/adminDpt'
 import { useToast } from '../components/Toast'
-import type { DPTEntry } from '../types/dptAdmin'
+import type { DPTEntry, ElectionVoterStatus } from '../types/dptAdmin'
+import { LucideIcon } from '../components/LucideIcon'
 import '../styles/AdminDPT.css'
 
 const AdminDPTEdit = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { token } = useAdminAuth()
+  const { activeElectionId } = useActiveElection()
   const [voter, setVoter] = useState<DPTEntry | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -25,6 +28,7 @@ const AdminDPTEdit = () => {
     tipe: 'mahasiswa' as 'mahasiswa' | 'dosen' | 'staf',
     akademik: 'aktif' as 'aktif' | 'cuti' | 'nonaktif',
     metodeVoting: 'online' as 'online' | 'tps',
+    electionVoterStatus: 'PENDING' as ElectionVoterStatus,
   })
   const { showToast } = useToast()
 
@@ -42,7 +46,7 @@ const AdminDPTEdit = () => {
     const loadVoter = async () => {
       try {
         setLoading(true)
-        const data = await fetchAdminDptVoterById(token, id)
+        const data = await fetchAdminDptVoterById(token, id, activeElectionId)
         if (data) {
           setVoter(data)
           setFormData({
@@ -55,6 +59,7 @@ const AdminDPTEdit = () => {
             tipe: (data.tipe as 'mahasiswa' | 'dosen' | 'staf') || 'mahasiswa',
             akademik: data.akademik,
             metodeVoting: (data.metodeVoting as 'online' | 'tps') || 'online',
+            electionVoterStatus: data.electionVoterStatus || 'PENDING',
           })
         } else {
           setError('Data pemilih tidak ditemukan')
@@ -80,7 +85,8 @@ const AdminDPTEdit = () => {
     try {
       const updatePayload: any = {
         voter_type: mapFrontendToApiVoterType(formData.tipe),
-        voting_method: formData.metodeVoting,
+        voting_method: formData.metodeVoting.toUpperCase(),
+        status: formData.electionVoterStatus,
       }
 
       // Only include biodata fields if voter hasn't voted yet
@@ -92,7 +98,7 @@ const AdminDPTEdit = () => {
         updatePayload.semester = formData.semester
       }
 
-      await updateAdminDptVoter(token, id, updatePayload)
+      await updateAdminDptVoter(token, id, updatePayload, activeElectionId)
       showToast('Data pemilih berhasil diperbarui', 'success')
       navigate('/admin/dpt', { state: { refresh: true } })
     } catch (err) {
@@ -241,7 +247,10 @@ const AdminDPTEdit = () => {
                   <option value="dosen">Dosen</option>
                   <option value="staf">Staf</option>
                 </select>
-                <small style={{ color: '#2d5a2d' }}>💡 Bisa diubah bahkan setelah voting untuk koreksi data</small>
+                <small className="inline-note" style={{ color: '#2d5a2d' }}>
+                  <LucideIcon name="lightbulb" className="inline-icon" size={14} />
+                  Bisa diubah bahkan setelah voting untuk koreksi data
+                </small>
               </div>
 
               <div className="form-field">
@@ -250,7 +259,28 @@ const AdminDPTEdit = () => {
                   <option value="online">Online</option>
                   <option value="tps">TPS</option>
                 </select>
-                <small style={{ color: '#2d5a2d' }}>💡 Pilih metode yang sesuai, bisa diubah sebelum voting dimulai</small>
+                <small className="inline-note" style={{ color: '#2d5a2d' }}>
+                  <LucideIcon name="lightbulb" className="inline-icon" size={14} />
+                  Pilih metode yang sesuai, bisa diubah sebelum voting dimulai
+                </small>
+              </div>
+
+              <div className="form-field">
+                <label>Status Verifikasi *</label>
+                <select 
+                  value={formData.electionVoterStatus} 
+                  onChange={(e) => setFormData((prev) => ({ ...prev, electionVoterStatus: e.target.value as ElectionVoterStatus }))}
+                >
+                  <option value="PENDING">Menunggu Verifikasi</option>
+                  <option value="VERIFIED">Terverifikasi</option>
+                  <option value="REJECTED">Ditolak</option>
+                  <option value="VOTED">Sudah Memilih</option>
+                  <option value="BLOCKED">Diblokir</option>
+                </select>
+                <small className="inline-note" style={{ color: '#2d5a2d' }}>
+                  <LucideIcon name="lightbulb" className="inline-icon" size={14} />
+                  Ubah status verifikasi pemilih untuk pemilu ini
+                </small>
               </div>
             </div>
 
@@ -267,10 +297,16 @@ const AdminDPTEdit = () => {
 
         {voter.statusSuara === 'sudah' && (
           <section className="card warning" style={{ marginTop: '1rem' }}>
-            <h3>⚠️ Peringatan</h3>
+            <h3 className="inline-note" style={{ color: '#b91c1c' }}>
+              <LucideIcon name="alertCircle" className="inline-icon" size={16} />
+              Peringatan
+            </h3>
             <p>Pemilih ini sudah melakukan voting. Perubahan data tidak akan mempengaruhi suara yang sudah masuk.</p>
             <p style={{ marginTop: '0.5rem', fontSize: '0.9em', color: '#2d5a2d' }}>
-              💡 <strong>Tipe pemilih</strong> masih bisa diubah untuk koreksi data yang salah.
+              <span className="inline-note">
+                <LucideIcon name="lightbulb" className="inline-icon" size={14} />
+                <strong>Tipe pemilih</strong> masih bisa diubah untuk koreksi data yang salah.
+              </span>
             </p>
           </section>
         )}

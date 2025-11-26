@@ -14,11 +14,12 @@ const votingModeLabels: Record<VotingMode, string> = {
   hybrid: 'Hybrid (Online + TPS)',
 }
 
-const tabs: { id: 'info' | 'timeline' | 'mode' | 'relations'; label: string }[] = [
+const tabs: { id: 'info' | 'timeline' | 'mode' | 'relations' | 'users'; label: string }[] = [
   { id: 'info', label: 'Informasi Umum' },
   { id: 'timeline', label: 'Tahapan & Jadwal' },
   { id: 'mode', label: 'Mode Pemilihan' },
   { id: 'relations', label: 'Keterkaitan Data' },
+  { id: 'users', label: 'Manajemen Admin' },
 ]
 
 const quickLinks = [
@@ -697,6 +698,25 @@ const AdminElectionSettings = (): JSX.Element => {
                 <div className="card-actions">
                   <button className="btn-primary" type="button" onClick={handleSaveMode} disabled={savingSection === 'mode'}>
                     {savingSection === 'mode' ? 'Menyimpan...' : 'Simpan Pengaturan Mode'}
+                  </button>
+                </div>
+              </section>
+            )}
+
+            {activeTab === 'users' && (
+              <section className="card">
+                <div className="card-head">
+                  <div>
+                    <p className="eyebrow">Manajemen Pengguna</p>
+                    <h2>Kelola Admin & Operator</h2>
+                  </div>
+                </div>
+                <div style={{ padding: '1rem 0' }}>
+                  <p style={{ marginBottom: '1rem' }}>
+                    Halaman ini untuk mengelola akun admin, operator TPS, dan pengguna sistem lainnya. Klik tombol di bawah untuk membuka halaman manajemen pengguna.
+                  </p>
+                  <button className="btn-primary" type="button" onClick={() => navigate('/admin/users')}>
+                    Buka Manajemen Pengguna
                   </button>
                 </div>
               </section>

@@ -41,7 +41,8 @@
 }
 
 .back-icon {
-  font-size: 20px;
+  width: 20px;
+  height: 20px;
   color: #2d3748;
 }
 
@@ -136,7 +137,9 @@
 }
 
 .tab-icon {
-  font-size: 32px;
+  width: 32px;
+  height: 32px;
+  color: #667eea;
 }
 
 .tab-text {
@@ -164,6 +167,14 @@
   font-weight: 700;
   color: #1a202c;
   margin: 0 0 8px 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.steps-title-icon {
+  width: 24px;
+  height: 24px;
 }
 
 .steps-subtitle {
@@ -213,8 +224,20 @@
 }
 
 .step-icon {
-  font-size: 36px;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #f5f7fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  color: #667eea;
+}
+
+.step-icon svg {
+  width: 22px;
+  height: 22px;
 }
 
 .step-content {
@@ -254,6 +277,14 @@
   font-weight: 700;
   color: #1a202c;
   margin: 0 0 8px 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.faq-title-icon {
+  width: 22px;
+  height: 22px;
 }
 
 .faq-subtitle {
@@ -350,7 +381,14 @@
   font-weight: 700;
   color: #1a202c;
   margin: 0 0 16px 0;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.actions-title-icon {
+  width: 22px;
+  height: 22px;
 }
 
 .actions-grid {
@@ -379,7 +417,9 @@
 }
 
 .action-icon {
-  font-size: 28px;
+  width: 28px;
+  height: 28px;
+  color: #667eea;
 }
 
 .action-text {
@@ -442,7 +482,8 @@
 }
 
 .nav-icon {
-  font-size: 24px;
+  width: 24px;
+  height: 24px;
   transition: transform 0.2s;
 }
 
@@ -466,7 +507,8 @@
   }
 
   .step-icon {
-    font-size: 28px;
+    width: 44px;
+    height: 44px;
   }
 
   .step-number {
@@ -490,7 +532,8 @@
   }
 
   .tab-icon {
-    font-size: 28px;
+    width: 28px;
+    height: 28px;
   }
 
   .nav-label {
@@ -498,6 +541,7 @@
   }
 
   .nav-icon {
-    font-size: 20px;
+    width: 20px;
+    height: 20px;
   }
 }

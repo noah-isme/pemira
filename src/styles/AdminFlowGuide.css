@@ -88,8 +88,12 @@
   background: #fff;
   display: grid;
   place-items: center;
-  font-size: 1.1rem;
   box-shadow: 0 6px 16px rgba(59, 130, 246, 0.15);
+}
+
+.flow-step .step-icon svg {
+  width: 20px;
+  height: 20px;
 }
 
 .flow-step .step-label {

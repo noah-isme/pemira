@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useVotingSession } from '../hooks/useVotingSession'
 import { useDashboardPemilih, type PemiraStage } from '../hooks/useDashboardPemilih'
+import { LucideIcon, type IconName } from '../components/LucideIcon'
 import '../styles/DashboardPemilihHiFi.css'
 
 type VoterMode = 'ONLINE' | 'OFFLINE'
@@ -11,7 +12,7 @@ interface TimelineStage {
   id: PemiraStage
   label: string
   status: 'completed' | 'active' | 'upcoming'
-  icon: string
+  icon: IconName
 }
 
 interface VoterData {
@@ -81,12 +82,12 @@ const DashboardPemilihHiFi = (): JSX.Element => {
     const currentIndex = stages.indexOf(currentStage)
     
     return [
-      { id: 'registration', label: 'Pendaftaran', status: currentIndex > 0 ? 'completed' : currentIndex === 0 ? 'active' : 'upcoming', icon: '📝' },
-      { id: 'verification', label: 'Verifikasi Berkas', status: currentIndex > 1 ? 'completed' : currentIndex === 1 ? 'active' : 'upcoming', icon: '✓' },
-      { id: 'campaign', label: 'Masa Kampanye', status: currentIndex > 2 ? 'completed' : currentIndex === 2 ? 'active' : 'upcoming', icon: '📣' },
-      { id: 'silence', label: 'Masa Tenang', status: currentIndex > 3 ? 'completed' : currentIndex === 3 ? 'active' : 'upcoming', icon: '🤫' },
-      { id: 'voting', label: 'Voting', status: currentIndex > 4 ? 'completed' : currentIndex === 4 ? 'active' : 'upcoming', icon: '🗳️' },
-      { id: 'rekapitulasi', label: 'Rekapitulasi', status: currentIndex >= 5 ? 'active' : 'upcoming', icon: '📊' }
+      { id: 'registration', label: 'Pendaftaran', status: currentIndex > 0 ? 'completed' : currentIndex === 0 ? 'active' : 'upcoming', icon: 'fileCheck' },
+      { id: 'verification', label: 'Verifikasi Berkas', status: currentIndex > 1 ? 'completed' : currentIndex === 1 ? 'active' : 'upcoming', icon: 'checkCircle' },
+      { id: 'campaign', label: 'Masa Kampanye', status: currentIndex > 2 ? 'completed' : currentIndex === 2 ? 'active' : 'upcoming', icon: 'megaphone' },
+      { id: 'silence', label: 'Masa Tenang', status: currentIndex > 3 ? 'completed' : currentIndex === 3 ? 'active' : 'upcoming', icon: 'moon' },
+      { id: 'voting', label: 'Voting', status: currentIndex > 4 ? 'completed' : currentIndex === 4 ? 'active' : 'upcoming', icon: 'ballot' },
+      { id: 'rekapitulasi', label: 'Rekapitulasi', status: currentIndex >= 5 ? 'active' : 'upcoming', icon: 'barChart' }
     ]
   }, [currentStage])
 
@@ -168,7 +169,7 @@ const DashboardPemilihHiFi = (): JSX.Element => {
       case 'campaign':
         return (
           <div className="main-panel campaign-panel">
-            <div className="panel-icon">📣</div>
+            <LucideIcon name="megaphone" className="panel-icon" size={64} />
             <h2>Saat ini adalah: MASA KAMPANYE</h2>
             <p>
               Anda dapat melihat profil lengkap seluruh pasangan calon.
@@ -184,7 +185,7 @@ const DashboardPemilihHiFi = (): JSX.Element => {
         if (voterData.status === 'VOTED') {
           return (
             <div className="main-panel success-panel">
-              <div className="panel-icon success">✓</div>
+              <LucideIcon name="checkCircle" className="panel-icon success" size={64} />
               <h2>Anda sudah memberikan suara</h2>
               <p>Terima kasih atas partisipasi Anda dalam PEMIRA UNIWA!</p>
             </div>
@@ -194,7 +195,7 @@ const DashboardPemilihHiFi = (): JSX.Element => {
         if (voterData.mode === 'ONLINE') {
           return (
             <div className="main-panel voting-panel online">
-              <div className="panel-icon">🗳️</div>
+              <LucideIcon name="ballot" className="panel-icon" size={64} />
               <h2>Tahap Voting telah dibuka!</h2>
               <p>Anda terdaftar sebagai <strong>PEMILIH ONLINE</strong>.</p>
               <p>Silakan memberikan suara melalui platform ini.</p>
@@ -211,7 +212,7 @@ const DashboardPemilihHiFi = (): JSX.Element => {
         } else {
           return (
             <div className="main-panel voting-panel offline">
-              <div className="panel-icon">🗳️</div>
+              <LucideIcon name="ballot" className="panel-icon" size={64} />
               <h2>Tahap Voting telah dibuka!</h2>
               <p>Anda terdaftar sebagai <strong>PEMILIH OFFLINE (TPS)</strong>.</p>
               <p>Silakan datang ke TPS terdekat sesuai jadwal.</p>
@@ -232,10 +233,10 @@ const DashboardPemilihHiFi = (): JSX.Element => {
 
               <div className="qr-actions">
                 <button className="btn-secondary" onClick={handleDownloadQR}>
-                  <span className="btn-icon">📥</span> Unduh QR
+                  <LucideIcon name="download" className="btn-icon" size={20} /> Unduh QR
                 </button>
                 <button className="btn-secondary" onClick={handlePrintQR}>
-                  <span className="btn-icon">🖨️</span> Cetak QR
+                  <LucideIcon name="printer" className="btn-icon" size={20} /> Cetak QR
                 </button>
               </div>
             </div>
@@ -245,7 +246,7 @@ const DashboardPemilihHiFi = (): JSX.Element => {
       case 'silence':
         return (
           <div className="main-panel silence-panel">
-            <div className="panel-icon">🤫</div>
+            <LucideIcon name="moon" className="panel-icon" size={64} />
             <h2>Masa Tenang</h2>
             <p>Masa tenang sedang berlangsung. Tidak ada kampanye yang diperbolehkan.</p>
             <div className="countdown-box">
@@ -273,7 +274,7 @@ const DashboardPemilihHiFi = (): JSX.Element => {
       default:
         return (
           <div className="main-panel default-panel">
-            <div className="panel-icon">ℹ️</div>
+            <LucideIcon name="info" className="panel-icon" size={64} />
             <h2>Dashboard PEMIRA UNIWA</h2>
             <p>Selamat datang di sistem pemilihan raya UNIWA.</p>
           </div>
@@ -288,7 +289,7 @@ const DashboardPemilihHiFi = (): JSX.Element => {
       return (
         <div className="mode-panel online-mode">
           <div className="mode-header">
-            <span className="mode-icon">💻</span>
+            <LucideIcon name="laptop" className="mode-icon" size={32} />
             <h3>Alur Pemilihan Online</h3>
           </div>
           
@@ -319,7 +320,7 @@ const DashboardPemilihHiFi = (): JSX.Element => {
       return (
         <div className="mode-panel offline-mode">
           <div className="mode-header">
-            <span className="mode-icon">🏛️</span>
+            <LucideIcon name="building" className="mode-icon" size={32} />
             <h3>Alur Pemilihan Offline (TPS)</h3>
           </div>
           
@@ -350,10 +351,10 @@ const DashboardPemilihHiFi = (): JSX.Element => {
             
             <div className="qr-action-buttons">
               <button className="btn-qr-action" onClick={handleDownloadQR}>
-                <span className="btn-icon">📥</span> Unduh QR
+                <LucideIcon name="download" className="btn-icon" size={20} /> Unduh QR
               </button>
               <button className="btn-qr-action" onClick={handlePrintQR}>
-                <span className="btn-icon">🖨️</span> Cetak QR
+                <LucideIcon name="printer" className="btn-icon" size={20} /> Cetak QR
               </button>
             </div>
           </div>
@@ -388,14 +389,14 @@ const DashboardPemilihHiFi = (): JSX.Element => {
         <div className="header-content">
           <div className="header-left">
             <div className="logo-pemira">
-              <span className="logo-icon">🗳️</span>
+              <LucideIcon name="ballot" className="logo-icon" size={28} />
               <span className="logo-text">PEMIRA UNIWA</span>
             </div>
           </div>
           
           <div className="header-right">
             <button className="profile-button">
-              <span className="profile-icon">👤</span>
+              <LucideIcon name="user" className="profile-icon" size={24} />
             </button>
           </div>
         </div>
@@ -417,7 +418,7 @@ const DashboardPemilihHiFi = (): JSX.Element => {
           {/* Timeline Section */}
           <section className="timeline-section">
             <h2 className="section-title">
-              <span className="section-icon">📍</span>
+              <LucideIcon name="mapPin" className="section-icon" size={24} />
               Status PEMIRA
             </h2>
             
@@ -436,7 +437,7 @@ const DashboardPemilihHiFi = (): JSX.Element => {
                   </div>
                   
                   <div className="stage-content">
-                    <div className="stage-icon">{stage.icon}</div>
+                    <LucideIcon name={stage.icon} className="stage-icon" size={28} />
                     <div className="stage-info">
                       <h3 className="stage-label">{stage.label}</h3>
                       <span className="stage-status-text">
@@ -469,7 +470,7 @@ const DashboardPemilihHiFi = (): JSX.Element => {
           {/* Notifications */}
           <section className="notifications-section">
             <h2 className="section-title">
-              <span className="section-icon">🔔</span>
+              <LucideIcon name="bell" className="section-icon" size={24} />
               Notifikasi
             </h2>
             
@@ -489,23 +490,23 @@ const DashboardPemilihHiFi = (): JSX.Element => {
       <footer className="dashboard-footer">
         <nav className="footer-nav">
           <button className="nav-item active">
-            <span className="nav-icon">🏠</span>
+            <LucideIcon name="home" className="nav-icon" size={24} />
             <span className="nav-label">Beranda</span>
           </button>
           <button className="nav-item" onClick={() => navigate('/dashboard/kandidat')}>
-            <span className="nav-icon">👥</span>
+            <LucideIcon name="users" className="nav-icon" size={24} />
             <span className="nav-label">Kandidat</span>
           </button>
           <button className="nav-item" onClick={() => navigate('/dashboard/riwayat')}>
-            <span className="nav-icon">📜</span>
+            <LucideIcon name="scroll" className="nav-icon" size={24} />
             <span className="nav-label">Riwayat</span>
           </button>
           <button className="nav-item" onClick={() => navigate('/dashboard/bantuan')}>
-            <span className="nav-icon">❓</span>
+            <LucideIcon name="helpCircle" className="nav-icon" size={24} />
             <span className="nav-label">Bantuan</span>
           </button>
           <button className="nav-item" onClick={() => navigate('/dashboard/profil')}>
-            <span className="nav-icon">👤</span>
+            <LucideIcon name="user" className="nav-icon" size={24} />
             <span className="nav-label">Profil</span>
           </button>
         </nav>

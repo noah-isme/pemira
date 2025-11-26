@@ -37,6 +37,8 @@ export type ActivityLogEntry = {
   highlight?: boolean
 }
 
+import type { IconName } from '../components/LucideIcon'
+
 export type CandidateVoteStat = {
   id: number
   name: string
@@ -55,7 +57,7 @@ export type QuickAction = {
   label: string
   description: string
   href: string
-  icon?: string
+  icon?: IconName
 }
 
 export type SystemInfo = {

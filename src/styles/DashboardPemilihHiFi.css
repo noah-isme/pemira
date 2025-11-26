@@ -50,6 +50,8 @@
 
 .logo-icon {
   font-size: 1.75rem;
+  width: 1em;
+  height: 1em;
 }
 
 .logo-text {
@@ -72,6 +74,10 @@
   cursor: pointer;
   transition: all var(--duration-normal) var(--ease-out);
   backdrop-filter: blur(8px);
+}
+.profile-icon {
+  width: 1em;
+  height: 1em;
 }
 
 .profile-button:hover {
@@ -157,6 +163,11 @@
 
 .section-icon {
   font-size: 1.5rem;
+  width: 1em;
+  height: 1em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* ============================================
@@ -254,6 +265,11 @@
 .stage-icon {
   font-size: 1.75rem;
   flex-shrink: 0;
+  width: 1em;
+  height: 1em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .stage-info {
@@ -328,6 +344,11 @@
   font-size: 4rem;
   margin-bottom: var(--space-l);
   animation: scaleIn var(--duration-slow) var(--ease-spring);
+  width: 1em;
+  height: 1em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .panel-icon.success {
@@ -478,6 +499,11 @@
 
 .btn-icon {
   font-size: 1.25rem;
+  width: 1em;
+  height: 1em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Countdown */
@@ -579,6 +605,11 @@
 
 .mode-icon {
   font-size: 2rem;
+  width: 1em;
+  height: 1em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .mode-header h3 {
@@ -867,6 +898,11 @@
 
 .nav-icon {
   font-size: 1.5rem;
+  width: 1em;
+  height: 1em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .nav-label {

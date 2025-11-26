@@ -4,8 +4,18 @@ export type AcademicStatus = 'aktif' | 'cuti' | 'nonaktif'
 
 export type VotingMethod = 'online' | 'tps' | '-' | string
 
+// New API: Election voter status
+export type ElectionVoterStatus = 'PENDING' | 'VERIFIED' | 'REJECTED' | 'VOTED' | 'BLOCKED'
+
+// New API: Voter type (backend format)
+export type VoterType = 'STUDENT' | 'LECTURER' | 'STAFF'
+
+// New API: Academic status (backend format)
+export type AcademicStatusAPI = 'ACTIVE' | 'GRADUATED' | 'ON_LEAVE' | 'DROPPED' | 'INACTIVE'
+
 export type DPTEntry = {
-  id: string
+  id: string // election_voter_id from new API
+  voterId?: number // voter_id for reference
   nim: string
   nama: string
   email?: string
@@ -24,6 +34,12 @@ export type DPTEntry = {
   tpsId?: number
   isEligible: boolean
   hasAccount?: boolean
+  hasVoted?: boolean
+  // New API fields
+  electionVoterStatus?: ElectionVoterStatus
+  checkedInAt?: string | null
+  votedAt?: string | null
+  updatedAt?: string
 }
 
 export type ImportStep = 1 | 2 | 3 | 4

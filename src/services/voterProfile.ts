@@ -48,14 +48,10 @@ export type UpdateProfileRequest = {
   email?: string
   phone?: string
   photo_url?: string
-  faculty_name?: string
-  study_program_name?: string
-  semester?: string
+  faculty_code?: string
+  study_program_code?: string
   cohort_year?: number
-  department?: string
-  unit?: string
-  position?: string
-  title?: string
+  class_label?: string
 }
 
 export type ChangePasswordRequest = {
@@ -108,13 +104,20 @@ export const updateProfile = async (
   token: string,
   data: UpdateProfileRequest,
   options?: { signal?: AbortSignal }
-): Promise<{ success: boolean; message: string }> => {
-  return apiRequest('/voters/me/profile', {
+): Promise<{ success: boolean; message: string; updated_fields?: string[]; synced_to_identity?: boolean }> => {
+  const response = await apiRequest<any>('/voters/me/profile', {
     method: 'PUT',
     token,
     body: data,
     signal: options?.signal,
   })
+  
+  // Handle wrapped response
+  if (response.data) {
+    return response.data
+  }
+  
+  return response
 }
 
 export const changePassword = async (

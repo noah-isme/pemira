@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useVotingSession } from '../hooks/useVotingSession'
 import { useDashboardPemilih } from '../hooks/useDashboardPemilih'
 import { fetchVoterHistory, type HistoryItem, type HistoryItemType } from '../services/voterHistory'
+import { LucideIcon, type IconName } from '../components/LucideIcon'
 import '../styles/VoterHistory.css'
 
 const VoterHistory = (): JSX.Element => {
@@ -37,16 +38,16 @@ const VoterHistory = (): JSX.Element => {
     return () => controller.abort()
   }, [session?.accessToken, dashboardData.election?.id])
 
-  const getHistoryIcon = (type: HistoryItemType): string => {
+  const getHistoryIcon = (type: HistoryItemType): IconName => {
     switch (type) {
-      case 'registration': return '📱'
-      case 'voting': return '🗳️'
-      case 'tps_checkin': return '📍'
-      case 'qr_generated': return '🎫'
-      case 'qr_rotated': return '🔄'
-      case 'login': return '🔐'
-      case 'logout': return '🚪'
-      default: return '📋'
+      case 'registration': return 'smartphone'
+      case 'voting': return 'ballot'
+      case 'tps_checkin': return 'mapPin'
+      case 'qr_generated': return 'ticket'
+      case 'qr_rotated': return 'refreshCw'
+      case 'login': return 'lock'
+      case 'logout': return 'logOut'
+      default: return 'fileText'
     }
   }
 
@@ -88,7 +89,7 @@ const VoterHistory = (): JSX.Element => {
       <header className="history-header">
         <div className="header-top">
           <button className="back-button" onClick={handleBack}>
-            <span className="back-icon">←</span>
+            <LucideIcon name="arrowLeft" className="back-icon" size={20} />
           </button>
           <h1 className="header-title">Riwayat Aktivitas</h1>
           <div className="header-spacer"></div>
@@ -116,14 +117,14 @@ const VoterHistory = (): JSX.Element => {
 
         {error && (
           <div className="history-error">
-            <span className="error-icon">⚠️</span>
+            <LucideIcon name="alertCircle" className="error-icon" size={48} />
             <p>{error}</p>
           </div>
         )}
 
         {!loading && !error && history.length === 0 && (
           <div className="history-empty">
-            <span className="empty-icon">📜</span>
+            <LucideIcon name="scroll" className="empty-icon" size={64} />
             <h3>Belum Ada Riwayat</h3>
             <p>Aktivitas Anda akan muncul di sini</p>
           </div>
@@ -132,7 +133,10 @@ const VoterHistory = (): JSX.Element => {
         {!loading && !error && history.length > 0 && (
           <div className="history-timeline">
             <div className="timeline-header">
-              <h3 className="timeline-title">📜 Kronologi Aktivitas</h3>
+              <h3 className="timeline-title">
+                <LucideIcon name="scroll" className="timeline-title-icon" size={20} />
+                Kronologi Aktivitas
+              </h3>
               <p className="timeline-subtitle">{history.length} aktivitas tercatat</p>
             </div>
 
@@ -140,7 +144,9 @@ const VoterHistory = (): JSX.Element => {
               {history.map((item, index) => (
                 <div key={index} className="timeline-item">
                   <div className="timeline-marker">
-                    <span className="marker-icon">{getHistoryIcon(item.type)}</span>
+                    <div className="marker-icon">
+                      <LucideIcon name={getHistoryIcon(item.type)} size={24} />
+                    </div>
                     {index < history.length - 1 && <div className="marker-line"></div>}
                   </div>
                   
@@ -194,23 +200,23 @@ const VoterHistory = (): JSX.Element => {
       <footer className="history-footer">
         <nav className="footer-nav">
           <button className="nav-item" onClick={handleBack}>
-            <span className="nav-icon">🏠</span>
+            <LucideIcon name="home" className="nav-icon" size={24} />
             <span className="nav-label">Beranda</span>
           </button>
           <button className="nav-item" onClick={() => navigate('/dashboard/kandidat')}>
-            <span className="nav-icon">👥</span>
+            <LucideIcon name="users" className="nav-icon" size={24} />
             <span className="nav-label">Kandidat</span>
           </button>
           <button className="nav-item active">
-            <span className="nav-icon">📜</span>
+            <LucideIcon name="scroll" className="nav-icon" size={24} />
             <span className="nav-label">Riwayat</span>
           </button>
           <button className="nav-item" onClick={() => navigate('/dashboard/bantuan')}>
-            <span className="nav-icon">❓</span>
+            <LucideIcon name="helpCircle" className="nav-icon" size={24} />
             <span className="nav-label">Bantuan</span>
           </button>
           <button className="nav-item" onClick={() => navigate('/dashboard/profil')}>
-            <span className="nav-icon">👤</span>
+            <LucideIcon name="user" className="nav-icon" size={24} />
             <span className="nav-label">Profil</span>
           </button>
         </nav>

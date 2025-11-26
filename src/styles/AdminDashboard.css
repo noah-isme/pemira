@@ -131,7 +131,11 @@
 }
 
 .admin-sidebar a .nav-icon {
-  font-size: 1.1rem;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   opacity: 0.7;
   transition: opacity var(--admin-motion-fast) var(--admin-motion-ease);
 }
@@ -917,8 +921,13 @@
   background: var(--admin-color-brand-soft);
   display: grid;
   place-items: center;
-  font-size: 1.3rem;
   transition: transform var(--admin-motion-fast) var(--admin-motion-ease);
+}
+
+.action-icon svg {
+  width: 22px;
+  height: 22px;
+  color: var(--admin-primary-dark);
 }
 
 .action-card p {
@@ -990,6 +999,11 @@
   background: var(--admin-color-brand-soft);
   color: var(--admin-primary-dark);
   font-weight: 700;
+}
+
+.system-info .info-icon svg {
+  width: 22px;
+  height: 22px;
 }
 
 @keyframes headerIntro {
@@ -1155,6 +1169,11 @@
   .admin-mobile-nav a.active {
     border-color: var(--admin-color-brand-400);
     background: var(--admin-color-brand-soft);
+  }
+
+  .admin-mobile-nav .nav-icon {
+    width: 22px;
+    height: 22px;
   }
 
   .admin-mobile-nav a:active {

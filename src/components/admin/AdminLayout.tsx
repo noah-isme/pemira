@@ -2,15 +2,16 @@ import { useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAdminAuth } from '../../hooks/useAdminAuth'
 import PemiraLogos from '../shared/PemiraLogos'
+import { LucideIcon, type IconName } from '../LucideIcon'
 import '../../styles/AdminDashboard.css'
 
-export const adminMenuItems = [
-  { label: 'Dashboard', href: '/admin', exact: true, icon: '📊' },
-  { label: 'Kandidat', href: '/admin/kandidat', icon: '👥' },
-  { label: 'DPT', href: '/admin/dpt', icon: '🗂️' },
-  { label: 'TPS', href: '/admin/tps', icon: '🏛️' },
-  { label: 'Monitoring', href: '/admin/monitoring', icon: '📡' },
-  { label: 'Pengaturan', href: '/admin/pengaturan', icon: '⚙️' },
+export const adminMenuItems: Array<{ label: string; href: string; exact?: boolean; icon: IconName }> = [
+  { label: 'Dashboard', href: '/admin', exact: true, icon: 'layoutDashboard' },
+  { label: 'Kandidat', href: '/admin/kandidat', icon: 'users' },
+  { label: 'DPT', href: '/admin/dpt', icon: 'folder' },
+  { label: 'TPS', href: '/admin/tps', icon: 'building' },
+  { label: 'Monitoring', href: '/admin/monitoring', icon: 'satellite' },
+  { label: 'Pengaturan', href: '/admin/pengaturan', icon: 'settings' },
 ]
 
 type AdminLayoutProps = {
@@ -40,7 +41,7 @@ const AdminLayout = ({ children, title = 'Admin Panel' }: AdminLayoutProps): JSX
             {adminMenuItems.map((item) => (
               <li key={item.href}>
                 <Link to={item.href} className={isActive(item.href, item.exact) ? 'active' : ''}>
-                  <span className="nav-icon" aria-hidden>{item.icon}</span>
+                  <LucideIcon name={item.icon} className="nav-icon" size={20} />
                   {!sidebarCollapsed && <span className="nav-label">{item.label}</span>}
                 </Link>
               </li>
@@ -94,7 +95,7 @@ const AdminLayout = ({ children, title = 'Admin Panel' }: AdminLayoutProps): JSX
         <nav className="admin-mobile-nav" aria-label="Menu admin">
           {mobileMenuItems.map((item) => (
             <Link key={item.href} to={item.href} className={isActive(item.href, item.exact) ? 'active' : ''}>
-              <span className="nav-icon" aria-hidden>{item.icon}</span>
+              <LucideIcon name={item.icon} className="nav-icon" size={22} />
               <span className="sr-only">{item.label}</span>
             </Link>
           ))}

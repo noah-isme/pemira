@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import AdminLayout from '../components/admin/AdminLayout'
 import { useAdminDashboardData } from '../hooks/useAdminDashboardData'
+import { LucideIcon } from '../components/LucideIcon'
 import '../styles/AdminDashboard.css'
 
 const AdminDashboard = (): JSX.Element => {
@@ -243,7 +244,7 @@ const AdminDashboard = (): JSX.Element => {
           {actions.map((action) => (
             <Link key={action.id} className="action-card" to={action.href}>
               <div className="action-icon" aria-hidden>
-                {action.icon ?? '↗'}
+                <LucideIcon name={action.icon ?? 'arrowRight'} size={22} />
               </div>
               <div>
                 <strong>{action.label}</strong>
@@ -256,23 +257,29 @@ const AdminDashboard = (): JSX.Element => {
 
       <section className="system-info card">
         <div className="info-block">
-          <div className="info-icon" aria-hidden>⏱</div>
+          <div className="info-icon" aria-hidden>
+            <LucideIcon name="clock" size={22} />
+          </div>
           <div className="info-text">
             <span>Terakhir Sinkronisasi</span>
             <strong>{systemInfo.lastSync}</strong>
           </div>
         </div>
         <div className="info-block">
-          <div className="info-icon" aria-hidden>🛰</div>
+          <div className="info-icon" aria-hidden>
+            <LucideIcon name="satellite" size={22} />
+          </div>
           <div className="info-text">
             <span>Status Server</span>
             <strong className={`status ${systemInfo.serverStatus}`}>
-              {systemInfo.serverStatus === 'normal' ? '✔ Normal' : systemInfo.serverStatus === 'warning' ? '⚠ Perlu perhatian' : '⛔ Down'}
+              {systemInfo.serverStatus === 'normal' ? 'Normal' : systemInfo.serverStatus === 'warning' ? 'Perlu perhatian' : 'Down'}
             </strong>
           </div>
         </div>
         <div className="info-block">
-          <div className="info-icon" aria-hidden>🔒</div>
+          <div className="info-icon" aria-hidden>
+            <LucideIcon name="lock" size={22} />
+          </div>
           <div className="info-text">
             <span>Data Sinkronisasi</span>
             <strong>{systemInfo.dataLocked ? 'Terkunci' : 'Live'}</strong>

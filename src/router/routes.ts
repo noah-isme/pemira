@@ -5,7 +5,7 @@ import DemoAccounts from '../pages/DemoAccounts'
 import DetailKandidat from '../pages/DetailKandidat'
 import LandingPage from '../pages/LandingPage'
 import LoginMahasiswa from '../pages/LoginMahasiswa'
-import Register from '../pages/Register'
+import RegisterNew from '../pages/RegisterNew'
 import TPSScanner from '../pages/TPSScanner'
 import TPSSuccess from '../pages/TPSSuccess'
 import TPSValidation from '../pages/TPSValidation'
@@ -40,6 +40,7 @@ import AdminDPTList from '../pages/AdminDPTList'
 import AdminDPTImport from '../pages/AdminDPTImport'
 import AdminDPTDetail from '../pages/AdminDPTDetail'
 import AdminDPTEdit from '../pages/AdminDPTEdit'
+import AdminUserManagement from '../pages/AdminUserManagement'
 import Panduan from '../pages/Panduan'
 import AdminFlowGuide from '../pages/AdminFlowGuide'
 import JadwalPemilu from '../pages/JadwalPemilu'
@@ -59,7 +60,7 @@ export const appRoutes: RouteDefinition[] = [
   { id: 'panduan', path: '/panduan', Component: Panduan },
   { id: 'demo-accounts', path: '/demo', Component: DemoAccounts, publicOnly: true },
   { id: 'login', path: '/login', Component: LoginMahasiswa, publicOnly: true },
-  { id: 'register', path: '/register', Component: Register, publicOnly: true },
+  { id: 'register', path: '/register', Component: RegisterNew, publicOnly: true },
   { id: 'admin-login', path: '/admin/login', Component: AdminLogin },
   { id: 'dashboard', path: '/dashboard', Component: DashboardPemilihHiFi, requiresAuth: true },
   { id: 'voter-history', path: '/dashboard/riwayat', Component: VoterHistory, requiresAuth: true },
@@ -100,6 +101,7 @@ export const appRoutes: RouteDefinition[] = [
   { id: 'admin-dpt-import', path: '/admin/dpt/import', Component: AdminDPTImport, requiresAdminAuth: true },
   { id: 'admin-dpt-edit', path: '/admin/dpt/:id/edit', Component: AdminDPTEdit, requiresAdminAuth: true },
   { id: 'admin-dpt-detail', path: '/admin/dpt/:id', Component: AdminDPTDetail, requiresAdminAuth: true },
+  { id: 'admin-users', path: '/admin/users', Component: AdminUserManagement, requiresAdminAuth: true },
   { id: 'jadwal-pemilu', path: '/jadwal', Component: JadwalPemilu },
   { id: 'tentang', path: '/tentang', Component: Tentang },
 ]

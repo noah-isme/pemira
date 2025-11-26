@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useVotingSession } from '../hooks/useVotingSession'
 import { useDashboardPemilih } from '../hooks/useDashboardPemilih'
+import { LucideIcon, type IconName } from '../components/LucideIcon'
 import '../styles/VoterHelp.css'
 
 type StepItem = {
-  icon: string
+  icon: IconName
   title: string
   description: string
 }
@@ -16,18 +17,18 @@ type FAQItem = {
 }
 
 const onlineSteps: StepItem[] = [
-  { icon: '🔐', title: 'Masuk', description: 'Login dengan akun PEMIRA atau akun kampus.' },
-  { icon: '👤', title: 'Pilih Kandidat', description: 'Baca profil, lalu pilih kandidat yang Anda dukung.' },
-  { icon: '🛡️', title: 'Konfirmasi Suara', description: 'Pastikan pilihan benar, lalu klik "Rekam Suara".' },
-  { icon: '✅', title: 'Selesai', description: 'Suara Anda berhasil direkam secara aman.' },
+  { icon: 'lock', title: 'Masuk', description: 'Login dengan akun PEMIRA atau akun kampus.' },
+  { icon: 'users', title: 'Pilih Kandidat', description: 'Baca profil, lalu pilih kandidat yang Anda dukung.' },
+  { icon: 'shieldCheck', title: 'Konfirmasi Suara', description: 'Pastikan pilihan benar, lalu klik "Rekam Suara".' },
+  { icon: 'checkCircle', title: 'Selesai', description: 'Suara Anda berhasil direkam secara aman.' },
 ]
 
 const tpsSteps: StepItem[] = [
-  { icon: '📲', title: 'Tunjukkan QR', description: 'Panitia memverifikasi identitas Anda dengan QR.' },
-  { icon: '🪪', title: 'Scan Check-In', description: 'Petugas mengkonfirmasi kehadiran Anda di TPS.' },
-  { icon: '🗳️', title: 'Ambil Surat Suara', description: 'Menuju bilik suara untuk memilih.' },
-  { icon: '✏️', title: 'Coblos & Scan', description: 'Pilih kandidat, petugas scan QR di surat suara.' },
-  { icon: '📦', title: 'Masukkan Kotak', description: 'Masukkan surat suara ke kotak, selesai.' },
+  { icon: 'smartphone', title: 'Tunjukkan QR', description: 'Panitia memverifikasi identitas Anda dengan QR.' },
+  { icon: 'ticket', title: 'Scan Check-In', description: 'Petugas mengkonfirmasi kehadiran Anda di TPS.' },
+  { icon: 'ballot', title: 'Ambil Surat Suara', description: 'Menuju bilik suara untuk memilih.' },
+  { icon: 'pencil', title: 'Coblos & Scan', description: 'Pilih kandidat, petugas scan QR di surat suara.' },
+  { icon: 'package', title: 'Masukkan Kotak', description: 'Masukkan surat suara ke kotak, selesai.' },
 ]
 
 const faqItems: FAQItem[] = [
@@ -80,7 +81,7 @@ const VoterHelp = (): JSX.Element => {
       <header className="help-header">
         <div className="header-top">
           <button className="back-button" onClick={handleBack}>
-            <span className="back-icon">←</span>
+            <LucideIcon name="arrowLeft" className="back-icon" size={20} />
           </button>
           <h1 className="header-title">Bantuan</h1>
           <div className="header-spacer"></div>
@@ -102,14 +103,14 @@ const VoterHelp = (): JSX.Element => {
               className={`method-tab ${activeTab === 'online' ? 'active' : ''}`}
               onClick={() => setActiveTab('online')}
             >
-              <span className="tab-icon">📱</span>
+              <LucideIcon name="smartphone" className="tab-icon" size={32} />
               <span className="tab-text">Voting Online</span>
             </button>
             <button 
               className={`method-tab ${activeTab === 'tps' ? 'active' : ''}`}
               onClick={() => setActiveTab('tps')}
             >
-              <span className="tab-icon">📍</span>
+              <LucideIcon name="mapPin" className="tab-icon" size={32} />
               <span className="tab-text">Voting di TPS</span>
             </button>
           </div>
@@ -119,7 +120,12 @@ const VoterHelp = (): JSX.Element => {
         <div className="steps-section">
           <div className="steps-header">
             <h3 className="steps-title">
-              {activeTab === 'online' ? '📱 Langkah Voting Online' : '📍 Langkah Voting di TPS'}
+              <LucideIcon
+                name={activeTab === 'online' ? 'smartphone' : 'mapPin'}
+                className="steps-title-icon"
+                size={24}
+              />
+              {activeTab === 'online' ? 'Langkah Voting Online' : 'Langkah Voting di TPS'}
             </h3>
             <p className="steps-subtitle">
               {activeTab === 'online' 
@@ -132,7 +138,9 @@ const VoterHelp = (): JSX.Element => {
             {(activeTab === 'online' ? onlineSteps : tpsSteps).map((step, index) => (
               <div key={index} className="step-card">
                 <div className="step-number">{index + 1}</div>
-                <div className="step-icon">{step.icon}</div>
+                <div className="step-icon">
+                  <LucideIcon name={step.icon} size={22} />
+                </div>
                 <div className="step-content">
                   <h4 className="step-title">{step.title}</h4>
                   <p className="step-description">{step.description}</p>
@@ -145,7 +153,10 @@ const VoterHelp = (): JSX.Element => {
         {/* FAQ Section */}
         <div className="faq-section">
           <div className="faq-header">
-            <h3 className="faq-title">❓ Pertanyaan Umum (FAQ)</h3>
+            <h3 className="faq-title">
+              <LucideIcon name="helpCircle" className="faq-title-icon" size={22} />
+              Pertanyaan Umum (FAQ)
+            </h3>
             <p className="faq-subtitle">Jawaban untuk pertanyaan yang sering diajukan</p>
           </div>
 
@@ -171,27 +182,30 @@ const VoterHelp = (): JSX.Element => {
 
         {/* Quick Actions */}
         <div className="quick-actions">
-          <h3 className="actions-title">🚀 Aksi Cepat</h3>
+          <h3 className="actions-title">
+            <LucideIcon name="rocket" className="actions-title-icon" size={22} />
+            Aksi Cepat
+          </h3>
           <div className="actions-grid">
             <button 
               className="action-card"
               onClick={() => navigate('/dashboard/kandidat')}
             >
-              <span className="action-icon">👥</span>
+              <LucideIcon name="users" className="action-icon" size={24} />
               <span className="action-text">Lihat Kandidat</span>
             </button>
             <button 
               className="action-card"
               onClick={() => navigate('/dashboard/riwayat')}
             >
-              <span className="action-icon">📜</span>
+              <LucideIcon name="scroll" className="action-icon" size={24} />
               <span className="action-text">Riwayat Saya</span>
             </button>
             <button 
               className="action-card"
               onClick={handleBack}
             >
-              <span className="action-icon">🏠</span>
+              <LucideIcon name="home" className="action-icon" size={24} />
               <span className="action-text">Ke Dashboard</span>
             </button>
           </div>
@@ -202,23 +216,23 @@ const VoterHelp = (): JSX.Element => {
       <footer className="help-footer">
         <nav className="footer-nav">
           <button className="nav-item" onClick={handleBack}>
-            <span className="nav-icon">🏠</span>
+            <LucideIcon name="home" className="nav-icon" size={24} />
             <span className="nav-label">Beranda</span>
           </button>
           <button className="nav-item" onClick={() => navigate('/dashboard/kandidat')}>
-            <span className="nav-icon">👥</span>
+            <LucideIcon name="users" className="nav-icon" size={24} />
             <span className="nav-label">Kandidat</span>
           </button>
           <button className="nav-item" onClick={() => navigate('/dashboard/riwayat')}>
-            <span className="nav-icon">📜</span>
+            <LucideIcon name="scroll" className="nav-icon" size={24} />
             <span className="nav-label">Riwayat</span>
           </button>
           <button className="nav-item active">
-            <span className="nav-icon">❓</span>
+            <LucideIcon name="helpCircle" className="nav-icon" size={24} />
             <span className="nav-label">Bantuan</span>
           </button>
           <button className="nav-item" onClick={() => navigate('/dashboard/profil')}>
-            <span className="nav-icon">👤</span>
+            <LucideIcon name="user" className="nav-icon" size={24} />
             <span className="nav-label">Profil</span>
           </button>
         </nav>

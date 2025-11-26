@@ -32,6 +32,18 @@
   color: #0f172a;
 }
 
+.inline-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.inline-icon {
+  width: 14px;
+  height: 14px;
+  vertical-align: middle;
+}
+
 .error-text {
   color: #b91c1c;
   font-weight: 600;
@@ -170,6 +182,37 @@
 .status-chip.sudah {
   background: var(--admin-color-success-soft, #dcfce7);
   color: var(--admin-color-success-500, #16a34a);
+}
+
+/* Election Voter Status Chips */
+.status-chip.status-pending {
+  background: #fef3c7;
+  color: #f59e0b;
+  border: 1px solid #fbbf24;
+}
+
+.status-chip.status-verified {
+  background: #dcfce7;
+  color: #16a34a;
+  border: 1px solid #22c55e;
+}
+
+.status-chip.status-rejected {
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #ef4444;
+}
+
+.status-chip.status-voted {
+  background: #dbeafe;
+  color: #2563eb;
+  border: 1px solid #3b82f6;
+}
+
+.status-chip.status-blocked {
+  background: #f3f4f6;
+  color: #6b7280;
+  border: 1px solid #9ca3af;
 }
 
 .empty-state {

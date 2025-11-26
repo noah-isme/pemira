@@ -87,7 +87,8 @@
 }
 
 .back-icon {
-  font-size: 20px;
+  width: 20px;
+  height: 20px;
   color: #2d3748;
 }
 
@@ -130,7 +131,8 @@
 }
 
 .error-icon {
-  font-size: 64px;
+  width: 64px;
+  height: 64px;
   margin-bottom: 16px;
 }
 
@@ -233,7 +235,8 @@
 }
 
 .btn-icon {
-  font-size: 16px;
+  width: 16px;
+  height: 16px;
 }
 
 /* Info Sections */
@@ -256,7 +259,8 @@
 }
 
 .section-icon {
-  font-size: 20px;
+  width: 20px;
+  height: 20px;
 }
 
 /* Info Grid */
@@ -317,6 +321,9 @@
 }
 
 .voting-method {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-weight: 600;
 }
 
@@ -331,6 +338,11 @@
   font-size: 14px;
   font-weight: 600;
   width: fit-content;
+}
+
+.inline-icon {
+  width: 18px;
+  height: 18px;
 }
 
 /* Edit Form */
@@ -541,7 +553,8 @@
 }
 
 .setting-icon {
-  font-size: 20px;
+  width: 20px;
+  height: 20px;
 }
 
 .setting-text {
@@ -552,7 +565,8 @@
 }
 
 .setting-arrow {
-  font-size: 18px;
+  width: 18px;
+  height: 18px;
   color: #718096;
 }
 
@@ -581,6 +595,12 @@
   margin-bottom: 16px;
   color: #991b1b;
   font-size: 14px;
+}
+
+.form-error .error-icon {
+  width: 20px;
+  height: 20px;
+  margin: 0;
 }
 
 /* Account Meta */
@@ -664,7 +684,8 @@
 }
 
 .nav-icon {
-  font-size: 24px;
+  width: 24px;
+  height: 24px;
   transition: transform 0.2s;
 }
 
@@ -712,7 +733,8 @@
   }
 
   .nav-icon {
-    font-size: 20px;
+    width: 20px;
+    height: 20px;
   }
 
   .notification-toast {

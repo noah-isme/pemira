@@ -4,9 +4,11 @@ import AdminLayout from '../components/admin/AdminLayout'
 import { useAdminAuth } from '../hooks/useAdminAuth'
 import { useDPTAdminStore } from '../hooks/useDPTAdminStore'
 import { deleteAdminDptVoter } from '../services/adminDpt'
+import { updateElectionVoter } from '../services/adminElectionVoters'
+import { useActiveElection } from '../hooks/useActiveElection'
 import { useToast } from '../components/Toast'
 import { usePopup } from '../components/Popup'
-import type { AcademicStatus, VoterStatus } from '../types/dptAdmin'
+import type { AcademicStatus, VoterStatus, ElectionVoterStatus } from '../types/dptAdmin'
 import '../styles/AdminDPT.css'
 
 const statusSuaraLabels: Record<VoterStatus, string> = {
@@ -20,12 +22,22 @@ const akademikLabels: Record<AcademicStatus, string> = {
   nonaktif: 'Nonaktif',
 }
 
+const electionVoterStatusLabels: Record<ElectionVoterStatus, string> = {
+  PENDING: 'Menunggu Verifikasi',
+  VERIFIED: 'Terverifikasi',
+  REJECTED: 'Ditolak',
+  VOTED: 'Sudah Memilih',
+  BLOCKED: 'Diblokir',
+}
+
 const AdminDPTList = (): JSX.Element => {
   const navigate = useNavigate()
   const location = useLocation()
   const { token } = useAdminAuth()
+  const { activeElectionId } = useActiveElection()
   const { voters, total, page, limit, setPage, filters, setFilters, selected, toggleSelect, selectAll, clearSelection, refresh, loading, error } = useDPTAdminStore()
   const [deleting, setDeleting] = useState(false)
+  const [updating, setUpdating] = useState(false)
   const { showToast } = useToast()
   const { showPopup } = usePopup()
 
@@ -126,6 +138,63 @@ const AdminDPTList = (): JSX.Element => {
     setDeleting(false)
   }
 
+  const handleUpdateStatus = async (electionVoterId: string, status: ElectionVoterStatus, voterName: string) => {
+    if (!token || !activeElectionId) return
+    
+    const confirmed = await showPopup({
+      title: 'Konfirmasi Update Status',
+      message: `Ubah status "${voterName}" menjadi ${electionVoterStatusLabels[status]}?`,
+      type: 'info',
+      confirmText: 'Ya, Ubah',
+      cancelText: 'Batal'
+    })
+    if (!confirmed) return
+
+    setUpdating(true)
+    try {
+      await updateElectionVoter(token, parseInt(electionVoterId), { status }, activeElectionId)
+      await refresh()
+      showToast(`Status berhasil diubah menjadi ${electionVoterStatusLabels[status]}`, 'success')
+    } catch (err) {
+      console.error('Failed to update status', err)
+      showToast('Gagal mengubah status: ' + ((err as any)?.message || 'Unknown error'), 'error')
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  const handleBulkVerify = async () => {
+    if (!token || !activeElectionId || selected.size === 0) return
+    
+    const confirmed = await showPopup({
+      title: 'Konfirmasi Verifikasi Massal',
+      message: `Verifikasi ${selected.size} pemilih terpilih?`,
+      type: 'info',
+      confirmText: 'Verifikasi Semua',
+      cancelText: 'Batal'
+    })
+    if (!confirmed) return
+
+    setUpdating(true)
+    let successCount = 0
+    let errorCount = 0
+
+    for (const electionVoterId of selected) {
+      try {
+        await updateElectionVoter(token, parseInt(electionVoterId), { status: 'VERIFIED' }, activeElectionId)
+        successCount++
+      } catch (err) {
+        console.error('Failed to verify voter', electionVoterId, err)
+        errorCount++
+      }
+    }
+
+    clearSelection()
+    await refresh()
+    showToast(`Selesai: ${successCount} berhasil diverifikasi, ${errorCount} gagal`, successCount > 0 ? 'success' : 'error')
+    setUpdating(false)
+  }
+
   return (
     <AdminLayout title="Daftar Pemilih">
       <div className="admin-dpt-page">
@@ -147,8 +216,9 @@ const AdminDPTList = (): JSX.Element => {
         <div className="status-row">
           {loading && <span>Memuat data DPT...</span>}
           {deleting && <span>Menghapus data...</span>}
+          {updating && <span>Memperbarui status...</span>}
           {error && <span className="error-text">{error}</span>}
-          <button className="btn-outline" type="button" onClick={() => void refresh()} disabled={loading || deleting}>
+          <button className="btn-outline" type="button" onClick={() => void refresh()} disabled={loading || deleting || updating}>
             Muat ulang
           </button>
         </div>
@@ -191,20 +261,32 @@ const AdminDPTList = (): JSX.Element => {
             <option value="dosen">Dosen</option>
             <option value="staf">Staf</option>
           </select>
+          <select value={filters.electionVoterStatus} onChange={(event) => setFilters((prev) => ({ ...prev, electionVoterStatus: event.target.value as typeof filters.electionVoterStatus }))}>
+            <option value="all">Status Verifikasi: Semua</option>
+            <option value="PENDING">Menunggu Verifikasi</option>
+            <option value="VERIFIED">Terverifikasi</option>
+            <option value="REJECTED">Ditolak</option>
+            <option value="VOTED">Sudah Memilih</option>
+            <option value="BLOCKED">Diblokir</option>
+          </select>
         </div>
 
         <div className="mass-actions">
           <label>
-            <input type="checkbox" checked={filteredVoters.every((voter) => selected.has(voter.id)) && filteredVoters.length > 0} onChange={handleSelectAll} disabled={deleting} />
+            <input type="checkbox" checked={filteredVoters.every((voter) => selected.has(voter.id)) && filteredVoters.length > 0} onChange={handleSelectAll} disabled={deleting || updating} />
             Pilih semua di halaman
           </label>
           <select onChange={(e) => {
             if (e.target.value === 'delete') {
               void handleBulkDelete()
               e.target.value = ''
+            } else if (e.target.value === 'verify') {
+              void handleBulkVerify()
+              e.target.value = ''
             }
-          }} disabled={selected.size === 0 || deleting}>
+          }} disabled={selected.size === 0 || deleting || updating}>
             <option value="">Aksi Massal ({selected.size} dipilih)</option>
+            <option value="verify">✓ Verifikasi Pemilih</option>
             <option value="delete">Hapus dari DPT</option>
           </select>
         </div>
@@ -222,6 +304,7 @@ const AdminDPTList = (): JSX.Element => {
                 <th>Semester</th>
                 <th>Tipe Pemilih</th>
                 <th>Akademik</th>
+                <th>Status Verifikasi</th>
                 <th>Status Suara</th>
                 <th>Metode</th>
                 <th>Aksi</th>
@@ -231,7 +314,7 @@ const AdminDPTList = (): JSX.Element => {
             <tbody>
               {filteredVoters.length === 0 && (
                 <tr>
-                  <td colSpan={12} className="empty-state">
+                  <td colSpan={13} className="empty-state">
                     Tidak ada data pemilih.
                   </td>
                 </tr>
@@ -258,6 +341,15 @@ const AdminDPTList = (): JSX.Element => {
                   </td>
                   <td>{akademikLabels[voter.akademik]}</td>
                   <td>
+                    {voter.electionVoterStatus ? (
+                      <span className={`status-chip status-${voter.electionVoterStatus.toLowerCase()}`}>
+                        {electionVoterStatusLabels[voter.electionVoterStatus]}
+                      </span>
+                    ) : (
+                      <span className="status-chip">-</span>
+                    )}
+                  </td>
+                  <td>
                     <span className={`status-chip ${voter.statusSuara}`}>{statusSuaraLabels[voter.statusSuara]}</span>
                   </td>
                   <td>
@@ -267,13 +359,35 @@ const AdminDPTList = (): JSX.Element => {
                     </div>
                   </td>
                   <td>
-                    <button className="btn-table" type="button" onClick={() => navigate(`/admin/dpt/${voter.id}`)} disabled={deleting}>
+                    {voter.electionVoterStatus === 'PENDING' && (
+                      <button 
+                        className="btn-table" 
+                        type="button" 
+                        onClick={() => void handleUpdateStatus(voter.id, 'VERIFIED', voter.nama)} 
+                        disabled={deleting || updating}
+                        style={{ marginRight: '4px', backgroundColor: '#10b981', color: 'white' }}
+                      >
+                        ✓ Verifikasi
+                      </button>
+                    )}
+                    {voter.electionVoterStatus === 'VERIFIED' && (
+                      <button 
+                        className="btn-table" 
+                        type="button" 
+                        onClick={() => void handleUpdateStatus(voter.id, 'REJECTED', voter.nama)} 
+                        disabled={deleting || updating}
+                        style={{ marginRight: '4px', backgroundColor: '#ef4444', color: 'white' }}
+                      >
+                        ✗ Tolak
+                      </button>
+                    )}
+                    <button className="btn-table" type="button" onClick={() => navigate(`/admin/dpt/${voter.id}`)} disabled={deleting || updating}>
                       Detail
                     </button>
-                    <button className="btn-table" type="button" onClick={() => navigate(`/admin/dpt/${voter.id}/edit`)} disabled={deleting} style={{ marginLeft: '4px' }}>
+                    <button className="btn-table" type="button" onClick={() => navigate(`/admin/dpt/${voter.id}/edit`)} disabled={deleting || updating} style={{ marginLeft: '4px' }}>
                       Edit
                     </button>
-                    <button className="btn-table danger" type="button" onClick={() => void handleDeleteVoter(voter.id, voter.nama)} disabled={deleting} style={{ marginLeft: '4px' }}>
+                    <button className="btn-table danger" type="button" onClick={() => void handleDeleteVoter(voter.id, voter.nama)} disabled={deleting || updating} style={{ marginLeft: '4px' }}>
                       Hapus
                     </button>
                   </td>

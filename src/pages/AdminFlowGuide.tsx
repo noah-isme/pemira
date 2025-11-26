@@ -1,10 +1,11 @@
 import AdminLayout from '../components/admin/AdminLayout'
+import { LucideIcon, type IconName } from '../components/LucideIcon'
 import '../styles/AdminFlowGuide.css'
 
 type FlowStep = {
   label: string
   detail: string
-  icon?: string
+  icon?: IconName
 }
 
 type FlowTrack = {
@@ -22,11 +23,11 @@ const flowTracks: FlowTrack[] = [
     badge: 'LEVEL 1',
     tone: 'purple',
     steps: [
-      { label: 'Pendaftaran Pemilih', detail: 'Mahasiswa, dosen, staf mendaftar sesuai mode pilihan.', icon: '📝' },
-      { label: 'Verifikasi DPT', detail: 'Validasi identitas & penentuan hak pilih (ONLINE / TPS).', icon: '🔎' },
-      { label: 'Hari H Pemungutan Suara', detail: 'Online via portal atau offline di TPS.', icon: '📅' },
-      { label: 'Rekapitulasi Suara', detail: 'Tarik suara ONLINE + TPS, audit, dan validasi.', icon: '📊' },
-      { label: 'Publikasi Hasil', detail: 'Umumkan hasil final setelah verifikasi panitia.', icon: '📢' },
+      { label: 'Pendaftaran Pemilih', detail: 'Mahasiswa, dosen, staf mendaftar sesuai mode pilihan.', icon: 'fileCheck' },
+      { label: 'Verifikasi DPT', detail: 'Validasi identitas & penentuan hak pilih (ONLINE / TPS).', icon: 'search' },
+      { label: 'Hari H Pemungutan Suara', detail: 'Online via portal atau offline di TPS.', icon: 'calendar' },
+      { label: 'Rekapitulasi Suara', detail: 'Tarik suara ONLINE + TPS, audit, dan validasi.', icon: 'barChart' },
+      { label: 'Publikasi Hasil', detail: 'Umumkan hasil final setelah verifikasi panitia.', icon: 'megaphone' },
     ],
   },
   {
@@ -35,10 +36,10 @@ const flowTracks: FlowTrack[] = [
     badge: 'LEVEL 2',
     tone: 'blue',
     steps: [
-      { label: 'Isi Data', detail: 'Nama, NIM/NIDN/NIP, prodi/unit, email (opsional), password.', icon: '🧾' },
-      { label: 'Pilih Mode', detail: 'ONLINE: hanya portal. TPS: akan dapat QR pendaftaran.', icon: '🎯' },
-      { label: 'Submit Form', detail: 'System membuat akun & status DPT sesuai mode.', icon: '✅' },
-      { label: 'Hasil', detail: 'ONLINE → langsung login. TPS → tampilkan/unduh QR pendaftaran.', icon: '🎟️' },
+      { label: 'Isi Data', detail: 'Nama, NIM/NIDN/NIP, prodi/unit, email (opsional), password.', icon: 'receipt' },
+      { label: 'Pilih Mode', detail: 'ONLINE: hanya portal. TPS: akan dapat QR pendaftaran.', icon: 'target' },
+      { label: 'Submit Form', detail: 'System membuat akun & status DPT sesuai mode.', icon: 'checkCircle' },
+      { label: 'Hasil', detail: 'ONLINE → langsung login. TPS → tampilkan/unduh QR pendaftaran.', icon: 'ticket' },
     ],
   },
   {
@@ -47,10 +48,10 @@ const flowTracks: FlowTrack[] = [
     badge: 'LEVEL 3',
     tone: 'green',
     steps: [
-      { label: 'Login', detail: 'Validasi akun & hak pilih ONLINE.', icon: '🔐' },
-      { label: 'Lihat Kandidat', detail: 'Baca profil & program kerja.', icon: '🧭' },
-      { label: 'Pilih & Konfirmasi', detail: 'Kunci pilihan, kirim suara (channel=ONLINE).', icon: '🗳️' },
-      { label: 'Status Tercatat', detail: 'System update voter_status & log suara.', icon: '📌' },
+      { label: 'Login', detail: 'Validasi akun & hak pilih ONLINE.', icon: 'lock' },
+      { label: 'Lihat Kandidat', detail: 'Baca profil & program kerja.', icon: 'compass' },
+      { label: 'Pilih & Konfirmasi', detail: 'Kunci pilihan, kirim suara (channel=ONLINE).', icon: 'ballot' },
+      { label: 'Status Tercatat', detail: 'System update voter_status & log suara.', icon: 'mapPin' },
     ],
   },
   {
@@ -59,10 +60,10 @@ const flowTracks: FlowTrack[] = [
     badge: 'LEVEL 4',
     tone: 'orange',
     steps: [
-      { label: 'Check-in', detail: 'Tunjukkan QR pendaftaran di TPS → panitia scan & approve.', icon: '📱' },
-      { label: 'Ambil Surat Suara', detail: 'Status checkin APPROVED, pemilih masuk bilik.', icon: '🧾' },
-      { label: 'Scan QR Paslon', detail: 'Scan QR pada surat suara → catat vote (channel=TPS).', icon: '🗳️' },
-      { label: 'Selesai', detail: 'Update status VOTED, tinta jari, keluar TPS.', icon: '✅' },
+      { label: 'Check-in', detail: 'Tunjukkan QR pendaftaran di TPS → panitia scan & approve.', icon: 'smartphone' },
+      { label: 'Ambil Surat Suara', detail: 'Status checkin APPROVED, pemilih masuk bilik.', icon: 'receipt' },
+      { label: 'Scan QR Paslon', detail: 'Scan QR pada surat suara → catat vote (channel=TPS).', icon: 'ballot' },
+      { label: 'Selesai', detail: 'Update status VOTED, tinta jari, keluar TPS.', icon: 'checkCircle' },
     ],
   },
   {
@@ -71,11 +72,11 @@ const flowTracks: FlowTrack[] = [
     badge: 'LEVEL 5',
     tone: 'purple',
     steps: [
-      { label: 'Tutup Voting', detail: 'Pastikan semua channel berhenti menerima suara.', icon: '⛔' },
-      { label: 'Tarik Data Suara', detail: 'Kumpulkan votes ONLINE + TPS.', icon: '⬇️' },
-      { label: 'Hitung & Segmentasi', detail: 'Total per kandidat, per fakultas, per TPS, per mode.', icon: '📈' },
-      { label: 'Audit & Validasi', detail: 'Cek duplikasi/anomali, verifikasi panitia.', icon: '🛡️' },
-      { label: 'Publikasi', detail: 'Umumkan hasil final dan bagikan ringkasan.', icon: '📣' },
+      { label: 'Tutup Voting', detail: 'Pastikan semua channel berhenti menerima suara.', icon: 'lock' },
+      { label: 'Tarik Data Suara', detail: 'Kumpulkan votes ONLINE + TPS.', icon: 'download' },
+      { label: 'Hitung & Segmentasi', detail: 'Total per kandidat, per fakultas, per TPS, per mode.', icon: 'trendingUp' },
+      { label: 'Audit & Validasi', detail: 'Cek duplikasi/anomali, verifikasi panitia.', icon: 'shieldCheck' },
+      { label: 'Publikasi', detail: 'Umumkan hasil final dan bagikan ringkasan.', icon: 'megaphone' },
     ],
   },
 ]
@@ -108,7 +109,9 @@ const AdminFlowGuide = (): JSX.Element => {
               <ol className="flow-steps">
                 {track.steps.map((step) => (
                   <li key={step.label} className="flow-step">
-                    <div className="step-icon">{step.icon ?? '•'}</div>
+                    <div className="step-icon">
+                      <LucideIcon name={step.icon ?? 'info'} size={20} />
+                    </div>
                     <div className="step-content">
                       <p className="step-label">{step.label}</p>
                       <p className="step-detail">{step.detail}</p>

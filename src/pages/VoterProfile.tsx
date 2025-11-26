@@ -10,6 +10,7 @@ import {
   type VoterCompleteProfile,
   type ParticipationStats,
 } from '../services/voterProfile'
+import { LucideIcon } from '../components/LucideIcon'
 import '../styles/VoterProfile.css'
 
 const VoterProfile = (): JSX.Element => {
@@ -25,14 +26,10 @@ const VoterProfile = (): JSX.Element => {
   const [isEditMode, setIsEditMode] = useState(false)
   const [editEmail, setEditEmail] = useState('')
   const [editPhone, setEditPhone] = useState('')
-  const [editFaculty, setEditFaculty] = useState('')
-  const [editProgram, setEditProgram] = useState('')
-  const [editSemester, setEditSemester] = useState('')
+  const [editFacultyCode, setEditFacultyCode] = useState('')
+  const [editProgramCode, setEditProgramCode] = useState('')
   const [editCohortYear, setEditCohortYear] = useState('')
-  const [editDepartment, setEditDepartment] = useState('')
-  const [editUnit, setEditUnit] = useState('')
-  const [editPosition, setEditPosition] = useState('')
-  const [editTitle, setEditTitle] = useState('')
+  const [editClassLabel, setEditClassLabel] = useState('')
   const [saving, setSaving] = useState(false)
   
   // Password change states
@@ -81,14 +78,11 @@ const VoterProfile = (): JSX.Element => {
         setStats(statsData)
         setEditEmail(profileData.personal_info?.email || '')
         setEditPhone(profileData.personal_info?.phone || '')
-        setEditFaculty(profileData.personal_info?.faculty_name || '')
-        setEditProgram(profileData.personal_info?.study_program_name || '')
-        setEditSemester(profileData.personal_info?.semester || '')
+        // Note: API contract doesn't expose codes directly in response, we use names for display
+        setEditFacultyCode('')
+        setEditProgramCode('')
         setEditCohortYear(profileData.personal_info?.cohort_year ? String(profileData.personal_info.cohort_year) : '')
-        setEditDepartment(profileData.personal_info?.department || '')
-        setEditUnit(profileData.personal_info?.unit || '')
-        setEditPosition(profileData.personal_info?.position || '')
-        setEditTitle(profileData.personal_info?.title || '')
+        setEditClassLabel('')
         setError(null)
       })
       .catch((err) => {
@@ -117,28 +111,45 @@ const VoterProfile = (): JSX.Element => {
         phone: editPhone || undefined,
       }
 
+      // Add editable identity fields based on voter type
+      if (editFacultyCode) {
+        payload.faculty_code = editFacultyCode
+      }
+      
       if (profile?.personal_info.voter_type === 'STUDENT') {
-        payload.faculty_name = editFaculty || undefined
-        payload.study_program_name = editProgram || undefined
-        payload.semester = editSemester || undefined
+        if (editProgramCode) {
+          payload.study_program_code = editProgramCode
+        }
         const parsedCohort = Number.parseInt(editCohortYear, 10)
-        payload.cohort_year = Number.isNaN(parsedCohort) ? undefined : parsedCohort
+        if (!Number.isNaN(parsedCohort)) {
+          payload.cohort_year = parsedCohort
+        }
+        if (editClassLabel) {
+          payload.class_label = editClassLabel
+        }
       } else if (profile?.personal_info.voter_type === 'LECTURER') {
-        payload.faculty_name = editFaculty || undefined
-        payload.department = editDepartment || undefined
-        payload.title = editTitle || undefined
+        if (editProgramCode) {
+          payload.study_program_code = editProgramCode
+        }
+        if (editClassLabel) {
+          payload.class_label = editClassLabel
+        }
       } else if (profile?.personal_info.voter_type === 'STAFF') {
-        payload.unit = editUnit || undefined
-        payload.position = editPosition || undefined
+        if (editClassLabel) {
+          payload.class_label = editClassLabel
+        }
       }
 
-      await updateProfile(session.accessToken, payload)
+      const result = await updateProfile(session.accessToken, payload)
       
       // Refresh profile
       const updatedProfile = await fetchCompleteProfile(session.accessToken)
       setProfile(updatedProfile)
       setIsEditMode(false)
-      showNotification('success', 'Profil berhasil diperbarui!')
+      
+      // Show success with updated fields info
+      const updatedFields = result.updated_fields?.join(', ') || 'beberapa field'
+      showNotification('success', `Profil berhasil diperbarui (${updatedFields})`)
     } catch (err: any) {
       showNotification('error', err.message || 'Gagal memperbarui profil')
     } finally {
@@ -236,7 +247,7 @@ const VoterProfile = (): JSX.Element => {
       <header className="profile-header">
         <div className="header-top">
           <button className="back-button" onClick={handleBack}>
-            <span className="back-icon">←</span>
+            <LucideIcon name="arrowLeft" className="back-icon" size={20} />
           </button>
           <h1 className="header-title">Profil Saya</h1>
           <div className="header-spacer"></div>
@@ -262,7 +273,7 @@ const VoterProfile = (): JSX.Element => {
           
           {!isEditMode && (
             <button className="btn-edit-profile" onClick={() => setIsEditMode(true)}>
-              <span className="btn-icon">✏️</span>
+              <LucideIcon name="pencil" className="btn-icon" size={16} />
               <span className="btn-text">Edit Profil</span>
             </button>
           )}
@@ -271,7 +282,7 @@ const VoterProfile = (): JSX.Element => {
         {/* Personal Info Section */}
         <section className="info-section">
           <h3 className="section-title">
-            <span className="section-icon">👤</span>
+            <LucideIcon name="user" className="section-icon" size={20} />
             Informasi Pribadi
           </h3>
           
@@ -295,68 +306,28 @@ const VoterProfile = (): JSX.Element => {
                 {personal_info.faculty_name && (
                   <div className="info-item">
                     <span className="info-label">Fakultas</span>
-                    {isEditMode ? (
-                      <input
-                        className="form-input"
-                        type="text"
-                        value={editFaculty}
-                        onChange={(e) => setEditFaculty(e.target.value)}
-                        placeholder="Fakultas"
-                      />
-                    ) : (
-                      <span className="info-value">{personal_info.faculty_name}</span>
-                    )}
+                    <span className="info-value">{personal_info.faculty_name}</span>
                   </div>
                 )}
                 
                 {personal_info.study_program_name && (
                   <div className="info-item">
                     <span className="info-label">Program Studi</span>
-                    {isEditMode ? (
-                      <input
-                        className="form-input"
-                        type="text"
-                        value={editProgram}
-                        onChange={(e) => setEditProgram(e.target.value)}
-                        placeholder="Program Studi"
-                      />
-                    ) : (
-                      <span className="info-value">{personal_info.study_program_name}</span>
-                    )}
+                    <span className="info-value">{personal_info.study_program_name}</span>
                   </div>
                 )}
                 
                 {personal_info.cohort_year && (
                   <div className="info-item">
                     <span className="info-label">Angkatan</span>
-                    {isEditMode ? (
-                      <input
-                        className="form-input"
-                        type="number"
-                        value={editCohortYear}
-                        onChange={(e) => setEditCohortYear(e.target.value)}
-                        placeholder="2021"
-                      />
-                    ) : (
-                      <span className="info-value">{personal_info.cohort_year}</span>
-                    )}
+                    <span className="info-value">{personal_info.cohort_year}</span>
                   </div>
                 )}
                 
                 {personal_info.semester && (
                   <div className="info-item">
                     <span className="info-label">Semester</span>
-                    {isEditMode ? (
-                      <input
-                        className="form-input"
-                        type="text"
-                        value={editSemester}
-                        onChange={(e) => setEditSemester(e.target.value)}
-                        placeholder="Semester"
-                      />
-                    ) : (
-                      <span className="info-value">{personal_info.semester}</span>
-                    )}
+                    <span className="info-value">{personal_info.semester}</span>
                   </div>
                 )}
               </>
@@ -368,51 +339,21 @@ const VoterProfile = (): JSX.Element => {
                 {personal_info.title && (
                   <div className="info-item">
                     <span className="info-label">Gelar</span>
-                    {isEditMode ? (
-                      <input
-                        className="form-input"
-                        type="text"
-                        value={editTitle}
-                        onChange={(e) => setEditTitle(e.target.value)}
-                        placeholder="Gelar akademik"
-                      />
-                    ) : (
-                      <span className="info-value">{personal_info.title}</span>
-                    )}
+                    <span className="info-value">{personal_info.title}</span>
                   </div>
                 )}
                 
                 {personal_info.department && (
                   <div className="info-item">
                     <span className="info-label">Unit Kerja</span>
-                    {isEditMode ? (
-                      <input
-                        className="form-input"
-                        type="text"
-                        value={editDepartment}
-                        onChange={(e) => setEditDepartment(e.target.value)}
-                        placeholder="Departemen/Prodi"
-                      />
-                    ) : (
-                      <span className="info-value">{personal_info.department}</span>
-                    )}
+                    <span className="info-value">{personal_info.department}</span>
                   </div>
                 )}
                 
                 {personal_info.faculty_name && (
                   <div className="info-item">
                     <span className="info-label">Fakultas</span>
-                    {isEditMode ? (
-                      <input
-                        className="form-input"
-                        type="text"
-                        value={editFaculty}
-                        onChange={(e) => setEditFaculty(e.target.value)}
-                        placeholder="Fakultas"
-                      />
-                    ) : (
-                      <span className="info-value">{personal_info.faculty_name}</span>
-                    )}
+                    <span className="info-value">{personal_info.faculty_name}</span>
                   </div>
                 )}
               </>
@@ -424,34 +365,14 @@ const VoterProfile = (): JSX.Element => {
                 {personal_info.position && (
                   <div className="info-item">
                     <span className="info-label">Jabatan</span>
-                    {isEditMode ? (
-                      <input
-                        className="form-input"
-                        type="text"
-                        value={editPosition}
-                        onChange={(e) => setEditPosition(e.target.value)}
-                        placeholder="Jabatan"
-                      />
-                    ) : (
-                      <span className="info-value">{personal_info.position}</span>
-                    )}
+                    <span className="info-value">{personal_info.position}</span>
                   </div>
                 )}
                 
                 {personal_info.unit && (
                   <div className="info-item">
                     <span className="info-label">Unit Kerja</span>
-                    {isEditMode ? (
-                      <input
-                        className="form-input"
-                        type="text"
-                        value={editUnit}
-                        onChange={(e) => setEditUnit(e.target.value)}
-                        placeholder="Unit"
-                      />
-                    ) : (
-                      <span className="info-value">{personal_info.unit}</span>
-                    )}
+                    <span className="info-value">{personal_info.unit}</span>
                   </div>
                 )}
               </>
@@ -461,7 +382,12 @@ const VoterProfile = (): JSX.Element => {
             <div className="info-item full-width">
               <span className="info-label">Tipe Pemilih</span>
               <span className="info-value voter-type-badge">
-                {isStudent ? '🎓 Mahasiswa' : isLecturer ? '👨‍🏫 Dosen' : '👔 Staf Administrasi'}
+                <LucideIcon
+                  name={isStudent ? 'graduationCap' : isLecturer ? 'presentation' : 'briefcase'}
+                  className="inline-icon"
+                  size={18}
+                />
+                {isStudent ? 'Mahasiswa' : isLecturer ? 'Dosen' : 'Staf Administrasi'}
               </span>
             </div>
           </div>
@@ -470,7 +396,7 @@ const VoterProfile = (): JSX.Element => {
         {/* Contact Info Section - Editable */}
         <section className="info-section">
           <h3 className="section-title">
-            <span className="section-icon">📧</span>
+            <LucideIcon name="mail" className="section-icon" size={20} />
             Kontak
           </h3>
           
@@ -495,36 +421,9 @@ const VoterProfile = (): JSX.Element => {
                   value={editPhone}
                   onChange={(e) => setEditPhone(e.target.value)}
                   placeholder="08123456789"
+                  pattern="^(08\d{8,11}|\+628\d{8,12})$"
                 />
-              </div>
-              
-              <div className="form-actions">
-                <button
-                  className="btn-cancel"
-                  onClick={() => {
-                    setIsEditMode(false)
-                    setEditEmail(personal_info.email || '')
-                    setEditPhone(personal_info.phone || '')
-                    setEditFaculty(personal_info.faculty_name || '')
-                    setEditProgram(personal_info.study_program_name || '')
-                    setEditSemester(personal_info.semester || '')
-                    setEditCohortYear(personal_info.cohort_year ? String(personal_info.cohort_year) : '')
-                    setEditDepartment(personal_info.department || '')
-                    setEditUnit(personal_info.unit || '')
-                    setEditPosition(personal_info.position || '')
-                    setEditTitle(personal_info.title || '')
-                  }}
-                  disabled={saving}
-                >
-                  Batal
-                </button>
-                <button
-                  className="btn-save"
-                  onClick={handleSaveProfile}
-                  disabled={saving}
-                >
-                  {saving ? 'Menyimpan...' : 'Simpan'}
-                </button>
+                <span className="form-hint">Format: 08xxx atau +62xxx</span>
               </div>
             </div>
           ) : (
@@ -542,10 +441,111 @@ const VoterProfile = (): JSX.Element => {
           )}
         </section>
 
+        {/* Identity Info Section - Editable */}
+        {isEditMode && (
+          <section className="info-section">
+            <h3 className="section-title">
+              <LucideIcon name="idCard" className="section-icon" size={20} />
+              Informasi Identitas (Opsional)
+            </h3>
+            
+            <div className="edit-form">
+              <div className="form-group">
+                <label className="form-label">Kode Fakultas/Unit</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={editFacultyCode}
+                  onChange={(e) => setEditFacultyCode(e.target.value)}
+                  placeholder="Contoh: FTI, BAU"
+                />
+                <span className="form-hint">Kode fakultas atau unit kerja</span>
+              </div>
+
+              {(isStudent || isLecturer) && (
+                <div className="form-group">
+                  <label className="form-label">Kode Program Studi/Departemen</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editProgramCode}
+                    onChange={(e) => setEditProgramCode(e.target.value)}
+                    placeholder="Contoh: IF, SI, Informatika"
+                  />
+                  <span className="form-hint">
+                    {isStudent ? 'Kode program studi' : 'Kode departemen'}
+                  </span>
+                </div>
+              )}
+
+              {isStudent && (
+                <div className="form-group">
+                  <label className="form-label">Tahun Angkatan</label>
+                  <input
+                    type="number"
+                    className="form-input"
+                    value={editCohortYear}
+                    onChange={(e) => setEditCohortYear(e.target.value)}
+                    placeholder="2021"
+                    min="2000"
+                    max={new Date().getFullYear()}
+                  />
+                  <span className="form-hint">Tahun masuk kuliah</span>
+                </div>
+              )}
+
+              <div className="form-group">
+                <label className="form-label">
+                  {isStudent ? 'Kelas' : isLecturer ? 'Jabatan' : 'Posisi'}
+                </label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={editClassLabel}
+                  onChange={(e) => setEditClassLabel(e.target.value)}
+                  placeholder={
+                    isStudent ? 'Contoh: IF-A, SI-B' :
+                    isLecturer ? 'Contoh: Lektor, Lektor Kepala' :
+                    'Contoh: Koordinator, Staff'
+                  }
+                />
+                <span className="form-hint">
+                  {isStudent ? 'Label kelas' : isLecturer ? 'Jabatan akademik' : 'Posisi di unit'}
+                </span>
+              </div>
+              
+              <div className="form-actions">
+                <button
+                  className="btn-cancel"
+                  onClick={() => {
+                    setIsEditMode(false)
+                    setEditEmail(personal_info.email || '')
+                    setEditPhone(personal_info.phone || '')
+                    setEditFacultyCode('')
+                    setEditProgramCode('')
+                    setEditCohortYear(personal_info.cohort_year ? String(personal_info.cohort_year) : '')
+                    setEditClassLabel('')
+                  }}
+                  disabled={saving}
+                >
+                  Batal
+                </button>
+                <button
+                  className="btn-save"
+                  onClick={handleSaveProfile}
+                  disabled={saving}
+                >
+                  {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Voting Info Section */}
         <section className="info-section">
           <h3 className="section-title">
-            <span className="section-icon">🗳️</span>
+            <LucideIcon name="ballot" className="section-icon" size={20} />
             Informasi Voting
           </h3>
           
@@ -553,7 +553,12 @@ const VoterProfile = (): JSX.Element => {
             <div className="info-item">
               <span className="info-label">Metode Preferensi</span>
               <span className="info-value voting-method">
-                {voting_info.preferred_method === 'ONLINE' ? '📱 Online' : '📍 TPS'}
+                <LucideIcon
+                  name={voting_info.preferred_method === 'ONLINE' ? 'smartphone' : 'mapPin'}
+                  className="inline-icon"
+                  size={18}
+                />
+                {voting_info.preferred_method === 'ONLINE' ? 'Online' : 'TPS'}
               </span>
             </div>
             
@@ -595,7 +600,7 @@ const VoterProfile = (): JSX.Element => {
         {participation && (
           <section className="info-section stats-section">
             <h3 className="section-title">
-              <span className="section-icon">📊</span>
+              <LucideIcon name="barChart" className="section-icon" size={20} />
               Statistik Partisipasi
             </h3>
             
@@ -642,7 +647,7 @@ const VoterProfile = (): JSX.Element => {
         {/* Account Settings */}
         <section className="info-section">
           <h3 className="section-title">
-            <span className="section-icon">⚙️</span>
+            <LucideIcon name="settings" className="section-icon" size={20} />
             Pengaturan Akun
           </h3>
           
@@ -651,15 +656,15 @@ const VoterProfile = (): JSX.Element => {
               className="setting-item"
               onClick={() => setShowPasswordForm(!showPasswordForm)}
             >
-              <span className="setting-icon">🔒</span>
+              <LucideIcon name="lock" className="setting-icon" size={20} />
               <span className="setting-text">Ganti Password</span>
-              <span className="setting-arrow">→</span>
+              <LucideIcon name="arrowRight" className="setting-arrow" size={18} />
             </button>
             
             <button className="setting-item" onClick={handleLogout}>
-              <span className="setting-icon">🚪</span>
+              <LucideIcon name="logOut" className="setting-icon" size={20} />
               <span className="setting-text">Keluar</span>
-              <span className="setting-arrow">→</span>
+              <LucideIcon name="arrowRight" className="setting-arrow" size={18} />
             </button>
           </div>
           
@@ -669,7 +674,7 @@ const VoterProfile = (): JSX.Element => {
               
               {passwordError && (
                 <div className="form-error">
-                  <span className="error-icon">⚠️</span>
+                  <LucideIcon name="alertCircle" className="error-icon" size={20} />
                   <span>{passwordError}</span>
                 </div>
               )}
@@ -770,23 +775,23 @@ const VoterProfile = (): JSX.Element => {
       <footer className="profile-footer">
         <nav className="footer-nav">
           <button className="nav-item" onClick={handleBack}>
-            <span className="nav-icon">🏠</span>
+            <LucideIcon name="home" className="nav-icon" size={24} />
             <span className="nav-label">Beranda</span>
           </button>
           <button className="nav-item" onClick={() => navigate('/dashboard/kandidat')}>
-            <span className="nav-icon">👥</span>
+            <LucideIcon name="users" className="nav-icon" size={24} />
             <span className="nav-label">Kandidat</span>
           </button>
           <button className="nav-item" onClick={() => navigate('/dashboard/riwayat')}>
-            <span className="nav-icon">📜</span>
+            <LucideIcon name="scroll" className="nav-icon" size={24} />
             <span className="nav-label">Riwayat</span>
           </button>
           <button className="nav-item" onClick={() => navigate('/dashboard/bantuan')}>
-            <span className="nav-icon">❓</span>
+            <LucideIcon name="helpCircle" className="nav-icon" size={24} />
             <span className="nav-label">Bantuan</span>
           </button>
           <button className="nav-item active">
-            <span className="nav-icon">👤</span>
+            <LucideIcon name="user" className="nav-icon" size={24} />
             <span className="nav-label">Profil</span>
           </button>
         </nav>
