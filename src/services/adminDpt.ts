@@ -176,7 +176,19 @@ const extractItems = (payload: any): DptApiItem[] => {
   )
 }
 
-const extractTotal = (payload: any, fallback: number) => payload?.pagination?.total_items ?? payload?.data?.pagination?.total_items ?? fallback
+const extractTotal = (payload: any, fallback: number) => {
+  const rawTotal =
+    payload?.pagination?.total_items ??
+    payload?.data?.pagination?.total_items ??
+    payload?.total_items ??
+    payload?.data?.total_items ??
+    payload?.total ??
+    payload?.data?.total ??
+    payload?.data?.total_eligible
+
+  const numericTotal = typeof rawTotal === 'string' ? parseInt(rawTotal, 10) : rawTotal
+  return Number.isFinite(numericTotal) ? (numericTotal as number) : fallback
+}
 
 const mapDptItems = (raw: DptApiItem[]): DPTEntry[] =>
   raw.map((item) => {
