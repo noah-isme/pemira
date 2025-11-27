@@ -17,6 +17,7 @@ import {
   fetchStaffPositions,
   type FacultyProgram 
 } from '../services/meta'
+import { fetchCurrentElection } from '../services/publicElection'
 import { useVotingSession } from '../hooks/useVotingSession'
 import type { ApiError } from '../utils/apiClient'
 import '../styles/LoginMahasiswa.css'
@@ -30,7 +31,7 @@ type RegistrationData =
   | LecturerRegistrationResponse 
   | StaffRegistrationResponse
 
-const RegisterNew = (): JSX.Element => {
+const RegisterNew = () => {
   const navigate = useNavigate()
   const { setSession } = useVotingSession()
 
@@ -62,6 +63,10 @@ const RegisterNew = (): JSX.Element => {
   const [lecturerPositions, setLecturerPositions] = useState<string[]>([])
   const [staffUnits, setStaffUnits] = useState<string[]>([])
   const [staffPositions, setStaffPositions] = useState<string[]>([])
+  
+  // Election mode availability
+  const [onlineEnabled, setOnlineEnabled] = useState(true)
+  const [tpsEnabled, setTpsEnabled] = useState(true)
 
   const heroRef = useRef<HTMLDivElement | null>(null)
   const formCardRef = useRef<HTMLDivElement | null>(null)
@@ -83,6 +88,26 @@ const RegisterNew = (): JSX.Element => {
 
   // Load master data on mount
   useEffect(() => {
+    // Fetch election info to check available voting modes
+    fetchCurrentElection()
+      .then((election) => {
+        const onlineAvailable = election.online_enabled
+        const tpsAvailable = election.tps_enabled
+        setOnlineEnabled(onlineAvailable)
+        setTpsEnabled(tpsAvailable)
+        // Set default voting mode based on availability
+        if (!onlineAvailable && tpsAvailable) {
+          setVotingMode('TPS')
+        } else if (onlineAvailable && !tpsAvailable) {
+          setVotingMode('ONLINE')
+        }
+      })
+      .catch(() => {
+        // Fallback to both enabled if fetch fails
+        setOnlineEnabled(true)
+        setTpsEnabled(true)
+      })
+    
     fetchFacultiesPrograms()
       .then((res) => setMetaOptions(res.faculties ?? []))
       .catch(() => setMetaOptions([]))
@@ -568,37 +593,46 @@ const RegisterNew = (): JSX.Element => {
                     onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                     placeholder="Kosongkan jika ingin auto-generate"
                   />
-                  <span className="field-hint">Akan dibuat otomatis jika kosong: {formData.identifier}@pemira.ac.id</span>
+                  <span className="field-hint">Akan dibuat otomatis jika kosong: {formData.identifier}@pemira.online</span>
                 </label>
 
                 <fieldset className="mode-fieldset compact" style={{ marginTop: '16px' }}>
                   <legend className="field-label">Mode Pemilihan</legend>
-                  <label className="radio-row">
-                    <input 
-                      type="radio" 
-                      name="mode" 
-                      value="ONLINE" 
-                      checked={votingMode === 'ONLINE'} 
-                      onChange={() => setVotingMode('ONLINE')} 
-                    />
-                    <div>
-                      <div className="radio-title">Pemilihan Online</div>
-                      <div className="radio-desc">Akses login ke platform online. Hanya bisa memilih secara daring.</div>
+                  {onlineEnabled && (
+                    <label className="radio-row">
+                      <input 
+                        type="radio" 
+                        name="mode" 
+                        value="ONLINE" 
+                        checked={votingMode === 'ONLINE'} 
+                        onChange={() => setVotingMode('ONLINE')} 
+                      />
+                      <div>
+                        <div className="radio-title">Pemilihan Online</div>
+                        <div className="radio-desc">Akses login ke platform online. Hanya bisa memilih secara daring.</div>
+                      </div>
+                    </label>
+                  )}
+                  {tpsEnabled && (
+                    <label className="radio-row">
+                      <input 
+                        type="radio" 
+                        name="mode" 
+                        value="TPS" 
+                        checked={votingMode === 'TPS'} 
+                        onChange={() => setVotingMode('TPS')} 
+                      />
+                      <div>
+                        <div className="radio-title">Pemilihan Offline (TPS)</div>
+                        <div className="radio-desc">Dapat QR pendaftaran dan wajib hadir ke TPS.</div>
+                      </div>
+                    </label>
+                  )}
+                  {!onlineEnabled && !tpsEnabled && (
+                    <div className="alert-error" style={{ marginTop: '8px' }}>
+                      Mode pemilihan belum tersedia. Hubungi admin.
                     </div>
-                  </label>
-                  <label className="radio-row">
-                    <input 
-                      type="radio" 
-                      name="mode" 
-                      value="TPS" 
-                      checked={votingMode === 'TPS'} 
-                      onChange={() => setVotingMode('TPS')} 
-                    />
-                    <div>
-                      <div className="radio-title">Pemilihan Offline (TPS)</div>
-                      <div className="radio-desc">Dapat QR pendaftaran dan wajib hadir ke TPS.</div>
-                    </div>
-                  </label>
+                  )}
                 </fieldset>
               </div>
 

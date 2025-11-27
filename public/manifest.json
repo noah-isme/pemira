@@ -1,7 +1,7 @@
 {
-  "name": "PEMIRA - Pemilihan Raya Universitas Widyatama",
+  "name": "PEMIRA - Pemilihan Raya Universitas Wahidiyah",
   "short_name": "PEMIRA",
-  "description": "Sistem Pemilihan Umum Elektronik untuk Pemilihan Raya (PEMIRA) Universitas Widyatama",
+  "description": "Sistem Pemilihan Umum Elektronik untuk Pemilihan Raya (PEMIRA) Universitas Wahidiyah",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
