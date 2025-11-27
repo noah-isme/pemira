@@ -1,5 +1,5 @@
 import { getActiveElectionId } from '../state/activeElection'
-import type { TPSAdmin, TPSOperator, TPSStatus } from '../types/tpsAdmin'
+import type { TPSActivitySummary, TPSAdmin, TPSAllocationSummary, TPSOperator, TPSStatus } from '../types/tpsAdmin'
 import { apiRequest } from '../utils/apiClient'
 
 type AdminTpsDTO = {
@@ -163,20 +163,75 @@ export const fetchAdminTpsQrForPrint = async (token: string, id: string) => {
   return response.qr_payload
 }
 
-export const fetchAdminTpsOperators = async (token: string, id: string): Promise<TPSOperator[]> => {
-  const response = await apiRequest<AdminTpsOperatorDTO[]>(`/admin/tps/${id}/operators`, { token })
-  return response.map(mapOperator)
+export const fetchAdminTpsOperators = async (token: string, id: string, electionId: number | null = getActiveElectionId()): Promise<TPSOperator[]> => {
+  const path = electionId ? `/admin/elections/${electionId}/tps/${id}/operators` : `/admin/tps/${id}/operators`
+  const response = await apiRequest<any>(path, { token })
+  const items = response?.data?.items ?? response?.items ?? response
+  if (!Array.isArray(items)) return []
+  return items.map((op: any) => ({
+    userId: op.ID ?? op.user_id,
+    username: op.Username ?? op.username,
+    name: op.Name ?? op.name,
+    email: op.Email ?? op.email,
+  }))
 }
 
-export const createAdminTpsOperator = async (token: string, id: string, payload: CreateTPSOperatorPayload): Promise<TPSOperator> => {
-  const response = await apiRequest<AdminTpsOperatorDTO>(`/admin/tps/${id}/operators`, {
+export const createAdminTpsOperator = async (token: string, id: string, payload: CreateTPSOperatorPayload, electionId: number | null = getActiveElectionId()): Promise<TPSOperator> => {
+  const path = electionId ? `/admin/elections/${electionId}/tps/${id}/operators` : `/admin/tps/${id}/operators`
+  const response = await apiRequest<any>(path, {
     method: 'POST',
     token,
     body: payload,
   })
-  return mapOperator(response)
+  return {
+    userId: response.user_id ?? response.ID,
+    username: response.username ?? response.Username,
+    name: response.name ?? response.Name,
+    email: response.email ?? response.Email,
+  }
 }
 
-export const deleteAdminTpsOperator = async (token: string, tpsId: string, userId: number): Promise<void> => {
-  await apiRequest(`/admin/tps/${tpsId}/operators/${userId}`, { method: 'DELETE', token })
+export const deleteAdminTpsOperator = async (token: string, tpsId: string, userId: number, electionId: number | null = getActiveElectionId()): Promise<void> => {
+  const path = electionId ? `/admin/elections/${electionId}/tps/${tpsId}/operators/${userId}` : `/admin/tps/${tpsId}/operators/${userId}`
+  await apiRequest(path, { method: 'DELETE', token })
+}
+
+export const fetchAdminTpsAllocation = async (token: string, id: string, electionId: number | null = getActiveElectionId()): Promise<TPSAllocationSummary> => {
+  const path = electionId ? `/admin/elections/${electionId}/tps/${id}/allocation` : `/admin/tps/${id}/allocation`
+  const response = await apiRequest<any>(path, { token })
+  const data = response?.data ?? response
+  return {
+    totalTpsVoters: data?.total_tps_voters ?? 0,
+    allocatedToThisTps: data?.allocated_to_this_tps ?? data?.total_tps_voters ?? 0,
+    voted: data?.voted ?? 0,
+    notVoted: data?.not_voted ?? 0,
+    voters: Array.isArray(data?.voters)
+      ? data.voters.map((item: any) => ({
+          voterId: item.voter_id,
+          nim: item.nim,
+          name: item.name,
+          hasVoted: Boolean(item.has_voted),
+          votedAt: item.voted_at,
+        }))
+      : undefined,
+  }
+}
+
+export const fetchAdminTpsActivity = async (token: string, id: string, electionId: number | null = getActiveElectionId()): Promise<TPSActivitySummary> => {
+  const path = electionId ? `/admin/elections/${electionId}/tps/${id}/activity` : `/admin/tps/${id}/activity`
+  const response = await apiRequest<any>(path, { token })
+  const data = response?.data ?? response
+  return {
+    checkinsToday: data?.checkins_today ?? 0,
+    voted: data?.voted ?? 0,
+    notVoted: data?.not_voted ?? 0,
+    timeline: Array.isArray(data?.timeline)
+      ? data.timeline.map((row: any) => ({
+          hour: row.hour,
+          checkins: row.checkins ?? row.checked_in ?? 0,
+          approved: row.approved ?? 0,
+          voted: row.voted ?? 0,
+        }))
+      : [],
+  }
 }

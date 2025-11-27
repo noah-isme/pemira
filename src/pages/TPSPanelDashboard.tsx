@@ -1,9 +1,11 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import TPSPanelHeader from '../components/TPSPanelHeader'
 import { useTPSPanelStore } from '../hooks/useTPSPanelStore'
 import { useAdminAuth } from '../hooks/useAdminAuth'
 import { usePopup } from '../components/Popup'
+import { useActiveElection } from '../hooks/useActiveElection'
+import type { TPSQueueEntry } from '../types/tpsPanel'
 import '../styles/TPSPanel.css'
 
 const timeFormatter = new Intl.DateTimeFormat('id-ID', {
@@ -18,6 +20,7 @@ const formatTime = (value: string) => timeFormatter.format(new Date(value))
 const TPSPanelDashboard = (): JSX.Element => {
   const navigate = useNavigate()
   const { token } = useAdminAuth()
+  const { activeElectionId } = useActiveElection()
   const [searchParams] = useSearchParams()
   const tpsIdParam = searchParams.get('tpsId') ?? undefined
   const {
@@ -29,12 +32,13 @@ const TPSPanelDashboard = (): JSX.Element => {
     triggerManualRefresh,
   } = useTPSPanelStore()
   const { showPopup } = usePopup()
+  const [selectedEntry, setSelectedEntry] = useState<TPSQueueEntry | null>(null)
 
   useEffect(() => {
     if (token && tpsIdParam) {
-      void syncFromApi(token, tpsIdParam)
+      void syncFromApi(token, tpsIdParam, activeElectionId)
     }
-  }, [syncFromApi, token, tpsIdParam])
+  }, [activeElectionId, syncFromApi, token, tpsIdParam])
 
   const handleScanQR = () => {
     navigate('/tps-panel/scan-qr')
@@ -42,7 +46,7 @@ const TPSPanelDashboard = (): JSX.Element => {
 
   const handleRefresh = () => {
     if (token && tpsIdParam) {
-      void syncFromApi(token, tpsIdParam)
+      void syncFromApi(token, tpsIdParam, activeElectionId)
     } else {
       triggerManualRefresh()
     }

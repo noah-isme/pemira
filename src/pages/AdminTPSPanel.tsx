@@ -6,6 +6,7 @@ import { useAdminAuth } from '../hooks/useAdminAuth'
 import { useTPSPanelStore } from '../hooks/useTPSPanelStore'
 import { createTpsCheckin, type CreateCheckinPayload } from '../services/tpsPanel'
 import { useToast } from '../components/Toast'
+import { useActiveElection } from '../hooks/useActiveElection'
 import '../styles/AdminTPSPanel.css'
 
 const timeFormatter = new Intl.DateTimeFormat('id-ID', {
@@ -19,9 +20,10 @@ const formatTime = (value?: string) => (value ? timeFormatter.format(new Date(va
 const AdminTPSPanel = (): JSX.Element => {
   const navigate = useNavigate()
   const { user, token } = useAdminAuth()
+  const { activeElectionId } = useActiveElection()
   const [searchParams] = useSearchParams()
   const tpsIdParam = searchParams.get('tpsId') ?? undefined
-  const { panelInfo, queue, syncFromApi, triggerManualRefresh, addQueueEntry } = useTPSPanelStore()
+  const { panelInfo, queue, syncFromApi, triggerManualRefresh, addQueueEntry, timelinePoints, panelStats } = useTPSPanelStore()
   const { showToast } = useToast()
 
   const [manualCode, setManualCode] = useState('')
@@ -38,9 +40,9 @@ const AdminTPSPanel = (): JSX.Element => {
 
   useEffect(() => {
     if (token && tpsIdParam) {
-      void syncFromApi(token, tpsIdParam)
+      void syncFromApi(token, tpsIdParam, activeElectionId)
     }
-  }, [syncFromApi, token, tpsIdParam])
+  }, [activeElectionId, syncFromApi, token, tpsIdParam])
 
   const handleCheckin = async (payload: CreateCheckinPayload) => {
     if (!token || !tpsIdParam) {
@@ -50,7 +52,7 @@ const AdminTPSPanel = (): JSX.Element => {
     try {
       setCheckinLoading(true)
       setCheckinError(null)
-      const entry = await createTpsCheckin(token, tpsIdParam, payload)
+      const entry = await createTpsCheckin(token, tpsIdParam, payload, activeElectionId)
       addQueueEntry({
         nim: entry.nim,
         nama: entry.nama,
@@ -120,7 +122,7 @@ const AdminTPSPanel = (): JSX.Element => {
 
   const handleRefresh = () => {
     if (token && tpsIdParam) {
-      void syncFromApi(token, tpsIdParam)
+      void syncFromApi(token, tpsIdParam, activeElectionId)
     } else {
       triggerManualRefresh()
     }
@@ -182,15 +184,15 @@ const AdminTPSPanel = (): JSX.Element => {
             <div className="stats-row">
               <div>
                 <p className="muted">Total Pemilih TPS</p>
-                <strong>{panelInfo.totalVoters}</strong>
+                <strong>{panelStats?.totalRegisteredTpsVoters ?? panelInfo.totalVoters}</strong>
               </div>
               <div>
                 <p className="muted">Check-in</p>
-                <strong>{queue.length}</strong>
+                <strong>{panelStats?.totalCheckedIn ?? queue.length}</strong>
               </div>
               <div>
                 <p className="muted">Sudah Memilih</p>
-                <strong>{queue.filter((item) => item.status === 'VOTED').length}</strong>
+                <strong>{panelStats?.totalVoted ?? queue.filter((item) => item.status === 'VOTED').length}</strong>
               </div>
             </div>
           </section>
@@ -311,21 +313,22 @@ const AdminTPSPanel = (): JSX.Element => {
             </button>
           </div>
           <div className="mini-chart">
-            <div className="mini-chart-row">
-              <span>08:00</span>
-              <div className="mini-chart-bar" style={{ width: '40%' }} />
-              <span className="muted">10 CI / 5 V</span>
-            </div>
-            <div className="mini-chart-row">
-              <span>09:00</span>
-              <div className="mini-chart-bar" style={{ width: '70%' }} />
-              <span className="muted">40 CI / 25 V</span>
-            </div>
-            <div className="mini-chart-row">
-              <span>10:00</span>
-              <div className="mini-chart-bar" style={{ width: '95%' }} />
-              <span className="muted">80 CI / 60 V</span>
-            </div>
+            {timelinePoints.length === 0 && <p className="muted">Belum ada data aktivitas.</p>}
+            {timelinePoints.map((point) => {
+              const hour = new Date(point.hour).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+              const checkedWidth = Math.min(100, (point.checkedIn || 0) / Math.max(1, panelStats?.totalCheckedIn || point.checkedIn || 1) * 100)
+              const votedWidth = Math.min(checkedWidth, (point.voted || 0) / Math.max(1, point.checkedIn || 1) * 100)
+              return (
+                <div key={point.hour} className="mini-chart-row">
+                  <span>{hour}</span>
+                  <div className="mini-chart-bar">
+                    <div className="mini-chart-fill checked" style={{ width: `${checkedWidth}%` }} />
+                    <div className="mini-chart-fill voted" style={{ width: `${votedWidth}%` }} />
+                  </div>
+                  <span className="muted">{point.checkedIn} CI / {point.voted} V</span>
+                </div>
+              )
+            })}
           </div>
         </section>
 

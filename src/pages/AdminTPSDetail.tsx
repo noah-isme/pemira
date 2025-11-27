@@ -5,18 +5,22 @@ import AdminLayout from '../components/admin/AdminLayout'
 import { useTPSAdminStore } from '../hooks/useTPSAdminStore'
 import { useToast } from '../components/Toast'
 import { usePopup } from '../components/Popup'
-import type { TPSAdmin } from '../types/tpsAdmin'
+import type { TPSActivitySummary, TPSAdmin, TPSAllocationSummary, TPSOperator } from '../types/tpsAdmin'
 import '../styles/AdminTPS.css'
 
 const AdminTPSDetail = (): JSX.Element => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { getById, loadDetail, rotateQr, deleteTPS, saveTPS, loading } = useTPSAdminStore()
+  const { getById, loadDetail, rotateQr, deleteTPS, saveTPS, loading, fetchOperators, addOperator, removeOperator, fetchAllocation, fetchActivity } = useTPSAdminStore()
   const [tps, setTps] = useState<TPSAdmin | undefined>(() => (id ? getById(id) : undefined))
   const [qrImage, setQrImage] = useState<string | undefined>(undefined)
   const [formState, setFormState] = useState<TPSAdmin | undefined>(undefined)
-  const [techConfig, setTechConfig] = useState({ offlineOnly: true, requireCheckin: true, qrIntegrated: true })
   const [adminNote, setAdminNote] = useState('')
+  const [operators, setOperators] = useState<TPSOperator[]>([])
+  const [opForm, setOpForm] = useState({ username: '', password: '', name: '', email: '' })
+  const [opLoading, setOpLoading] = useState(false)
+  const [allocation, setAllocation] = useState<TPSAllocationSummary | null>(null)
+  const [activity, setActivity] = useState<TPSActivitySummary | null>(null)
   const { showToast } = useToast()
   const { showPopup } = usePopup()
 
@@ -25,11 +29,23 @@ const AdminTPSDetail = (): JSX.Element => {
       void (async () => {
         const detail = await loadDetail(id)
         if (detail) setTps(detail)
+        try {
+          const [ops, alloc, act] = await Promise.all([
+            fetchOperators(id).catch(() => []),
+            fetchAllocation(id).catch(() => null),
+            fetchActivity(id).catch(() => null),
+          ])
+          setOperators(ops)
+          setAllocation(alloc)
+          setActivity(act)
+        } catch (err) {
+          console.warn('Failed to fetch TPS extra data', err)
+        }
       })()
     } else {
       setTps(undefined)
     }
-  }, [id, loadDetail])
+  }, [id, loadDetail, fetchActivity, fetchAllocation, fetchOperators])
 
   useEffect(() => {
     if (tps) {
@@ -73,8 +89,43 @@ const AdminTPSDetail = (): JSX.Element => {
     }
   }
 
-  const handleSaveTechConfig = async () => {
-    await handleSaveInfo()
+  const handleAddOperator = async () => {
+    if (!tps || !opForm.username || !opForm.password) {
+      showToast('Lengkapi username dan password operator', 'error')
+      return
+    }
+    try {
+      setOpLoading(true)
+      const created = await addOperator(tps.id, opForm)
+      setOperators((prev) => [...prev, created])
+      setOpForm({ username: '', password: '', name: '', email: '' })
+      showToast('Operator TPS ditambahkan', 'success')
+    } catch (err) {
+      console.error('Failed to add operator', err)
+      showToast((err as any)?.message || 'Gagal menambah operator', 'error')
+    } finally {
+      setOpLoading(false)
+    }
+  }
+
+  const handleRemoveOperator = async (userId: number) => {
+    if (!tps) return
+    const confirmed = await showPopup({
+      title: 'Hapus Operator',
+      message: 'Hapus operator TPS ini? Aksesnya akan dicabut.',
+      type: 'warning',
+      confirmText: 'Hapus',
+      cancelText: 'Batal',
+    })
+    if (!confirmed) return
+    try {
+      await removeOperator(tps.id, userId)
+      setOperators((prev) => prev.filter((op) => op.userId !== userId))
+      showToast('Operator dihapus', 'success')
+    } catch (err) {
+      console.error('Failed to remove operator', err)
+      showToast((err as any)?.message || 'Gagal menghapus operator', 'error')
+    }
   }
 
   const handleRotateQr = async () => {
@@ -208,12 +259,25 @@ const AdminTPSDetail = (): JSX.Element => {
                 </select>
               </label>
               <label>
+                Kapasitas Pemilih
+                <input
+                  type="number"
+                  min={0}
+                  value={formState?.kapasitas ?? 0}
+                  onChange={(event) => handleFormChange('kapasitas', Number(event.target.value))}
+                />
+              </label>
+              <label>
                 Jam Mulai Voting
                 <input type="time" value={formState?.jamBuka ?? ''} onChange={(event) => handleFormChange('jamBuka', event.target.value)} />
               </label>
               <label>
                 Jam Selesai Voting
                 <input type="time" value={formState?.jamTutup ?? ''} onChange={(event) => handleFormChange('jamTutup', event.target.value)} />
+              </label>
+              <label className="full-row">
+                Catatan Admin (opsional)
+                <textarea value={adminNote} onChange={(event) => setAdminNote(event.target.value)} />
               </label>
             </div>
             <div className="form-actions">
@@ -223,183 +287,96 @@ const AdminTPSDetail = (): JSX.Element => {
             </div>
           </section>
 
-          <section className="card detail-section">
-            <div className="section-head">
-              <div>
-                <p className="eyebrow">Konfigurasi Teknis</p>
-                <h2>Aturan Operasional TPS</h2>
+        <section className="card detail-section">
+          <div className="section-head">
+            <div>
+              <p className="eyebrow">Alokasi Pemilih</p>
+              <h2>Distribusi TPS</h2>
+            </div>
+          </div>
+          <div className="allocation-grid">
+            <div>
+              <p className="muted">Total pemilih mode TPS di pemilu ini</p>
+              <h3>{allocation?.totalTpsVoters?.toLocaleString('id-ID') ?? '0'}</h3>
+            </div>
+            <div>
+              <p className="muted">Alokasi ke {tps.nama}</p>
+              <h3>{allocation?.allocatedToThisTps?.toLocaleString('id-ID') ?? '0'} pemilih</h3>
+            </div>
+            <div className="progress-bar">
+              <div
+                className="progress-fill"
+                style={{ width: allocation ? `${Math.min(100, (allocation.allocatedToThisTps || 0) / Math.max(1, allocation.totalTpsVoters || 1) * 100)}%` : '0%' }}
+              />
+            </div>
+            <p className="muted">
+              {(allocation?.allocatedToThisTps ?? 0).toLocaleString('id-ID')} total / {(allocation?.voted ?? 0).toLocaleString('id-ID')} sudah memilih / {(allocation?.notVoted ?? 0).toLocaleString('id-ID')} belum memilih
+            </p>
+            {allocation?.voters && allocation.voters.length > 0 && (
+              <div className="mini-table">
+                <div className="mini-table-head">
+                  <span>Nama</span>
+                  <span>Status</span>
+                </div>
+                {allocation.voters.slice(0, 5).map((voter) => (
+                  <div key={voter.voterId} className="mini-table-row">
+                    <span>{voter.name} ({voter.nim})</span>
+                    <span className={`status-chip ${voter.hasVoted ? 'active' : 'neutral'}`}>{voter.hasVoted ? 'Sudah memilih' : 'Belum'}</span>
+                  </div>
+                ))}
+                {allocation.voters.length > 5 && <p className="muted">+{allocation.voters.length - 5} lagi</p>}
               </div>
-            </div>
-            <div className="info-grid">
-              <label>
-                Kapasitas Pemilih (rekomendasi)
-                <input
-                  type="number"
-                  value={formState?.kapasitas ?? 0}
-                  onChange={(event) => handleFormChange('kapasitas', Number(event.target.value))}
-                  min={0}
-                />
-              </label>
-              <div className="toggle-stack full-row">
-                <label className="check-row">
-                  <input
-                    type="checkbox"
-                    checked={techConfig.offlineOnly}
-                    onChange={(event) => setTechConfig((prev) => ({ ...prev, offlineOnly: event.target.checked }))}
-                  />
-                  Hanya pemilih mode OFFLINE (TPS)
-                </label>
-                <label className="check-row">
-                  <input
-                    type="checkbox"
-                    checked={techConfig.requireCheckin}
-                    onChange={(event) => setTechConfig((prev) => ({ ...prev, requireCheckin: event.target.checked }))}
-                  />
-                  Wajib check-in sebelum voting
-                </label>
-                <label className="check-row">
-                  <input
-                    type="checkbox"
-                    checked={techConfig.qrIntegrated}
-                    onChange={(event) => setTechConfig((prev) => ({ ...prev, qrIntegrated: event.target.checked }))}
-                  />
-                  Terhubung dengan sistem QR pendaftaran
-                </label>
-              </div>
-              <label className="full-row">
-                Catatan Admin (opsional)
-                <textarea value={adminNote} onChange={(event) => setAdminNote(event.target.value)} />
-              </label>
-            </div>
-            <div className="form-actions">
-              <button className="btn-primary" type="button" onClick={handleSaveTechConfig}>
-                Simpan Konfigurasi
-              </button>
-            </div>
-          </section>
+            )}
+          </div>
+        </section>
 
-          <section className="card detail-section">
-            <div className="section-head">
-              <div>
-                <p className="eyebrow">Operator TPS</p>
-                <h2>Tim Operator</h2>
-              </div>
-              <button
-                className="btn-primary"
-                type="button"
-                onClick={() => showToast('Tambah operator TPS belum terhubung ke backend.', 'info')}
-              >
-                + Tambah Operator
-              </button>
+        <section className="card detail-section">
+          <div className="section-head">
+            <div>
+              <p className="eyebrow">Aktivitas TPS</p>
+              <h2>Monitoring Ringkas</h2>
             </div>
-            <div className="table-wrapper card">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Nama</th>
-                    <th>Username</th>
-                    <th>Role</th>
-                    <th>Aksi</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(tps.operators ?? []).length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="empty-state">
-                        Belum ada operator TPS.
-                      </td>
-                    </tr>
-                  )}
-                  {(tps.operators ?? []).map((op) => (
-                    <tr key={op.userId}>
-                      <td>{op.name ?? '-'}</td>
-                      <td>{op.username}</td>
-                      <td>TPS_OPERATOR</td>
-                      <td>
-                        <button
-                          className="btn-outline danger"
-                          type="button"
-                          onClick={() => showToast('Hapus operator belum tersedia.', 'warning')}
-                        >
-                          Hapus
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          </div>
+          <div className="activity-grid">
+            <div>
+              <p className="muted">Check-in hari ini</p>
+              <h3>{activity?.checkinsToday ?? 0}</h3>
             </div>
-          </section>
-
-          <section className="card detail-section">
-            <div className="section-head">
-              <div>
-                <p className="eyebrow">Alokasi Pemilih</p>
-                <h2>Distribusi TPS</h2>
-              </div>
+            <div>
+              <p className="muted">Sudah memilih</p>
+              <h3>{activity?.voted ?? 0}</h3>
             </div>
-            <div className="allocation-grid">
-              <div>
-                <p className="muted">Total pemilih mode TPS di pemilu ini</p>
-                <h3>934</h3>
-              </div>
-              <div>
-                <p className="muted">Alokasi ke {tps.nama}</p>
-                <h3>{(formState?.kapasitas ?? tps.kapasitas)?.toLocaleString('id-ID') || '0'} pemilih</h3>
-              </div>
-              <div className="progress-bar">
-                <div className="progress-fill" style={{ width: '48%' }} />
-              </div>
-              <p className="muted">250 total / 120 sudah memilih / 130 belum memilih</p>
-              <button className="btn-outline" type="button" onClick={() => showToast('Daftar pemilih TPS belum tersedia.', 'info')}>
-                Lihat Daftar Pemilih TPS
-              </button>
+            <div>
+              <p className="muted">Belum memilih</p>
+              <h3>{activity?.notVoted ?? 0}</h3>
             </div>
-          </section>
-
-          <section className="card detail-section">
-            <div className="section-head">
-              <div>
-                <p className="eyebrow">Aktivitas TPS</p>
-                <h2>Monitoring Ringkas</h2>
-              </div>
-            </div>
-            <div className="activity-grid">
-              <div>
-                <p className="muted">Check-in hari ini</p>
-                <h3>140</h3>
-              </div>
-              <div>
-                <p className="muted">Sudah memilih</p>
-                <h3>120</h3>
-              </div>
-              <div>
-                <p className="muted">Belum memilih</p>
-                <h3>110</h3>
-              </div>
-            </div>
-            <div className="mini-chart">
-              <p className="muted">Timeline ringkas</p>
-              <div className="mini-chart-row">
-                <span>08:00</span>
-                <div className="mini-chart-bar" style={{ width: '40%' }} />
-                <span className="muted">10 CI / 5 V</span>
-              </div>
-              <div className="mini-chart-row">
-                <span>09:00</span>
-                <div className="mini-chart-bar" style={{ width: '70%' }} />
-                <span className="muted">40 CI / 25 V</span>
-              </div>
-              <div className="mini-chart-row">
-                <span>10:00</span>
-                <div className="mini-chart-bar" style={{ width: '95%' }} />
-                <span className="muted">80 CI / 60 V</span>
-              </div>
-            </div>
-            <button className="btn-primary" type="button" onClick={() => navigate(`/admin/tps/panel?tpsId=${tps.id}`)}>
-              Buka TPS Panel (mode operator)
-            </button>
-          </section>
+          </div>
+          <div className="mini-chart">
+            <p className="muted">Timeline ringkas</p>
+            {activity?.timeline?.length ? (
+              activity.timeline.map((row) => {
+                const checkedWidth = Math.min(100, (row.checkins || 0) / Math.max(1, activity.checkinsToday || row.checkins || 1) * 100)
+                const votedWidth = Math.min(checkedWidth, (row.voted || 0) / Math.max(1, row.checkins || 1) * 100)
+                const hour = new Date(row.hour).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+                return (
+                  <div key={row.hour} className="mini-chart-row">
+                    <span>{hour}</span>
+                    <div className="mini-chart-bar">
+                      <div className="mini-chart-fill checked" style={{ width: `${checkedWidth}%` }} />
+                      <div className="mini-chart-fill voted" style={{ width: `${votedWidth}%` }} />
+                    </div>
+                    <span className="muted">{row.checkins} CI / {row.voted} V</span>
+                  </div>
+                )
+              })
+            ) : (
+              <p className="muted">Belum ada data aktivitas.</p>
+            )}
+          </div>
+          <button className="btn-primary" type="button" onClick={() => navigate(`/admin/tps/panel?tpsId=${tps.id}`)}>
+            Buka TPS Panel (mode operator)
+          </button>
+        </section>
 
           <section className="card detail-section danger-zone">
             <div className="section-head">
@@ -463,6 +440,73 @@ const AdminTPSDetail = (): JSX.Element => {
               </button>
             </div>
             <p className="muted">Endpoint backend: GET /admin/tps/{tps.id}/qr dan POST /admin/tps/{tps.id}/qr/rotate.</p>
+          </section>
+
+          <section className="card detail-section">
+            <div className="section-head">
+              <div>
+                <p className="eyebrow">Operator TPS</p>
+                <h2>Tim Operator</h2>
+              </div>
+            </div>
+            <div className="table-wrapper card">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nama</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {operators.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="empty-state">
+                        Belum ada operator TPS.
+                      </td>
+                    </tr>
+                  )}
+                  {operators.map((op) => (
+                    <tr key={op.userId}>
+                      <td>{op.name ?? '-'}</td>
+                      <td>{op.username}</td>
+                      <td>{op.email ?? '-'}</td>
+                      <td>
+                        <button className="btn-outline danger" type="button" onClick={() => void handleRemoveOperator(op.userId)}>
+                          Hapus
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="operator-form">
+              <div className="form-grid" style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+                <label>
+                  Username
+                  <input value={opForm.username} onChange={(e) => setOpForm((prev) => ({ ...prev, username: e.target.value }))} />
+                </label>
+                <label>
+                  Password
+                  <input type="password" value={opForm.password} onChange={(e) => setOpForm((prev) => ({ ...prev, password: e.target.value }))} />
+                </label>
+                <label>
+                  Nama
+                  <input value={opForm.name} onChange={(e) => setOpForm((prev) => ({ ...prev, name: e.target.value }))} />
+                </label>
+                <label>
+                  Email
+                  <input value={opForm.email} onChange={(e) => setOpForm((prev) => ({ ...prev, email: e.target.value }))} />
+                </label>
+              </div>
+              <div className="form-actions">
+                <button className="btn-primary" type="button" onClick={() => void handleAddOperator()} disabled={opLoading}>
+                  {opLoading ? 'Menyimpan...' : 'Tambah Operator'}
+                </button>
+              </div>
+            </div>
           </section>
         </div>
       </div>
