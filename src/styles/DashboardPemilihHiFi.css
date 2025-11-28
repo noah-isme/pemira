@@ -290,6 +290,13 @@
   font-weight: var(--weight-medium);
 }
 
+.stage-dates {
+  display: block;
+  font-size: var(--text-body-xs);
+  color: var(--color-neutral-500);
+  margin-top: 2px;
+}
+
 .timeline-stage.completed .stage-status-text {
   color: var(--color-success);
 }

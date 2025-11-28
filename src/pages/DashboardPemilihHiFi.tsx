@@ -9,10 +9,12 @@ type VoterMode = 'ONLINE' | 'OFFLINE'
 type VoterStatus = 'NOT_VOTED' | 'VOTED' | 'CHECKED_IN'
 
 interface TimelineStage {
-  id: PemiraStage
+  id: PhaseKey
   label: string
   status: 'completed' | 'active' | 'upcoming'
   icon: IconName
+  start?: string | null
+  end?: string | null
 }
 
 interface VoterData {
@@ -22,6 +24,55 @@ interface VoterData {
   status: VoterStatus
   qrCode: string
   qrId: string
+}
+
+type PhaseKey = 'REGISTRATION' | 'VERIFICATION' | 'CAMPAIGN' | 'QUIET_PERIOD' | 'VOTING' | 'RECAP'
+
+const PHASE_ORDER: PhaseKey[] = ['REGISTRATION', 'VERIFICATION', 'CAMPAIGN', 'QUIET_PERIOD', 'VOTING', 'RECAP']
+
+const PHASE_META: Record<PhaseKey, { label: string; icon: IconName }> = {
+  REGISTRATION: { label: 'Pendaftaran', icon: 'fileCheck' },
+  VERIFICATION: { label: 'Verifikasi Berkas', icon: 'checkCircle' },
+  CAMPAIGN: { label: 'Masa Kampanye', icon: 'megaphone' },
+  QUIET_PERIOD: { label: 'Masa Tenang', icon: 'moon' },
+  VOTING: { label: 'Voting', icon: 'ballot' },
+  RECAP: { label: 'Rekapitulasi', icon: 'barChart' },
+}
+
+const normalizePhaseKey = (value?: string | null): PhaseKey | null => {
+  if (!value) return null
+  const normalized = value.toString().trim().replace(/-/g, '_').toUpperCase()
+  if (normalized === 'QUIET') return 'QUIET_PERIOD'
+  if (normalized === 'RECAPITULATION') return 'RECAP'
+  if ((PHASE_ORDER as string[]).includes(normalized)) return normalized as PhaseKey
+  return null
+}
+
+const determinePhaseStatus = (start?: string | null, end?: string | null): 'active' | 'upcoming' | 'completed' => {
+  const now = Date.now()
+  const startMs = start ? new Date(start).getTime() : Number.NaN
+  const endMs = end ? new Date(end).getTime() : Number.NaN
+
+  if (!Number.isNaN(startMs) && now < startMs) return 'upcoming'
+  if (!Number.isNaN(startMs) && Number.isNaN(endMs) && now >= startMs) return 'active'
+  if (!Number.isNaN(startMs) && !Number.isNaN(endMs) && now >= startMs && now <= endMs) return 'active'
+  if (!Number.isNaN(endMs) && now > endMs) return 'completed'
+  return 'upcoming'
+}
+
+const formatStageRange = (start?: string | null, end?: string | null): string | null => {
+  const format = (value?: string | null) => {
+    if (!value) return ''
+    const parsed = new Date(value)
+    if (Number.isNaN(parsed.getTime())) return ''
+    return parsed.toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+  }
+  const startLabel = format(start)
+  const endLabel = format(end)
+  if (startLabel && endLabel) return `${startLabel} - ${endLabel}`
+  if (startLabel) return startLabel
+  if (endLabel) return endLabel
+  return null
 }
 
 const DashboardPemilihHiFi = (): JSX.Element => {
@@ -78,18 +129,70 @@ const DashboardPemilihHiFi = (): JSX.Element => {
   }, [dashboardData.election])
 
   const timelineStages: TimelineStage[] = useMemo(() => {
-    const stages: PemiraStage[] = ['registration', 'verification', 'campaign', 'silence', 'voting', 'rekapitulasi']
-    const currentIndex = stages.indexOf(currentStage)
-    
-    return [
-      { id: 'registration', label: 'Pendaftaran', status: currentIndex > 0 ? 'completed' : currentIndex === 0 ? 'active' : 'upcoming', icon: 'fileCheck' },
-      { id: 'verification', label: 'Verifikasi Berkas', status: currentIndex > 1 ? 'completed' : currentIndex === 1 ? 'active' : 'upcoming', icon: 'checkCircle' },
-      { id: 'campaign', label: 'Masa Kampanye', status: currentIndex > 2 ? 'completed' : currentIndex === 2 ? 'active' : 'upcoming', icon: 'megaphone' },
-      { id: 'silence', label: 'Masa Tenang', status: currentIndex > 3 ? 'completed' : currentIndex === 3 ? 'active' : 'upcoming', icon: 'moon' },
-      { id: 'voting', label: 'Voting', status: currentIndex > 4 ? 'completed' : currentIndex === 4 ? 'active' : 'upcoming', icon: 'ballot' },
-      { id: 'rekapitulasi', label: 'Rekapitulasi', status: currentIndex >= 5 ? 'active' : 'upcoming', icon: 'barChart' }
-    ]
-  }, [currentStage])
+    const lookup = new Map<PhaseKey, { start?: string | null; end?: string | null; label?: string | null }>()
+    dashboardData.phases.forEach((phase) => {
+      const key = normalizePhaseKey(phase.key ?? phase.phase)
+      if (key) {
+        lookup.set(key, {
+          start: (phase as any)?.start_at ?? (phase as any)?.startAt ?? (phase as any)?.start ?? null,
+          end: (phase as any)?.end_at ?? (phase as any)?.endAt ?? (phase as any)?.end ?? null,
+          label: phase.label ?? (phase as any)?.name ?? null,
+        })
+      }
+    })
+
+    // If no phases available, fall back to currentStage-based ordering
+    if (lookup.size === 0) {
+      const stages: PemiraStage[] = ['registration', 'verification', 'campaign', 'silence', 'voting', 'rekapitulasi']
+      const currentIndex = stages.indexOf(currentStage)
+      return [
+        { id: 'REGISTRATION', label: 'Pendaftaran', status: currentIndex > 0 ? 'completed' : currentIndex === 0 ? 'active' : 'upcoming', icon: 'fileCheck' },
+        { id: 'VERIFICATION', label: 'Verifikasi Berkas', status: currentIndex > 1 ? 'completed' : currentIndex === 1 ? 'active' : 'upcoming', icon: 'checkCircle' },
+        { id: 'CAMPAIGN', label: 'Masa Kampanye', status: currentIndex > 2 ? 'completed' : currentIndex === 2 ? 'active' : 'upcoming', icon: 'megaphone' },
+        { id: 'QUIET_PERIOD', label: 'Masa Tenang', status: currentIndex > 3 ? 'completed' : currentIndex === 3 ? 'active' : 'upcoming', icon: 'moon' },
+        { id: 'VOTING', label: 'Voting', status: currentIndex > 4 ? 'completed' : currentIndex === 4 ? 'active' : 'upcoming', icon: 'ballot' },
+        { id: 'RECAP', label: 'Rekapitulasi', status: currentIndex >= 5 ? 'active' : 'upcoming', icon: 'barChart' },
+      ]
+    }
+
+    const ordered = PHASE_ORDER.map((key) => {
+      const source = lookup.get(key)
+      const start = source?.start ?? null
+      const end = source?.end ?? null
+      return {
+        id: key,
+        label: source?.label ?? PHASE_META[key].label,
+        status: determinePhaseStatus(start, end),
+        icon: PHASE_META[key].icon,
+        start,
+        end,
+      }
+    })
+
+    // If no active stage detected, sync with backend currentStage to highlight
+    const hasActive = ordered.some((item) => item.status === 'active')
+    if (!hasActive) {
+      const stageToKey: Record<PemiraStage, PhaseKey> = {
+        registration: 'REGISTRATION',
+        verification: 'VERIFICATION',
+        campaign: 'CAMPAIGN',
+        silence: 'QUIET_PERIOD',
+        voting: 'VOTING',
+        rekapitulasi: 'RECAP',
+      }
+      const activeKey = stageToKey[currentStage]
+      const activeIndex = ordered.findIndex((item) => item.id === activeKey)
+      if (activeIndex >= 0) {
+        ordered.forEach((item, idx) => {
+          if (idx < activeIndex) item.status = 'completed'
+          else if (idx === activeIndex) item.status = 'active'
+          else item.status = 'upcoming'
+        })
+      }
+    }
+
+    return ordered
+  }, [currentStage, dashboardData.phases])
 
   const notifications = useMemo(() => {
     const notifs = []
@@ -445,6 +548,9 @@ const DashboardPemilihHiFi = (): JSX.Element => {
                         {stage.status === 'active' && 'Sedang berlangsung'}
                         {stage.status === 'upcoming' && 'Belum dibuka'}
                       </span>
+                      {formatStageRange(stage.start, stage.end) && (
+                        <span className="stage-dates">{formatStageRange(stage.start, stage.end)}</span>
+                      )}
                     </div>
                   </div>
                 </div>
