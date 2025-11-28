@@ -65,7 +65,9 @@ const formatStageRange = (start?: string | null, end?: string | null): string | 
     if (!value) return ''
     const parsed = new Date(value)
     if (Number.isNaN(parsed.getTime())) return ''
-    return parsed.toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+    const datePart = parsed.toLocaleDateString('id-ID', { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' })
+    const timePart = parsed.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false })
+    return `${datePart}, pukul ${timePart}`
   }
   const startLabel = format(start)
   const endLabel = format(end)

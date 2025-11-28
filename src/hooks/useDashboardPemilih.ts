@@ -7,6 +7,7 @@ import type { PublicElection, PublicPhase } from '../services/publicElection'
 import type { VoterMeStatus } from '../services/voterStatus'
 import type { VoterQRResult } from '../services/voterQr'
 import type { AuthUser } from '../services/auth'
+import { getActiveElectionId } from '../state/activeElection'
 
 export type PemiraStage = 'registration' | 'verification' | 'campaign' | 'silence' | 'voting' | 'rekapitulasi'
 
@@ -90,14 +91,16 @@ export const useDashboardPemilih = (token: string | null) => {
           fetchAuthMe(token, { signal }),
           fetchCurrentElection({ signal }),
         ])
+        const configuredElectionId = getActiveElectionId()
+        const targetElectionId = configuredElectionId || election.id
 
         // Fetch voter status
-        const voterStatus = await fetchVoterStatus(token, election.id, { signal })
+        const voterStatus = await fetchVoterStatus(token, targetElectionId, { signal })
 
         // Fetch phases
         let phases: PublicPhase[] = []
         try {
-          phases = await fetchPublicPhases(election.id, { signal })
+          phases = await fetchPublicPhases(targetElectionId, { signal })
         } catch (err) {
           console.warn('Failed to fetch phases:', err)
           // Use phases from election if available
