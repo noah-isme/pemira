@@ -108,7 +108,7 @@ const buildTimeline = (phases: PublicPhase[]): TimelinePhase[] => {
 
 const resolveTargetDate = (election?: PublicElection | null, phases?: TimelinePhase[]): Date => {
   const now = Date.now()
-  
+
   const votingPhase = phases?.find((item) => item.key === 'VOTING')
 
   let votingStart: Date | null = votingPhase ? parseDate(votingPhase.start) : null
@@ -120,11 +120,15 @@ const resolveTargetDate = (election?: PublicElection | null, phases?: TimelinePh
 
   // Before voting starts: countdown to start
   if (votingStart && votingStart.getTime() > now) return votingStart
-  
+
   // During voting: countdown to end
   if (votingStart && votingEnd && now >= votingStart.getTime() && now <= votingEnd.getTime()) return votingEnd
-  
-  // After voting or no dates: fallback
+
+  // Voting finished: freeze countdown at end time if known
+  if (votingEnd) return votingEnd
+
+  // As a last resort, use start time or fallback date for future planning
+  if (votingStart) return votingStart
   return parseDate(FALLBACK_VOTING_DATE) ?? new Date('2026-01-01T00:00:00Z')
 }
 
@@ -260,9 +264,14 @@ const HeroSection = ({ election, loading = false, error }: Props): JSX.Element =
     [targetDate],
   )
 
-  const displayCountdownTitle = derivedState === 'voting' ? 'Sisa waktu voting' : 'Menuju hari voting'
+  const displayCountdownTitle =
+    derivedState === 'voting' ? 'Sisa waktu voting' : derivedState === 'post' ? 'Voting telah selesai' : 'Menuju hari voting'
   const displayCountdownCaption =
-    derivedState === 'voting' ? 'Pemilihan akan ditutup otomatis setelah waktu habis.' : 'Voting dimulai pada tanggal yang tertera.'
+    derivedState === 'voting'
+      ? 'Pemilihan akan ditutup otomatis setelah waktu habis.'
+      : derivedState === 'post'
+        ? 'Terima kasih, proses pemungutan suara sudah berakhir.'
+        : 'Voting dimulai pada tanggal yang tertera.'
 
   return (
     <section className="hero" id="tentang">
