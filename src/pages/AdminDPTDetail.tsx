@@ -91,11 +91,9 @@ const AdminDPTDetail = (): JSX.Element => {
                         <strong>Angkatan:</strong> {voter.angkatan}
                       </li>
                     )}
-                    {voter.semester && (
-                      <li>
-                        <strong>Semester:</strong> {voter.semester}
-                      </li>
-                    )}
+                    <li>
+                      <strong>Semester:</strong> {voter.semester && voter.semester !== '-' ? voter.semester : '-'}
+                    </li>
                     <li>
                       <strong>Status Akademik:</strong> {voter.akademik}
                     </li>

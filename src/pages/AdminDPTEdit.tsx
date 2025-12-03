@@ -97,13 +97,16 @@ const AdminDPTEdit = () => {
         const programValue = formData.prodi
 
         // Align with registration form semantics:
-        // - mahasiswa: fakultas + program studi + semester (as cohort_year)
+        // - mahasiswa: fakultas + program studi + semester eksplisit
         // - dosen: fakultas (unit) + departemen
         // - staf: unit kerja + detail unit
         if (formData.tipe === 'mahasiswa') {
           updatePayload.faculty_name = facultyValue
           updatePayload.study_program_name = programValue
-          updatePayload.cohort_year = formData.semester ? parseInt(formData.semester, 10) : undefined
+          const parsedSemester = formData.semester ? parseInt(formData.semester, 10) : undefined
+          if (parsedSemester !== undefined && !Number.isNaN(parsedSemester)) {
+            updatePayload.semester = parsedSemester
+          }
         } else if (formData.tipe === 'dosen') {
           updatePayload.faculty_name = facultyValue
           updatePayload.study_program_name = programValue

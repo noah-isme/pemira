@@ -89,7 +89,10 @@ const AdminDPTAdd = () => {
         payload.faculty_name = formData.fakultas.trim()
         payload.study_program_name = formData.prodi.trim()
         if (formData.semester) {
-          payload.cohort_year = parseInt(formData.semester, 10)
+          const parsedSemester = parseInt(formData.semester, 10)
+          if (!Number.isNaN(parsedSemester)) {
+            payload.semester = parsedSemester
+          }
         }
         payload.academic_status = academicMap[formData.akademik]
       } else if (formData.tipe === 'dosen') {

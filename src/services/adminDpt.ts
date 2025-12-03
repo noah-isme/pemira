@@ -19,7 +19,7 @@ type DptApiItem = {
   study_program?: string
   cohort_year?: number | string
   class_label?: string
-  semester?: string
+  semester?: string | number
   academic_status?: AcademicStatusAPI
   has_account?: boolean
   has_voted?: boolean
@@ -51,9 +51,10 @@ export type VoterLookupResponse = {
     voter_type: VoterType
     email?: string
     faculty_code?: string
-    study_program_code?: string
-    cohort_year?: number
-    academic_status?: AcademicStatusAPI
+  study_program_code?: string
+  cohort_year?: number
+  semester?: number
+  academic_status?: AcademicStatusAPI
     has_account: boolean
     lecturer_id?: number | null
     staff_id?: number | null
@@ -91,6 +92,7 @@ export type UpsertVoterRequest = {
   study_program_code?: string
   study_program_name?: string
   cohort_year?: number
+  semester?: number
   academic_status?: AcademicStatusAPI
   lecturer_id?: number | null
   staff_id?: number | null
@@ -190,6 +192,19 @@ const extractTotal = (payload: any, fallback: number) => {
   return Number.isFinite(numericTotal) ? (numericTotal as number) : fallback
 }
 
+const normalizeSemesterValue = (value?: string | number): string | undefined => {
+  if (value === null || value === undefined) return undefined
+  if (typeof value === 'number' && Number.isFinite(value)) return value.toString()
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (!trimmed || /tidak\s+diisi/i.test(trimmed)) return undefined
+    const digitMatch = trimmed.match(/(\d{1,2})/)
+    if (digitMatch) return digitMatch[1]
+    return trimmed
+  }
+  return undefined
+}
+
 const mapDptItems = (raw: DptApiItem[]): DPTEntry[] =>
   raw.map((item) => {
     const voterType = mapVoterType(item.type || item.voter_type || item.category || item.role)
@@ -258,6 +273,20 @@ const mapDptItems = (raw: DptApiItem[]): DPTEntry[] =>
       ? item.election_voter_id.toString() 
       : `voter_${item.voter_id}`
 
+    let cohortYearNumeric: number | undefined
+    if (typeof item.cohort_year === 'number') {
+      cohortYearNumeric = item.cohort_year
+    } else if (typeof item.cohort_year === 'string' && item.cohort_year) {
+      const parsed = Number.parseInt(item.cohort_year, 10)
+      cohortYearNumeric = Number.isNaN(parsed) ? undefined : parsed
+    }
+    const fallbackSemester =
+      typeof cohortYearNumeric === 'number'
+        ? `${(new Date().getFullYear() - cohortYearNumeric) * 2 + 1}`
+        : undefined
+    const classLabelSemester = voterType === 'mahasiswa' ? item.class_label : undefined
+    const semesterValue = normalizeSemesterValue(item.semester ?? classLabelSemester ?? fallbackSemester)
+
     return {
       id,
       voterId: item.voter_id,
@@ -269,7 +298,7 @@ const mapDptItems = (raw: DptApiItem[]): DPTEntry[] =>
       prodi,
       prodiCode: item.study_program_code,
       angkatan: item.cohort_year ? item.cohort_year.toString() : '-',
-      semester: item.semester ?? item.class_label ?? (typeof item.cohort_year === 'number' ? `${(new Date().getFullYear() - item.cohort_year) * 2 + 1}` : undefined),
+      semester: semesterValue != null && semesterValue !== '' ? semesterValue.toString() : undefined,
       kelasLabel: item.class_label,
       akademik: mapAcademicStatus(item.academic_status),
       tipe: voterType,
@@ -359,7 +388,6 @@ export const updateAdminDptVoter = async (
   updates: UpdateVoterPayload,
   electionId: number = getActiveElectionId(),
 ): Promise<DPTEntry> => {
-  // Use PATCH method as per new API contract
   const response = await apiRequest<DptApiItem>(`/admin/elections/${electionId}/voters/${electionVoterId}`, {
     method: 'PATCH',
     token,
