@@ -1,57 +1,63 @@
-import type { ComponentType } from 'react'
-import DashboardPemilihHiFi from '../pages/DashboardPemilihHiFi'
-import DaftarKandidat from '../pages/DaftarKandidat'
-import DemoAccounts from '../pages/DemoAccounts'
-import DetailKandidat from '../pages/DetailKandidat'
-import LandingPage from '../pages/LandingPage'
-import LoginMahasiswa from '../pages/LoginMahasiswa'
-import RegisterNew from '../pages/RegisterNew'
-import TPSScanner from '../pages/TPSScanner'
-import TPSSuccess from '../pages/TPSSuccess'
-import TPSValidation from '../pages/TPSValidation'
-import TPSVoting from '../pages/TPSVoting'
-import VotingOnline from '../pages/VotingOnline'
-import VotingTPS from '../pages/VotingTPS'
-import TPSPanelDashboard from '../pages/TPSPanelDashboard'
-import AdminTPSPanel from '../pages/AdminTPSPanel'
-import TPSPanelHistory from '../pages/TPSPanelHistory'
-import TPSPanelVotingRoom from '../pages/TPSPanelVotingRoom'
-import TPSQRScanner from '../pages/TPSQRScanner'
-import TPSCheckInSuccess from '../pages/TPSCheckInSuccess'
-import TPSVoterDetail from '../pages/TPSVoterDetail'
-import TPSPanelSettings from '../pages/TPSPanelSettings'
-import VoterQRScanner from '../pages/VoterQRScanner'
-import VoterHistory from '../pages/VoterHistory'
-import VoterCandidates from '../pages/VoterCandidates'
-import VoterHelp from '../pages/VoterHelp'
-import VoterProfile from '../pages/VoterProfile'
-import ElectionResults from '../pages/ElectionResults'
-import AdminDashboard from '../pages/AdminDashboard'
-import AdminLogin from '../pages/AdminLogin'
-import AdminCandidatesList from '../pages/AdminCandidatesList'
-import AdminCandidateForm from '../pages/AdminCandidateForm'
-import AdminCandidatePreview from '../pages/AdminCandidatePreview'
-import AdminElectionSettings from '../pages/AdminElectionSettings'
-import AdminMonitoringLiveCount from '../pages/AdminMonitoringLiveCount'
-import AdminTPSList from '../pages/AdminTPSList'
-import AdminTPSForm from '../pages/AdminTPSForm'
-import AdminTPSDetail from '../pages/AdminTPSDetail'
-import AdminDPTList from '../pages/AdminDPTList'
-import AdminDPTImport from '../pages/AdminDPTImport'
-import AdminDPTDetail from '../pages/AdminDPTDetail'
-import AdminDPTEdit from '../pages/AdminDPTEdit'
-import AdminDPTAdd from '../pages/AdminDPTAdd'
-import AdminUserManagement from '../pages/AdminUserManagement'
-import Panduan from '../pages/Panduan'
-import AdminFlowGuide from '../pages/AdminFlowGuide'
-import JadwalPemilu from '../pages/JadwalPemilu'
-import Tentang from '../pages/Tentang'
-import ContactPanitia from '../pages/ContactPanitia'
+import { lazy } from 'react'
+import type { ComponentType, LazyExoticComponent } from 'react'
+
+type RouteComponent = ComponentType<any> | LazyExoticComponent<ComponentType<any>>
+
+const lazyPage = <T extends ComponentType<any>>(loader: () => Promise<{ default: T }>) => lazy(loader)
+
+const LandingPage = lazyPage(() => import('../pages/LandingPage'))
+const DashboardPemilihHiFi = lazyPage(() => import('../pages/DashboardPemilihHiFi'))
+const DaftarKandidat = lazyPage(() => import('../pages/DaftarKandidat'))
+const DemoAccounts = lazyPage(() => import('../pages/DemoAccounts'))
+const DetailKandidat = lazyPage(() => import('../pages/DetailKandidat'))
+const LoginMahasiswa = lazyPage(() => import('../pages/LoginMahasiswa'))
+const RegisterNew = lazyPage(() => import('../pages/RegisterNew'))
+const TPSScanner = lazyPage(() => import('../pages/TPSScanner'))
+const TPSSuccess = lazyPage(() => import('../pages/TPSSuccess'))
+const TPSValidation = lazyPage(() => import('../pages/TPSValidation'))
+const TPSVoting = lazyPage(() => import('../pages/TPSVoting'))
+const VotingOnline = lazyPage(() => import('../pages/VotingOnline'))
+const VotingTPS = lazyPage(() => import('../pages/VotingTPS'))
+const TPSPanelDashboard = lazyPage(() => import('../pages/TPSPanelDashboard'))
+const AdminTPSPanel = lazyPage(() => import('../pages/AdminTPSPanel'))
+const TPSPanelHistory = lazyPage(() => import('../pages/TPSPanelHistory'))
+const TPSPanelVotingRoom = lazyPage(() => import('../pages/TPSPanelVotingRoom'))
+const TPSQRScanner = lazyPage(() => import('../pages/TPSQRScanner'))
+const TPSCheckInSuccess = lazyPage(() => import('../pages/TPSCheckInSuccess'))
+const TPSVoterDetail = lazyPage(() => import('../pages/TPSVoterDetail'))
+const TPSPanelSettings = lazyPage(() => import('../pages/TPSPanelSettings'))
+const VoterQRScanner = lazyPage(() => import('../pages/VoterQRScanner'))
+const VoterHistory = lazyPage(() => import('../pages/VoterHistory'))
+const VoterCandidates = lazyPage(() => import('../pages/VoterCandidates'))
+const VoterHelp = lazyPage(() => import('../pages/VoterHelp'))
+const VoterProfile = lazyPage(() => import('../pages/VoterProfile'))
+const ElectionResults = lazyPage(() => import('../pages/ElectionResults'))
+const AdminDashboard = lazyPage(() => import('../pages/AdminDashboard'))
+const AdminLogin = lazyPage(() => import('../pages/AdminLogin'))
+const AdminCandidatesList = lazyPage(() => import('../pages/AdminCandidatesList'))
+const AdminCandidateForm = lazyPage(() => import('../pages/AdminCandidateForm'))
+const AdminCandidatePreview = lazyPage(() => import('../pages/AdminCandidatePreview'))
+const AdminElectionSettings = lazyPage(() => import('../pages/AdminElectionSettings'))
+const AdminMonitoringLiveCount = lazyPage(() => import('../pages/AdminMonitoringLiveCount'))
+const AdminTPSList = lazyPage(() => import('../pages/AdminTPSList'))
+const AdminTPSForm = lazyPage(() => import('../pages/AdminTPSForm'))
+const AdminTPSDetail = lazyPage(() => import('../pages/AdminTPSDetail'))
+const AdminDPTList = lazyPage(() => import('../pages/AdminDPTList'))
+const AdminDPTImport = lazyPage(() => import('../pages/AdminDPTImport'))
+const AdminDPTDetail = lazyPage(() => import('../pages/AdminDPTDetail'))
+const AdminDPTEdit = lazyPage(() => import('../pages/AdminDPTEdit'))
+const AdminDPTAdd = lazyPage(() => import('../pages/AdminDPTAdd'))
+const AdminUserManagement = lazyPage(() => import('../pages/AdminUserManagement'))
+const Panduan = lazyPage(() => import('../pages/Panduan'))
+const AdminFlowGuide = lazyPage(() => import('../pages/AdminFlowGuide'))
+const JadwalPemilu = lazyPage(() => import('../pages/JadwalPemilu'))
+const Tentang = lazyPage(() => import('../pages/Tentang'))
+const ContactPanitia = lazyPage(() => import('../pages/ContactPanitia'))
 
 export type RouteDefinition = {
   id: string
   path: string
-  Component: ComponentType
+  Component: RouteComponent
   requiresAuth?: boolean
   publicOnly?: boolean
   requiresAdminAuth?: boolean

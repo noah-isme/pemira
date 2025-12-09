@@ -24,20 +24,22 @@ const App = (): React.JSX.Element => (
               <TPSAdminProvider>
                 <DPTAdminProvider>
                   <BrowserRouter>
-                    <Routes>
-                      {appRoutes.map(({ id, path, Component, requiresAuth, requiresAdminAuth, publicOnly }) => {
-                        let element: React.JSX.Element = <Component />
-                        if (requiresAdminAuth) {
-                          element = <AdminProtectedRoute component={Component} />
-                        } else if (requiresAuth) {
-                          element = <ProtectedRoute component={Component} />
-                        } else if (publicOnly) {
-                          element = <PublicOnlyRoute component={Component} />
-                        }
-                        return <Route key={id} path={path} element={element} />
-                      })}
-                      <Route path={fallbackRoute.path} element={<fallbackRoute.Component />} />
-                    </Routes>
+                    <React.Suspense fallback={<div className="app-loading">Memuat halaman...</div>}>
+                      <Routes>
+                        {appRoutes.map(({ id, path, Component, requiresAuth, requiresAdminAuth, publicOnly }) => {
+                          let element: React.JSX.Element = <Component />
+                          if (requiresAdminAuth) {
+                            element = <AdminProtectedRoute component={Component} />
+                          } else if (requiresAuth) {
+                            element = <ProtectedRoute component={Component} />
+                          } else if (publicOnly) {
+                            element = <PublicOnlyRoute component={Component} />
+                          }
+                          return <Route key={id} path={path} element={element} />
+                        })}
+                        <Route path={fallbackRoute.path} element={<fallbackRoute.Component />} />
+                      </Routes>
+                    </React.Suspense>
                   </BrowserRouter>
                 </DPTAdminProvider>
               </TPSAdminProvider>
