@@ -27,7 +27,7 @@ const AdminCandidatesList = (): JSX.Element => {
   const navigate = useNavigate()
   const { token } = useAdminAuth()
   const { activeElectionId } = useActiveElection()
-  const { candidates, archiveCandidate, refresh, loading, error } = useCandidateAdminStore()
+  const { candidates, archiveCandidate, deleteCandidate, refresh, loading, error } = useCandidateAdminStore()
   const { showPopup } = usePopup()
   const [search, setSearch] = useState('')
   const [facultyFilter, setFacultyFilter] = useState('all')
@@ -137,6 +137,28 @@ const AdminCandidatesList = (): JSX.Element => {
     })
     if (!confirmed) return
     archiveCandidate(id)
+  }
+
+  const handleDelete = async (id: string, name: string) => {
+    const confirmed = await showPopup({
+      title: 'Hapus Kandidat',
+      message: `Hapus kandidat "${name}"? (Soft delete)\n\nKandidat tidak akan muncul di daftar publik maupun admin list.`,
+      type: 'warning',
+      confirmText: 'Hapus',
+      cancelText: 'Batal'
+    })
+    if (!confirmed) return
+    try {
+      await deleteCandidate(id)
+    } catch (err) {
+      console.error('Failed to delete candidate', err)
+      await showPopup({
+        title: 'Gagal Menghapus',
+        message: (err as { message?: string })?.message ?? 'Gagal menghapus kandidat',
+        type: 'error',
+        confirmText: 'Tutup',
+      })
+    }
   }
 
   return (
@@ -266,6 +288,9 @@ const AdminCandidatesList = (): JSX.Element => {
                         </button>
                         <button className="btn-table danger" type="button" onClick={() => handleArchive(candidate.id)}>
                           Arsipkan
+                        </button>
+                        <button className="btn-table danger" type="button" onClick={() => void handleDelete(candidate.id, candidate.name)}>
+                          Hapus
                         </button>
                       </div>
                     </td>

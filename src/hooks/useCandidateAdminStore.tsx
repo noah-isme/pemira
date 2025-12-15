@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { createAdminCandidate, fetchAdminCandidates, updateAdminCandidate } from '../services/adminCandidates'
+import { createAdminCandidate, deleteAdminCandidate, fetchAdminCandidates, updateAdminCandidate } from '../services/adminCandidates'
 import { useAdminAuth } from './useAdminAuth'
 import { useActiveElection } from './useActiveElection'
 import type { CandidateAdmin, CandidateProgramAdmin, CandidateStatus } from '../types/candidateAdmin'
@@ -32,6 +32,7 @@ const CandidateAdminContext = createContext<{
   getCandidateById: (id: string) => CandidateAdmin | undefined
   addCandidate: (payload: CandidateAdmin) => Promise<CandidateAdmin>
   updateCandidate: (id: string, payload: Partial<CandidateAdmin>) => Promise<CandidateAdmin>
+  deleteCandidate: (id: string) => Promise<void>
   archiveCandidate: (id: string) => void
   createEmptyCandidate: () => CandidateAdmin
   isNumberAvailable: (number: number, excludeId?: string) => boolean
@@ -95,6 +96,16 @@ export const CandidateAdminProvider = ({ children }: { children: ReactNode }) =>
     [activeElectionId, createEmptyCandidate, getCandidateById, token],
   )
 
+  const deleteCandidate = useCallback(
+    async (id: string) => {
+      if (!token) throw new Error('Admin token diperlukan untuk menghapus kandidat')
+      if (!activeElectionId) throw new Error('Election ID tidak tersedia')
+      await deleteAdminCandidate(token, id, activeElectionId)
+      setCandidates((prev) => prev.filter((candidate) => candidate.id !== id))
+    },
+    [activeElectionId, token],
+  )
+
   const archiveCandidate = useCallback(
     (id: string) => {
       setCandidates((prev) =>
@@ -123,8 +134,9 @@ export const CandidateAdminProvider = ({ children }: { children: ReactNode }) =>
       refresh,
       loading,
       error,
+      deleteCandidate,
     }),
-    [archiveCandidate, candidates, createEmptyCandidate, error, getCandidateById, isNumberAvailable, loading, refresh, updateCandidate, addCandidate],
+    [archiveCandidate, candidates, createEmptyCandidate, error, getCandidateById, isNumberAvailable, loading, refresh, updateCandidate, addCandidate, deleteCandidate],
   )
 
   return <CandidateAdminContext.Provider value={value}>{children}</CandidateAdminContext.Provider>

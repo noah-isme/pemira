@@ -253,3 +253,10 @@ export const fetchAdminCandidateDetail = async (token: string, id: string | numb
   )
   return transformCandidateFromApi(response)
 }
+
+export const deleteAdminCandidate = async (token: string, id: string | number, electionId: number = getActiveElectionId()): Promise<void> => {
+  await apiRequest<any>(`/admin/elections/${electionId}/candidates/${id}`, {
+    method: 'DELETE',
+    token,
+  })
+}
