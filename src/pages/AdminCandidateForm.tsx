@@ -26,7 +26,7 @@ const statusLabels: Record<CandidateStatus, string> = {
   DRAFT: 'Draft',
   PENDING: 'Menunggu Review',
   PUBLISHED: 'Terpublikasi',
-  APPROVED: 'Disetujui',
+  APPROVED: 'Terpublikasi (Legacy)',
   HIDDEN: 'Disembunyikan',
   REJECTED: 'Ditolak',
   WITHDRAWN: 'Ditarik',
@@ -505,7 +505,7 @@ const AdminCandidateForm = (): JSX.Element => {
       cancelText: 'Batal'
     })
     if (!confirmed) return
-    void handleSubmit('APPROVED')
+    void handleSubmit('PUBLISHED')
   }
 
   const helperText = (text: string, required?: boolean) => (
@@ -938,7 +938,7 @@ const AdminCandidateForm = (): JSX.Element => {
                 </button>
               </div>
               <div className="right">
-                <button className="btn-outline" type="button" onClick={() => void handleSubmit('PENDING')}>
+                <button className="btn-outline" type="button" onClick={() => void handleSubmit('DRAFT')}>
                   Simpan Draft
                 </button>
                 {stepIndex < steps.length - 1 ? (

@@ -16,7 +16,7 @@ const statusOptions: { value: CandidateStatus | 'all'; label: string }[] = [
   { value: 'DRAFT', label: 'Draft' },
   { value: 'PENDING', label: 'Menunggu Review' },
   { value: 'PUBLISHED', label: 'Terpublikasi' },
-  { value: 'APPROVED', label: 'Disetujui (Legacy)' },
+  { value: 'APPROVED', label: 'Terpublikasi (Legacy)' },
   { value: 'HIDDEN', label: 'Disembunyikan' },
   { value: 'REJECTED', label: 'Ditolak' },
   { value: 'WITHDRAWN', label: 'Ditarik' },
@@ -254,10 +254,10 @@ const AdminCandidatesList = (): JSX.Element => {
                           ? 'Draft'
                           : candidate.status === 'PENDING'
                             ? 'Menunggu Review'
-                            : candidate.status === 'PUBLISHED'
+                          : candidate.status === 'PUBLISHED'
                               ? 'Terpublikasi'
                               : candidate.status === 'APPROVED'
-                                ? 'Disetujui'
+                                ? 'Terpublikasi'
                                 : candidate.status === 'HIDDEN'
                                   ? 'Disembunyikan'
                                   : candidate.status === 'REJECTED'
