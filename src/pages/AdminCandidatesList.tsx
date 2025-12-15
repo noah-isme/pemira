@@ -80,7 +80,8 @@ const AdminCandidatesList = (): JSX.Element => {
     setQrError(undefined)
     void (async () => {
       try {
-        const map = await fetchCandidateQrCodeMap(activeElectionId, { signal: controller.signal })
+        if (!token) throw new Error('Admin token tidak tersedia')
+        const map = await fetchCandidateQrCodeMap(token, activeElectionId, { signal: controller.signal })
         setQrCodes(map)
       } catch (err) {
         if ((err as any)?.name === 'AbortError') return
@@ -93,7 +94,7 @@ const AdminCandidatesList = (): JSX.Element => {
     })()
 
     return () => controller.abort()
-  }, [activeElectionId])
+  }, [activeElectionId, token])
 
   const facultyOptions = useMemo(() => {
     const faculties = Array.from(new Set(candidates.map((candidate) => candidate.faculty)))
@@ -104,7 +105,8 @@ const AdminCandidatesList = (): JSX.Element => {
     setQrLoading(true)
     setQrError(undefined)
     try {
-      const [, map] = await Promise.all([refresh(), fetchCandidateQrCodeMap(activeElectionId)])
+      if (!token) throw new Error('Admin token tidak tersedia')
+      const [, map] = await Promise.all([refresh(), fetchCandidateQrCodeMap(token, activeElectionId)])
       setQrCodes(map)
     } catch (err) {
       console.warn('Failed to refresh candidates or QR codes', err)
