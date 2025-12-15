@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type JSX } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { QRCodeSVG } from 'qrcode.react'
 import AdminLayout from '../components/admin/AdminLayout'
 import { useCandidateAdminStore } from '../hooks/useCandidateAdminStore'
 import { useAdminAuth } from '../hooks/useAdminAuth'
+import { useActiveElection } from '../hooks/useActiveElection'
 import { usePopup } from '../components/Popup'
 import { fetchCandidateProfileMedia } from '../services/adminCandidateMedia'
+import { fetchCandidateQrCodeMap, type CandidateQrCode } from '../services/candidateQr'
 import type { CandidateStatus } from '../types/candidateAdmin'
 import '../styles/AdminCandidates.css'
 
@@ -19,12 +22,16 @@ const statusOptions: { value: CandidateStatus | 'all'; label: string }[] = [
 const AdminCandidatesList = (): JSX.Element => {
   const navigate = useNavigate()
   const { token } = useAdminAuth()
+  const { activeElectionId } = useActiveElection()
   const { candidates, archiveCandidate, refresh, loading, error } = useCandidateAdminStore()
   const { showPopup } = usePopup()
   const [search, setSearch] = useState('')
   const [facultyFilter, setFacultyFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState<CandidateStatus | 'all'>('all')
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({})
+  const [qrCodes, setQrCodes] = useState<Record<string, CandidateQrCode>>({})
+  const [qrLoading, setQrLoading] = useState(false)
+  const [qrError, setQrError] = useState<string | undefined>(undefined)
   const objectUrlsRef = useRef<string[]>([])
 
   const registerObjectUrl = (url: string) => {
@@ -66,10 +73,46 @@ const AdminCandidatesList = (): JSX.Element => {
     [],
   )
 
+  useEffect(() => {
+    if (!activeElectionId) return
+    const controller = new AbortController()
+    setQrLoading(true)
+    setQrError(undefined)
+    void (async () => {
+      try {
+        const map = await fetchCandidateQrCodeMap(activeElectionId, { signal: controller.signal })
+        setQrCodes(map)
+      } catch (err) {
+        if ((err as any)?.name === 'AbortError') return
+        console.warn('Failed to load candidate QR codes', err)
+        setQrError((err as { message?: string })?.message ?? 'Gagal memuat QR kandidat')
+        setQrCodes({})
+      } finally {
+        setQrLoading(false)
+      }
+    })()
+
+    return () => controller.abort()
+  }, [activeElectionId])
+
   const facultyOptions = useMemo(() => {
     const faculties = Array.from(new Set(candidates.map((candidate) => candidate.faculty)))
     return ['all', ...faculties]
   }, [candidates])
+
+  const handleReload = async () => {
+    setQrLoading(true)
+    setQrError(undefined)
+    try {
+      const [, map] = await Promise.all([refresh(), fetchCandidateQrCodeMap(activeElectionId)])
+      setQrCodes(map)
+    } catch (err) {
+      console.warn('Failed to refresh candidates or QR codes', err)
+      setQrError((err as { message?: string })?.message ?? 'Gagal memuat QR kandidat')
+    } finally {
+      setQrLoading(false)
+    }
+  }
 
   const filteredCandidates = useMemo(() => {
     return candidates.filter((candidate) => {
@@ -109,7 +152,9 @@ const AdminCandidatesList = (): JSX.Element => {
           <div className="status-row">
             {loading && <span>Memuat kandidat...</span>}
             {error && <span className="error-text">{error}</span>}
-            <button className="btn-outline" type="button" onClick={() => void refresh()}>
+            {qrLoading && <span>Memuat QR...</span>}
+            {qrError && <span className="error-text">{qrError}</span>}
+            <button className="btn-outline" type="button" onClick={() => void handleReload()}>
               Muat ulang
             </button>
           </div>
@@ -144,6 +189,7 @@ const AdminCandidatesList = (): JSX.Element => {
                 <th>Nama</th>
                 <th>Fakultas</th>
                 <th>Status</th>
+                <th>QR</th>
                 <th>Konten</th>
                 <th>Aksi</th>
               </tr>
@@ -151,13 +197,14 @@ const AdminCandidatesList = (): JSX.Element => {
             <tbody>
               {filteredCandidates.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="empty-state">
+                  <td colSpan={8} className="empty-state">
                     Belum ada kandidat yang cocok.
                   </td>
                 </tr>
               )}
               {filteredCandidates.map((candidate) => {
                 const contentCount = candidate.missions.length + candidate.programs.length + (candidate.visionTitle ? 1 : 0)
+                const qr = qrCodes[candidate.id]
                 return (
                   <tr key={candidate.id}>
                     <td>
@@ -185,6 +232,16 @@ const AdminCandidatesList = (): JSX.Element => {
                               ? 'Ditolak'
                               : 'Ditarik'}
                       </span>
+                    </td>
+                    <td>
+                      {qr?.payload ? (
+                        <div className="candidate-qr-cell">
+                          <QRCodeSVG value={qr.payload} size={76} level="H" />
+                          <span className="candidate-qr-token">{qr.token}</span>
+                        </div>
+                      ) : (
+                        <span className="candidate-qr-empty">—</span>
+                      )}
                     </td>
                     <td>{contentCount} item</td>
                     <td>

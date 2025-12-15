@@ -168,6 +168,23 @@ const HeroSection = ({ election, loading = false, error }: Props): JSX.Element =
   const isNoActiveElectionError = error?.toLowerCase().includes('pemilu aktif')
   const showNoElectionState = !hasElection && !loading
   
+  // Debug logging
+  if (typeof window !== 'undefined') {
+    console.log('[HeroSection Debug]', {
+      hasElection,
+      loading,
+      showNoElectionState,
+      election: election ? {
+        id: election.id,
+        status: election.status,
+        current_phase: election.current_phase,
+        voting_start_at: election.voting_start_at,
+        voting_end_at: election.voting_end_at,
+        phases_count: election.phases?.length
+      } : null
+    })
+  }
+  
   // Use current_phase from backend (calculated) instead of status
   const effectivePhase = election?.current_phase ?? election?.status
   const statusLabel = loading ? 'Memuat status...' : hasElection ? statusLabelMap[effectivePhase ?? ''] ?? 'Pemilu aktif' : 'Belum ada pemilu aktif'
@@ -196,7 +213,11 @@ const HeroSection = ({ election, loading = false, error }: Props): JSX.Element =
   const subtitle = 'Sistem pemilu kampus yang aman, rahasia, dan mudah digunakan oleh seluruh mahasiswa, dosen, dan staf UNIWA.'
   const friendlyError =
     !loading && error && !isNoActiveElectionError ? 'Data jadwal belum dapat dimuat. Panitia sedang memperbarui informasi.' : null
-  const targetDate = useMemo(() => resolveTargetDate(election, timelinePhases), [election, timelinePhases])
+  const targetDate = useMemo(() => {
+    const resolved = resolveTargetDate(election, timelinePhases)
+    console.log('[Timer Debug] Target date:', resolved.toISOString(), 'Phases:', timelinePhases.length)
+    return resolved
+  }, [election, timelinePhases])
   const [countdown, setCountdown] = useState<CountdownState>(() => buildCountdown(targetDate))
 
   useEffect(() => {

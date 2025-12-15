@@ -99,6 +99,27 @@
   font-size: 0.85rem;
 }
 
+.candidate-qr-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: flex-start;
+}
+
+.candidate-qr-token {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  font-size: 0.72rem;
+  color: #64748b;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.candidate-qr-empty {
+  color: #94a3b8;
+}
+
 .status-chip {
   padding: 0.3rem 0.8rem;
   border-radius: 999px;
