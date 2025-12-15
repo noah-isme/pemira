@@ -143,14 +143,26 @@ export const transformCandidateFromApi = (payload: AdminCandidateResponse | null
   }
 }
 
-export const buildCandidatePayload = (candidate: CandidateAdmin, excludeStatus = false) => {
+export const buildCandidatePayload = (candidate: Partial<CandidateAdmin>) => {
   const programs: CandidateProgramAdmin[] = candidate.programs ?? []
-  const photos = candidate.media.filter((item) => item.type === 'photo').map((item) => item.url).filter((url) => url && !url.startsWith('blob:'))
-  const pdf = candidate.media.find((item) => item.type === 'pdf')
+  const media = candidate.media ?? []
+  const photos = media
+    .filter((item) => item.type === 'photo')
+    .map((item) => item.url)
+    .filter((url) => url && !url.startsWith('blob:'))
+  const pdfUrl = media.find((item) => item.type === 'pdf')?.url
+  const pdf = pdfUrl && !pdfUrl.startsWith('blob:') ? pdfUrl : undefined
+
+  const vision = candidate.visionDescription ?? candidate.visionTitle
 
   // Only send photo_url if there's no photo_media_id (backward compatibility)
-  // When photo_media_id exists, the API should use that instead
-  const photoUrl = candidate.photoMediaId ? undefined : (candidate.photoUrl?.startsWith('blob:') ? undefined : candidate.photoUrl)
+  // When photo_media_id exists, the API should use that instead.
+  const photoUrl =
+    candidate.photoMediaId != null
+      ? undefined
+      : candidate.photoUrl && candidate.photoUrl.startsWith('blob:')
+        ? undefined
+        : candidate.photoUrl
 
   const payload: any = {
     number: candidate.number,
@@ -163,22 +175,25 @@ export const buildCandidatePayload = (candidate: CandidateAdmin, excludeStatus =
     faculty_name: candidate.faculty,
     study_program_name: candidate.programStudi,
     cohort_year: candidate.angkatan ? Number(candidate.angkatan) : undefined,
-    vision: candidate.visionDescription || candidate.visionTitle,
+    vision,
     missions: candidate.missions,
-    main_programs: programs.map((program) => ({
-      title: program.title,
-      description: program.description,
-      category: program.category,
-    })),
-    media: {
-      video_url: candidate.campaignVideo ?? null,
-      gallery_photos: photos,
-      document_manifesto_url: pdf?.url ?? null,
-    },
+    main_programs: candidate.programs
+      ? programs.map((program) => ({
+          title: program.title,
+          description: program.description,
+          category: program.category,
+        }))
+      : undefined,
+    status: candidate.status ? mapStatusToApi(candidate.status) : undefined,
   }
 
-  if (!excludeStatus) {
-    payload.status = mapStatusToApi(candidate.status)
+  const shouldIncludeMedia = candidate.campaignVideo !== undefined || candidate.media !== undefined
+  if (shouldIncludeMedia) {
+    payload.media = {
+      video_url: candidate.campaignVideo ?? null,
+      gallery_photos: photos,
+      document_manifesto_url: pdf ?? null,
+    }
   }
 
   return payload
@@ -234,10 +249,9 @@ export const updateAdminCandidate = async (
   token: string,
   id: string,
   candidate: Partial<CandidateAdmin>,
-  excludeStatus = true,
   electionId: number = getActiveElectionId(),
 ): Promise<CandidateAdmin> => {
-  const payload = buildCandidatePayload(candidate as CandidateAdmin, excludeStatus)
+  const payload = buildCandidatePayload(candidate)
   const response = await apiRequest<AdminCandidateResponse>(`/admin/elections/${electionId}/candidates/${id}`, {
     method: 'PUT',
     token,

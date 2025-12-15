@@ -87,13 +87,13 @@ export const CandidateAdminProvider = ({ children }: { children: ReactNode }) =>
 
   const updateCandidate = useCallback(
     async (id: string, payload: Partial<CandidateAdmin>) => {
-      const baseCandidate = getCandidateById(id) ?? { ...createEmptyCandidate(), id }
       if (!token) throw new Error('Admin token diperlukan untuk memperbarui kandidat')
-      const updated = await updateAdminCandidate(token, id, { ...baseCandidate, ...payload } as CandidateAdmin, true, activeElectionId)
+      if (!activeElectionId) throw new Error('Election ID tidak tersedia')
+      const updated = await updateAdminCandidate(token, id, payload, activeElectionId)
       setCandidates((prev) => prev.map((candidate) => (candidate.id === id ? updated : candidate)))
       return updated
     },
-    [activeElectionId, createEmptyCandidate, getCandidateById, token],
+    [activeElectionId, token],
   )
 
   const deleteCandidate = useCallback(
