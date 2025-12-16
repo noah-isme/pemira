@@ -8,6 +8,7 @@ import { useActiveElection } from '../hooks/useActiveElection'
 import { usePopup } from '../components/Popup'
 import { fetchCandidateProfileMedia } from '../services/adminCandidateMedia'
 import { fetchCandidateQrCodeMap, type CandidateQrCode } from '../services/candidateQr'
+import { generateAdminCandidateQrCode } from '../services/adminCandidates'
 import type { CandidateStatus } from '../types/candidateAdmin'
 import '../styles/AdminCandidates.css'
 
@@ -36,6 +37,7 @@ const AdminCandidatesList = (): JSX.Element => {
   const [qrCodes, setQrCodes] = useState<Record<string, CandidateQrCode>>({})
   const [qrLoading, setQrLoading] = useState(false)
   const [qrError, setQrError] = useState<string | undefined>(undefined)
+  const [qrGeneratingId, setQrGeneratingId] = useState<string | null>(null)
   const objectUrlsRef = useRef<string[]>([])
 
   const registerObjectUrl = (url: string) => {
@@ -108,6 +110,11 @@ const AdminCandidatesList = (): JSX.Element => {
     setQrLoading(true)
     setQrError(undefined)
     try {
+      if (!activeElectionId) {
+        await refresh()
+        setQrCodes({})
+        return
+      }
       const [, map] = await Promise.all([refresh(), fetchCandidateQrCodeMap(activeElectionId)])
       setQrCodes(map)
     } catch (err) {
@@ -115,6 +122,35 @@ const AdminCandidatesList = (): JSX.Element => {
       setQrError((err as { message?: string })?.message ?? 'Gagal memuat QR kandidat')
     } finally {
       setQrLoading(false)
+    }
+  }
+
+  const handleGenerateQr = async (candidateId: string, candidateName: string) => {
+    if (!token) {
+      setQrError('Token admin diperlukan untuk generate QR.')
+      return
+    }
+    if (!activeElectionId) {
+      setQrError('Election ID tidak tersedia.')
+      return
+    }
+    const confirmed = await showPopup({
+      title: 'Generate QR Kandidat',
+      message: `Buat QR code untuk kandidat "${candidateName}"?`,
+      type: 'info',
+      confirmText: 'Generate',
+      cancelText: 'Batal',
+    })
+    if (!confirmed) return
+    try {
+      setQrGeneratingId(candidateId)
+      const qr = await generateAdminCandidateQrCode(token, activeElectionId, candidateId)
+      setQrCodes((prev) => ({ ...prev, [candidateId]: qr }))
+    } catch (err) {
+      console.warn('Failed to generate candidate QR', err)
+      setQrError((err as { message?: string })?.message ?? 'Gagal generate QR kandidat')
+    } finally {
+      setQrGeneratingId(null)
     }
   }
 
@@ -230,7 +266,12 @@ const AdminCandidatesList = (): JSX.Element => {
               )}
               {filteredCandidates.map((candidate) => {
                 const contentCount = candidate.missions.length + candidate.programs.length + (candidate.visionTitle ? 1 : 0)
-                const qr = qrCodes[candidate.id]
+                const qr = candidate.qrCode ?? qrCodes[candidate.id] ?? null
+                const qrValue = qr?.payload ?? qr?.token ?? ''
+                const canGenerateQr =
+                  Boolean(token && activeElectionId) &&
+                  !qrValue &&
+                  (candidate.status === 'PUBLISHED' || candidate.status === 'APPROVED')
                 return (
                   <tr key={candidate.id}>
                     <td>
@@ -268,11 +309,20 @@ const AdminCandidatesList = (): JSX.Element => {
                       </span>
                     </td>
                     <td>
-                      {qr?.payload ? (
+                      {qrValue ? (
                         <div className="candidate-qr-cell">
-                          <QRCodeSVG value={qr.payload} size={76} level="H" />
-                          <span className="candidate-qr-token">{qr.token}</span>
+                          <QRCodeSVG value={qrValue} size={76} level="H" />
+                          {qr?.token && <span className="candidate-qr-token">{qr.token}</span>}
                         </div>
+                      ) : canGenerateQr ? (
+                        <button
+                          className="btn-table"
+                          type="button"
+                          disabled={qrGeneratingId === candidate.id}
+                          onClick={() => void handleGenerateQr(candidate.id, candidate.name)}
+                        >
+                          {qrGeneratingId === candidate.id ? 'Generating…' : 'Generate QR'}
+                        </button>
                       ) : (
                         <span className="candidate-qr-empty">—</span>
                       )}

@@ -26,6 +26,15 @@ export type CandidateProgramAdmin = {
   category?: string
 }
 
+export type CandidateQrCode = {
+  id: number
+  token: string
+  url?: string
+  payload: string
+  version: number
+  isActive: boolean
+}
+
 export type CandidateAdmin = {
   id: string
   number: number
@@ -36,6 +45,7 @@ export type CandidateAdmin = {
   status: CandidateStatus
   photoUrl: string
   photoMediaId?: string | null
+  qrCode?: CandidateQrCode | null
   tagline?: string
   shortBio?: string
   longBio?: string

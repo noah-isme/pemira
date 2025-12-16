@@ -4,6 +4,7 @@ import Header from '../components/Header'
 import KandidatCard from '../components/shared/KandidatCard'
 import { fetchPublicCandidates } from '../services/publicCandidates'
 import { fetchPublicCandidateProfileMedia } from '../services/adminCandidateMedia'
+import { fetchCurrentElection } from '../services/publicElection'
 import type { Candidate } from '../types/voting'
 import '../styles/DaftarKandidat.css'
 
@@ -25,12 +26,21 @@ const DaftarKandidat = (): JSX.Element => {
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [photoUrls, setPhotoUrls] = useState<Record<number, string>>({})
   const [error, setError] = useState<string | null>(null)
+  const [electionYear, setElectionYear] = useState<number | null>(null)
   const objectUrlsRef = useRef<string[]>([])
 
   const registerObjectUrl = (url: string) => {
     objectUrlsRef.current.push(url)
     return url
   }
+
+  useEffect(() => {
+    const controller = new AbortController()
+    fetchCurrentElection({ signal: controller.signal })
+      .then((election) => setElectionYear(election.year))
+      .catch((err) => console.debug('Failed to fetch current election year', err))
+    return () => controller.abort()
+  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -109,7 +119,7 @@ const DaftarKandidat = (): JSX.Element => {
   }, [candidates, filterFakultas, searchQuery, sortBy])
 
   const pemiraStatus = {
-    periode: '2024',
+    periode: String(electionYear ?? 2026),
     status: 'Kampanye',
     totalKandidat: candidates.length,
   }

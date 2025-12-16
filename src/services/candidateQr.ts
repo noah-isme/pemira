@@ -1,14 +1,8 @@
 import { getActiveElectionId } from '../state/activeElection'
 import { apiRequest } from '../utils/apiClient'
 
-export type CandidateQrCode = {
-  id: number
-  token: string
-  url: string
-  payload: string
-  version: number
-  isActive: boolean
-}
+export type { CandidateQrCode } from '../types/candidateAdmin'
+import type { CandidateQrCode } from '../types/candidateAdmin'
 
 type ApiCandidateQrCode = {
   id: number

@@ -16,6 +16,7 @@ const defaultCandidate: CandidateAdmin = {
   status: 'DRAFT',
   photoUrl: '',
   photoMediaId: null,
+  qrCode: null,
   tagline: '',
   shortBio: '',
   longBio: '',

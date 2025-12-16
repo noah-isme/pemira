@@ -4,6 +4,7 @@ import Header from '../components/Header'
 import EmptyState from '../components/shared/EmptyState'
 import { fetchPublicCandidateDetail, fetchPublicCandidates } from '../services/publicCandidates'
 import { fetchPublicCandidateProfileMedia } from '../services/adminCandidateMedia'
+import { fetchCurrentElection } from '../services/publicElection'
 import type { CandidateDetail } from '../types/voting'
 import '../styles/DetailKandidat.css'
 
@@ -16,6 +17,27 @@ const tabs: Array<{ id: TabId; label: string }> = [
   { id: 'kampanye', label: 'Materi Kampanye' },
 ]
 
+const toEmbedUrl = (raw?: string | null): string => {
+  if (!raw) return ''
+  const url = raw.trim()
+  if (!url) return ''
+  if (url.includes('youtube.com/embed/')) return url
+  try {
+    const parsed = new URL(url)
+    if (parsed.hostname.includes('youtu.be')) {
+      const id = parsed.pathname.replace('/', '').trim()
+      return id ? `https://www.youtube.com/embed/${id}` : url
+    }
+    if (parsed.hostname.includes('youtube.com')) {
+      const id = parsed.searchParams.get('v')
+      return id ? `https://www.youtube.com/embed/${id}` : url
+    }
+  } catch {
+    // ignore
+  }
+  return url.replace('watch?v=', 'embed/')
+}
+
 const DetailKandidat = (): JSX.Element => {
   const navigate = useNavigate()
   const { id } = useParams()
@@ -27,6 +49,8 @@ const DetailKandidat = (): JSX.Element => {
   const [kandidat, setKandidat] = useState<CandidateDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [detailFallbackMessage, setDetailFallbackMessage] = useState<string | null>(null)
+  const [electionYear, setElectionYear] = useState<number | null>(null)
   const [photoUrl, setPhotoUrl] = useState<string>('')
   const objectUrlsRef = useRef<string[]>([])
 
@@ -34,6 +58,14 @@ const DetailKandidat = (): JSX.Element => {
     objectUrlsRef.current.push(url)
     return url
   }
+
+  useEffect(() => {
+    const controller = new AbortController()
+    fetchCurrentElection({ signal: controller.signal })
+      .then((election) => setElectionYear(election.year))
+      .catch((err) => console.debug('Failed to fetch current election year', err))
+    return () => controller.abort()
+  }, [])
 
   useEffect(() => {
     if (Number.isNaN(candidateId)) {
@@ -44,6 +76,7 @@ const DetailKandidat = (): JSX.Element => {
     const controller = new AbortController()
     setLoading(true)
     setError(null)
+    setDetailFallbackMessage(null)
     fetchPublicCandidateDetail(candidateId, { signal: controller.signal })
       .then((detail) => {
         const mapped: CandidateDetail = {
@@ -65,7 +98,7 @@ const DetailKandidat = (): JSX.Element => {
           })),
           pengalaman: [],
           kampanye: {
-            videoUrl: detail.media?.video_url ?? '',
+            videoUrl: toEmbedUrl(detail.media?.video_url),
             posterUrl: detail.media?.gallery_photos?.[0] ?? '',
             pdfUrl: detail.media?.document_manifesto_url ?? '',
           },
@@ -74,6 +107,11 @@ const DetailKandidat = (): JSX.Element => {
       })
       .catch((err) => {
         if ((err as Error).name === 'AbortError') return
+        setDetailFallbackMessage(
+          (err as any)?.status === 404
+            ? 'Detail kandidat belum tersedia di publik (API mengembalikan 404).'
+            : 'Detail kandidat gagal dimuat, menampilkan data dasar.',
+        )
         fetchPublicCandidates({ signal: controller.signal })
           .then((list) => {
             const fallback = list.find((item) => item.id === candidateId)
@@ -94,7 +132,7 @@ const DetailKandidat = (): JSX.Element => {
                 pengalaman: [],
                 kampanye: { videoUrl: '', posterUrl: '', pdfUrl: '' },
               })
-              setError('Detail lengkap tidak tersedia, menampilkan data dasar.')
+              setError(null)
             } else {
               setError('Kandidat tidak ditemukan')
               setKandidat(null)
@@ -202,7 +240,7 @@ const DetailKandidat = (): JSX.Element => {
             </div>
 
             <div className="hero-right">
-              <div className="hero-badge">Calon Ketua BEM 2024</div>
+              <div className="hero-badge">Calon Ketua BEM {electionYear ?? 2026}</div>
               <h1 className="identity-nama">{kandidat.nama}</h1>
               <p className="identity-fakultas">{kandidat.fakultas}</p>
               <p className="identity-detail">
@@ -214,6 +252,13 @@ const DetailKandidat = (): JSX.Element => {
                 <div className="verification-badge">
                   <span className="verify-icon">✓</span>
                   <span>Diverifikasi Panitia</span>
+                </div>
+              )}
+
+              {!kandidat.verified && detailFallbackMessage && (
+                <div className="verification-badge" style={{ background: '#fef9c3', borderColor: '#fde047', color: '#854d0e' }}>
+                  <span>ℹ</span>
+                  <span>{detailFallbackMessage}</span>
                 </div>
               )}
             </div>

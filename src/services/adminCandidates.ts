@@ -1,7 +1,16 @@
 import { API_BASE_URL } from '../config/env'
 import { getActiveElectionId } from '../state/activeElection'
-import type { CandidateAdmin, CandidateMedia, CandidateMediaSlot, CandidateProgramAdmin, CandidateStatus } from '../types/candidateAdmin'
+import type { CandidateAdmin, CandidateMedia, CandidateMediaSlot, CandidateProgramAdmin, CandidateQrCode, CandidateStatus } from '../types/candidateAdmin'
 import { apiRequest } from '../utils/apiClient'
+
+type ApiCandidateQrCode = {
+  id: number
+  token: string
+  url?: string
+  payload?: string
+  version?: number
+  is_active: boolean
+}
 
 export type AdminCandidateResponse = {
   id: number | string
@@ -35,6 +44,7 @@ export type AdminCandidateResponse = {
     content_type?: string | null
   }[]
   status: CandidateStatus
+  qr_code?: ApiCandidateQrCode | null
   created_at?: string
   updated_at?: string
 }
@@ -83,6 +93,80 @@ const buildMediaFromMeta = (candidateId: string, media?: AdminCandidateResponse[
     }))
 }
 
+const mapQrCodeFromApi = (qr?: ApiCandidateQrCode | null): CandidateQrCode | null => {
+  if (!qr) return null
+  return {
+    id: qr.id,
+    token: qr.token,
+    url: qr.url,
+    payload: qr.payload ?? '',
+    version: qr.version ?? 1,
+    isActive: qr.is_active,
+  }
+}
+
+const assertNumericId = (value: string | number, label: string) => {
+  const str = String(value)
+  if (!/^\d+$/.test(str)) {
+    throw new Error(`${label} harus berupa angka`)
+  }
+  return str
+}
+
+export const publishAdminCandidate = async (
+  token: string,
+  electionId: number,
+  candidateId: string | number,
+): Promise<CandidateAdmin> => {
+  const safeElectionId = Number(electionId)
+  if (!Number.isFinite(safeElectionId)) throw new Error('Election ID tidak valid')
+  const safeCandidateId = assertNumericId(candidateId, 'Candidate ID')
+  const response = await apiRequest<any>(
+    `/admin/elections/${safeElectionId}/candidates/${safeCandidateId}/publish`,
+    { method: 'POST', token },
+  )
+  return transformCandidateFromApi((response?.data ?? response) as AdminCandidateResponse)
+}
+
+export const unpublishAdminCandidate = async (
+  token: string,
+  electionId: number,
+  candidateId: string | number,
+): Promise<CandidateAdmin> => {
+  const safeElectionId = Number(electionId)
+  if (!Number.isFinite(safeElectionId)) throw new Error('Election ID tidak valid')
+  const safeCandidateId = assertNumericId(candidateId, 'Candidate ID')
+  const response = await apiRequest<any>(
+    `/admin/elections/${safeElectionId}/candidates/${safeCandidateId}/unpublish`,
+    { method: 'POST', token },
+  )
+  return transformCandidateFromApi((response?.data ?? response) as AdminCandidateResponse)
+}
+
+export const generateAdminCandidateQrCode = async (
+  token: string,
+  electionId: number,
+  candidateId: string | number,
+): Promise<CandidateQrCode> => {
+  const safeElectionId = Number(electionId)
+  if (!Number.isFinite(safeElectionId)) throw new Error('Election ID tidak valid')
+  const safeCandidateId = assertNumericId(candidateId, 'Candidate ID')
+  const response = await apiRequest<any>(
+    `/admin/elections/${safeElectionId}/candidates/${safeCandidateId}/qr/generate`,
+    { method: 'POST', token },
+  )
+  const qr = response?.qr_code ?? response?.data?.qr_code ?? response?.data?.data?.qr_code ?? null
+  if (!qr?.token) throw new Error('Response QR code tidak valid')
+  return {
+    id: Number(qr.id ?? 0),
+    token: String(qr.token),
+    url: qr.url ? String(qr.url) : undefined,
+    payload: String(qr.payload ?? ''),
+    version: Number(qr.version ?? 1),
+    isActive: Boolean(qr.is_active ?? qr.isActive ?? true),
+  }
+}
+
 export const transformCandidateFromApi = (payload: AdminCandidateResponse | null | undefined): CandidateAdmin => {
   if (!payload) {
     throw new Error('Invalid candidate data from API: payload is null or undefined')
@@ -102,6 +186,7 @@ export const transformCandidateFromApi = (payload: AdminCandidateResponse | null
     status: mapStatusFromApi(payload.status),
     photoUrl: payload.photo_url ? (payload.photo_url.startsWith('http') ? payload.photo_url : `http://localhost:8080${payload.photo_url}`) : '',
     photoMediaId: payload.photo_media_id ?? null,
+    qrCode: mapQrCodeFromApi(payload.qr_code),
     tagline: payload.tagline ?? '',
     shortBio: payload.short_bio ?? '',
     longBio: payload.long_bio ?? '',

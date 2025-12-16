@@ -3,8 +3,9 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import AdminLayout from '../components/admin/AdminLayout'
 import { useAdminAuth } from '../hooks/useAdminAuth'
 import { useCandidateAdminStore } from '../hooks/useCandidateAdminStore'
+import { useActiveElection } from '../hooks/useActiveElection'
 import { usePopup } from '../components/Popup'
-import { fetchAdminCandidateDetail } from '../services/adminCandidates'
+import { fetchAdminCandidateDetail, publishAdminCandidate } from '../services/adminCandidates'
 import {
   deleteCandidateMedia,
   deleteCandidateProfileMedia,
@@ -92,6 +93,7 @@ const AdminCandidateForm = (): JSX.Element => {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
   const { token } = useAdminAuth()
+  const { activeElectionId } = useActiveElection()
   const { getCandidateById, createEmptyCandidate, addCandidate, updateCandidate, isNumberAvailable, refresh } = useCandidateAdminStore()
   const { showPopup } = usePopup()
 
@@ -495,6 +497,62 @@ const AdminCandidateForm = (): JSX.Element => {
     }
   }
 
+  const saveCandidateOnly = async (status: CandidateStatus): Promise<CandidateAdmin> => {
+    const payload: CandidateAdmin = { ...formData, status }
+    let savedCandidate: CandidateAdmin
+    if (editing) {
+      savedCandidate = await updateCandidate(formData.id, payload)
+    } else {
+      savedCandidate = await addCandidate(payload)
+    }
+
+    if (token) {
+      if (pendingProfile?.file) {
+        try {
+          const uploaded = await uploadCandidateProfileMedia(token, savedCandidate.id, pendingProfile.file)
+          const photoUrl = await fetchCandidateProfileMedia(token, savedCandidate.id)
+          savedCandidate = {
+            ...savedCandidate,
+            photoMediaId: uploaded.id ?? savedCandidate.photoMediaId,
+            photoUrl: photoUrl ? registerObjectUrl(photoUrl) : savedCandidate.photoUrl,
+          }
+        } catch (err) {
+          console.error('Failed to upload pending profile', err)
+          setError('Foto profil belum berhasil diunggah.')
+        }
+      }
+
+      if (pendingMedia.length) {
+        for (const pendingItem of pendingMedia) {
+          try {
+            const uploaded = await uploadCandidateMedia(token, savedCandidate.id, pendingItem.slot, pendingItem.file)
+            const mediaUrl = await fetchCandidateMediaFile(token, savedCandidate.id, uploaded.id)
+            const newEntry = {
+              id: uploaded.id,
+              slot: uploaded.slot,
+              type: pendingItem.type,
+              url: mediaUrl ? registerObjectUrl(mediaUrl) : pendingItem.preview,
+              label: pendingItem.label,
+            }
+            savedCandidate = {
+              ...savedCandidate,
+              media: [...savedCandidate.media.filter((m) => m.id !== pendingItem.id), newEntry],
+            }
+          } catch (err) {
+            console.error('Failed to upload pending media', err)
+            setError('Sebagian media gagal diunggah.')
+          }
+        }
+      }
+    }
+
+    setPendingProfile(null)
+    setPendingMedia([])
+    setFormData(savedCandidate)
+    void refresh()
+    return savedCandidate
+  }
+
   const handlePublish = async () => {
     if (!validateStep('review')) return
     const confirmed = await showPopup({
@@ -505,7 +563,20 @@ const AdminCandidateForm = (): JSX.Element => {
       cancelText: 'Batal'
     })
     if (!confirmed) return
-    void handleSubmit('PUBLISHED')
+    if (!token) {
+      setError('Token admin diperlukan untuk publish.')
+      return
+    }
+    try {
+      const savedCandidate = await saveCandidateOnly('PENDING')
+      const published = await publishAdminCandidate(token, activeElectionId, savedCandidate.id)
+      setFormData(published)
+      void refresh()
+      navigate('/admin/kandidat')
+    } catch (err) {
+      console.error('Failed to publish candidate', err)
+      setError((err as { message?: string })?.message ?? 'Gagal publish kandidat')
+    }
   }
 
   const helperText = (text: string, required?: boolean) => (

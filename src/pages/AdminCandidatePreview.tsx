@@ -1,19 +1,50 @@
 import { useEffect, useRef, useState, type JSX } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { QRCodeSVG } from 'qrcode.react'
 import AdminLayout from '../components/admin/AdminLayout'
 import { useCandidateAdminStore } from '../hooks/useCandidateAdminStore'
 import { useAdminAuth } from '../hooks/useAdminAuth'
+import { fetchAdminCandidateDetail, generateAdminCandidateQrCode } from '../services/adminCandidates'
+import { useActiveElection } from '../hooks/useActiveElection'
 import { fetchCandidateProfileMedia } from '../services/adminCandidateMedia'
+import type { CandidateAdmin } from '../types/candidateAdmin'
+import { usePopup } from '../components/Popup'
 import '../styles/AdminCandidates.css'
 
 const AdminCandidatePreview = (): JSX.Element => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { token } = useAdminAuth()
+  const { activeElectionId } = useActiveElection()
   const { getCandidateById } = useCandidateAdminStore()
-  const candidate = id ? getCandidateById(id) : undefined
+  const { showPopup } = usePopup()
+  const candidateFromStore = id ? getCandidateById(id) : undefined
+  const [candidateDetail, setCandidateDetail] = useState<CandidateAdmin | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
   const [photoUrl, setPhotoUrl] = useState<string>('')
   const objectUrlsRef = useRef<string[]>([])
+
+  useEffect(() => {
+    if (!id || !token) return
+    let cancelled = false
+    setDetailLoading(true)
+    void (async () => {
+      try {
+        const detail = await fetchAdminCandidateDetail(token, id)
+        if (!cancelled) setCandidateDetail(detail)
+      } catch (err) {
+        console.warn('Failed to load candidate detail for preview', err)
+        if (!cancelled) setCandidateDetail(null)
+      } finally {
+        if (!cancelled) setDetailLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [id, token])
+
+  const candidate = candidateDetail ?? candidateFromStore
 
   const registerObjectUrl = (url: string) => {
     objectUrlsRef.current.push(url)
@@ -35,7 +66,7 @@ const AdminCandidatePreview = (): JSX.Element => {
       }
       void loadPhoto()
     }
-  }, [candidate, token])
+  }, [candidate?.id, candidate?.photoUrl, token])
 
   useEffect(
     () => () => {
@@ -50,7 +81,7 @@ const AdminCandidatePreview = (): JSX.Element => {
       <AdminLayout title="Pratinjau Kandidat">
         <div className="admin-candidates-page">
           <div className="empty-preview">
-            <p>Kandidat tidak ditemukan.</p>
+            <p>{detailLoading ? 'Memuat detail kandidat...' : 'Kandidat tidak ditemukan.'}</p>
             <button className="btn-primary" type="button" onClick={() => navigate('/admin/kandidat')}>
               Kembali ke daftar
             </button>
@@ -89,6 +120,55 @@ const AdminCandidatePreview = (): JSX.Element => {
             <p>Angkatan {candidate.angkatan}</p>
             {candidate.shortBio && <p>{candidate.shortBio}</p>}
           </div>
+        </section>
+
+        <section className="preview-section">
+          <h3>QR Code Voting</h3>
+          {(candidate.qrCode?.payload ?? candidate.qrCode?.token) ? (
+            <div className="candidate-qr-cell">
+              <QRCodeSVG value={candidate.qrCode.payload ?? candidate.qrCode.token} size={180} level="H" />
+              {candidate.qrCode.token && <span className="candidate-qr-token">{candidate.qrCode.token}</span>}
+              {candidate.qrCode.url && (
+                <a href={candidate.qrCode.url} target="_blank" rel="noreferrer">
+                  Buka link QR
+                </a>
+              )}
+            </div>
+          ) : (
+            <div>
+              <p className="candidate-qr-empty">QR code belum tersedia untuk kandidat ini.</p>
+              {token && activeElectionId ? (
+                <button
+                  className="btn-outline"
+                  type="button"
+                  onClick={async () => {
+                    const confirmed = await showPopup({
+                      title: 'Generate QR Kandidat',
+                      message: 'Buat QR code untuk kandidat ini?',
+                      type: 'info',
+                      confirmText: 'Generate',
+                      cancelText: 'Batal',
+                    })
+                    if (!confirmed || !candidate) return
+                    try {
+                      const qr = await generateAdminCandidateQrCode(token, activeElectionId, candidate.id)
+                      setCandidateDetail((prev) => ({ ...(prev ?? candidate), qrCode: qr }))
+                    } catch (err) {
+                      console.warn('Failed to generate candidate QR', err)
+                      await showPopup({
+                        title: 'Gagal Generate QR',
+                        message: (err as { message?: string })?.message ?? 'Gagal generate QR kandidat',
+                        type: 'error',
+                        confirmText: 'Tutup',
+                      })
+                    }
+                  }}
+                >
+                  Generate QR
+                </button>
+              ) : null}
+            </div>
+          )}
         </section>
 
         <section className="preview-section">

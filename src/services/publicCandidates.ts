@@ -84,7 +84,7 @@ export const fetchPublicCandidateDetail = async (
     return detail as PublicCandidateDetailResponse
   } catch (err) {
     if (token) {
-      const fallback = await apiRequest<any>(`/admin/candidates/${candidateId}?election_id=${electionId}`, { signal, token })
+      const fallback = await apiRequest<any>(`/admin/elections/${electionId}/candidates/${candidateId}`, { signal, token })
       const detail = parseDetail(fallback)
       if (!detail) throw new Error('Invalid admin candidate detail response')
       return detail as PublicCandidateDetailResponse
