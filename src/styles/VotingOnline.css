@@ -817,10 +817,9 @@
     margin-bottom: 0;
   }
 
-  /* Adjust Signature Canvas for Mobile */
+  /* Signature Canvas - height now controlled by JavaScript for proper touch coords */
   .signature-canvas-container canvas {
-    height: 150px !important;
-    /* Force smaller height */
+    /* No height override - let JS handle it for accurate touch coordinates */
   }
 
   .btn-large {
