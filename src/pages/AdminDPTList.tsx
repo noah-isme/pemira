@@ -347,7 +347,6 @@ const AdminDPTList = (): JSX.Element => {
                 <th>Prodi</th>
                 <th>Semester</th>
                 <th>Tipe Pemilih</th>
-                <th>Akademik</th>
 
                 <th>Status Suara</th>
                 <th>Metode</th>
@@ -430,7 +429,6 @@ const AdminDPTList = (): JSX.Element => {
                         </span>
                       )}
                     </td>
-                    <td>{akademikLabels[voter.akademik]}</td>
 
                     <td>
                       <span className={`status-chip ${voter.statusSuara}`}>{statusSuaraLabels[voter.statusSuara]}</span>
