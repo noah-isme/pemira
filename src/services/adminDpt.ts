@@ -34,14 +34,14 @@ type DptApiItem = {
     last_vote_at?: string | null
     last_vote_channel?: string | null
     last_tps_id?: number | null
-    digital_signature?: string | null // NEW: Signature data
+    digital_signature_url?: string | null // URL to signature image in Supabase Storage
   }
   voting_method?: 'ONLINE' | 'TPS'
   tps_id?: number | null
   checked_in_at?: string | null
   voted_at?: string | null
   updated_at?: string
-  digital_signature?: string | null
+  digital_signature_url?: string | null
 }
 
 // Lookup response type
@@ -332,7 +332,7 @@ const mapDptItems = (raw: DptApiItem[]): DPTEntry[] =>
       checkedInAt: item.checked_in_at ?? undefined,
       votedAt: item.voted_at ?? undefined,
       updatedAt: item.updated_at,
-      digitalSignature: item.digital_signature ?? (typeof item.status === 'object' ? item.status?.digital_signature : null)
+      digitalSignature: item.digital_signature_url ?? (typeof item.status === 'object' ? item.status?.digital_signature_url : null)
     }
   })
 
