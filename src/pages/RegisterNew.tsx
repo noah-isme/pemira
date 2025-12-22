@@ -67,6 +67,7 @@ const RegisterNew = () => {
   // Election mode availability
   const [onlineEnabled, setOnlineEnabled] = useState(true)
   const [tpsEnabled, setTpsEnabled] = useState(true)
+  const [electionStatus, setElectionStatus] = useState<string>('')
 
   const heroRef = useRef<HTMLDivElement | null>(null)
   const formCardRef = useRef<HTMLDivElement | null>(null)
@@ -88,13 +89,21 @@ const RegisterNew = () => {
 
   // Load master data on mount
   useEffect(() => {
-    // Fetch election info to check available voting modes
+    // Fetch election info to check available voting modes and status
     fetchCurrentElection()
       .then((election) => {
         const onlineAvailable = election.online_enabled
         const tpsAvailable = election.tps_enabled
         setOnlineEnabled(onlineAvailable)
         setTpsEnabled(tpsAvailable)
+        const status = election.status || ''
+        setElectionStatus(status)
+        
+        // Set default voter type to lecturer if voting is open
+        if (status === 'VOTING_OPEN') {
+          setVoterType('lecturer')
+        }
+        
         // Set default voting mode based on availability
         if (!onlineAvailable && tpsAvailable) {
           setVotingMode('TPS')
@@ -106,6 +115,7 @@ const RegisterNew = () => {
         // Fallback to both enabled if fetch fails
         setOnlineEnabled(true)
         setTpsEnabled(true)
+        setElectionStatus('')
       })
     
     fetchFacultiesPrograms()
@@ -286,6 +296,10 @@ const RegisterNew = () => {
     )
   }
 
+  // Check if student registration should be blocked
+  const isVotingDay = electionStatus === 'VOTING_OPEN'
+  const isStudentRegistrationBlocked = isVotingDay && voterType === 'student'
+
   return (
     <div className="login-page premium-page">
       <header className="login-topbar new-appbar" ref={heroRef}>
@@ -351,6 +365,23 @@ const RegisterNew = () => {
           </div>
 
           <div className="login-card premium-card" ref={formCardRef}>
+            {isStudentRegistrationBlocked ? (
+              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                <div className="warning-icon" style={{ fontSize: '48px', marginBottom: '20px' }}>⚠️</div>
+                <h2 style={{ marginBottom: '16px' }}>Pendaftaran Mahasiswa Ditutup</h2>
+                <p style={{ marginBottom: '24px', color: '#666' }}>
+                  Pendaftaran untuk mahasiswa sudah ditutup karena hari ini adalah hari voting. 
+                  Silakan hubungi panitia jika ada masalah.
+                </p>
+                <button 
+                  className="btn-primary btn-block" 
+                  onClick={() => navigate('/login')} 
+                  type="button"
+                >
+                  Ke Halaman Login
+                </button>
+              </div>
+            ) : (
             <form onSubmit={handleSubmit} className="login-form">
               {/* Step 1: Data Pribadi */}
               <div className="section-block">
@@ -663,7 +694,9 @@ const RegisterNew = () => {
                 {loading ? 'Mendaftar...' : 'Daftar Sekarang'}
               </button>
             </form>
+            )}
 
+            {!isStudentRegistrationBlocked && (
             <div className="login-footer">
               <p>
                 Sudah punya akun?{' '}
@@ -672,6 +705,7 @@ const RegisterNew = () => {
                 </a>
               </p>
             </div>
+            )}
           </div>
         </div>
       </main>
