@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../config/env'
 import { getActiveElectionId } from '../state/activeElection'
 import type { AcademicStatus, DPTEntry, VoterStatus, VotingMethod, VoterType, AcademicStatusAPI } from '../types/dptAdmin'
 import { apiRequest } from '../utils/apiClient'
@@ -505,7 +506,7 @@ export const importDptCsv = async (
   const formData = new FormData()
   formData.append('file', file)
 
-  const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/v1/admin/elections/${electionId}/voters/import`, {
+  const response = await fetch(`${API_BASE_URL}/admin/elections/${electionId}/voters/import`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -532,7 +533,7 @@ export const exportDptCsv = async (
   electionId: number = getActiveElectionId()
 ): Promise<Blob> => {
   const queryString = filters ? `?${filters.toString()}` : ''
-  const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/v1/admin/elections/${electionId}/voters/export${queryString}`, {
+  const response = await fetch(`${API_BASE_URL}/admin/elections/${electionId}/voters/export${queryString}`, {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${token}`,

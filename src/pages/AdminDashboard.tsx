@@ -19,12 +19,21 @@ const AdminDashboard = (): JSX.Element => {
     facultyStats,
     actions,
     systemInfo,
+    timeline,
     loading,
     error,
   } = useAdminDashboardData()
 
   const openScheduleSettings = () => navigate('/admin/pengaturan#jadwal')
   const openModeSettings = () => navigate('/admin/pengaturan#mode-voting')
+
+  const formatRange = (start?: string | null, end?: string | null) => {
+    if (!start || !end) return 'Belum diatur'
+    const opts: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }
+    const startLabel = new Date(start).toLocaleDateString('id-ID', opts)
+    const endLabel = new Date(end).toLocaleDateString('id-ID', opts)
+    return `${startLabel} - ${endLabel}`
+  }
 
   const voteTotal = useMemo(() => votes.reduce((sum, item) => sum + item.votes, 0), [votes])
   const topCandidateId = useMemo(() => {
@@ -72,29 +81,135 @@ const AdminDashboard = (): JSX.Element => {
       </section>
 
       <section className="section-grid two-col">
+        <article className="card vote-card">
+          <div className="card-header">
+            <div>
+              <h3>Grafik Suara per Kandidat</h3>
+              <span className="muted">Total suara: {voteTotal.toLocaleString('id-ID')}</span>
+            </div>
+            <div className="chart-toggle">
+              <button type="button" className={voteViewMode === 'bar' ? 'active' : ''} onClick={() => setVoteViewMode('bar')}>
+                Bar
+              </button>
+              <button type="button" className={voteViewMode === 'pie' ? 'active' : ''} onClick={() => setVoteViewMode('pie')}>
+                Pie
+              </button>
+            </div>
+          </div>
+          <div className={`vote-chart ${voteViewMode}`}>
+            {voteViewMode === 'bar' ? (
+              // Bar Chart View
+              votes.map((candidate) => (
+                <div key={candidate.id} className={`vote-item ${candidate.id === topCandidateId?.id ? 'leader' : ''}`}>
+                  <div className="vote-info">
+                    <strong>{candidate.name}</strong>
+                    <span>{candidate.votes.toLocaleString('id-ID')} suara ({candidate.percentage}%)</span>
+                  </div>
+                  <div className="vote-bar-wrapper">
+                    <div className="vote-bar" style={{ width: `${candidate.percentage}%` }} />
+                  </div>
+                </div>
+              ))
+            ) : (
+              // Pie Chart View
+              <div className="pie-chart-container">
+                <svg viewBox="0 0 200 200" className="pie-chart-svg">
+                  {votes.reduce((acc, candidate, index) => {
+                    const colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4']
+                    const color = colors[index % colors.length]
+                    const angle = (candidate.percentage / 100) * 360
+                    const startAngle = acc.accumulated
+                    const endAngle = startAngle + angle
+                    
+                    const largeArc = angle > 180 ? 1 : 0
+                    const startRad = (startAngle - 90) * (Math.PI / 180)
+                    const endRad = (endAngle - 90) * (Math.PI / 180)
+                    
+                    const x1 = 100 + 80 * Math.cos(startRad)
+                    const y1 = 100 + 80 * Math.sin(startRad)
+                    const x2 = 100 + 80 * Math.cos(endRad)
+                    const y2 = 100 + 80 * Math.sin(endRad)
+                    
+                    const path = candidate.percentage > 0 
+                      ? `M 100 100 L ${x1} ${y1} A 80 80 0 ${largeArc} 1 ${x2} ${y2} Z`
+                      : ''
+                    
+                    acc.elements.push(
+                      <path
+                        key={candidate.id}
+                        d={path}
+                        fill={color}
+                        stroke="#fff"
+                        strokeWidth="2"
+                      />
+                    )
+                    acc.accumulated = endAngle
+                    return acc
+                  }, { elements: [] as JSX.Element[], accumulated: 0 }).elements}
+                </svg>
+                <div className="pie-legend">
+                  {votes.map((candidate, index) => {
+                    const colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4']
+                    const color = colors[index % colors.length]
+                    return (
+                      <div key={candidate.id} className={`legend-item ${candidate.id === topCandidateId?.id ? 'leader' : ''}`}>
+                        <span className="legend-color" style={{ backgroundColor: color }} />
+                        <span className="legend-label">{candidate.name}</span>
+                        <span className="legend-value">{candidate.votes.toLocaleString('id-ID')} ({candidate.percentage}%)</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </article>
+
+        <article className="card faculty-card" id="partisipasi-fakultas">
+          <div className="card-header">
+            <div>
+              <h3>Partisipasi per Fakultas</h3>
+              <span className="muted">Filter: Semua Fakultas</span>
+            </div>
+          </div>
+          <ul className="faculty-list">
+            {facultyStats.map((faculty) => {
+              const percentage = Number(((faculty.voted / faculty.total) * 100).toFixed(0))
+              return (
+                <li key={faculty.faculty}>
+                  <div className="faculty-info">
+                    <strong>{faculty.faculty}</strong>
+                    <span>
+                      {faculty.voted}/{faculty.total} ({percentage}%)
+                    </span>
+                  </div>
+                  <div className="faculty-bar">
+                    <div style={{ width: `${percentage}%` }} />
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        </article>
+      </section>
+
+      <section className="section-grid two-col">
         <article className="card status-card">
           <div className="card-header">
-            <h3>Status Pemilu</h3>
-            <span className="muted">Realtime</span>
+            <h3>Timeline Pemilu</h3>
+            <span className="muted">Tahapan & Jadwal</span>
           </div>
           <div className="status-pill-row">
             <span className="pill success">{overview.stageLabel}</span>
             <span className="pill outline">Mode: {overview.activeMode}</span>
-            <span className="pill outline">Jadwal: {overview.votingPeriod}</span>
           </div>
-          <div className="status-stats">
-            <div>
-              <span>Total DPT</span>
-              <strong>{overview.totalVoters.toLocaleString('id-ID')}</strong>
-            </div>
-            <div>
-              <span>Sudah Memilih</span>
-              <strong>{participation.voted.toLocaleString('id-ID')}</strong>
-            </div>
-            <div>
-              <span>Belum Memilih</span>
-              <strong>{participation.notVoted.toLocaleString('id-ID')}</strong>
-            </div>
+          <div className="timeline-phases">
+            {timeline.map((phase, index) => (
+              <div key={index} className="phase-item">
+                <strong>{phase.label}</strong>
+                <span className="muted">{formatRange(phase.start, phase.end)}</span>
+              </div>
+            ))}
           </div>
           <div className="status-actions">
             <button type="button" className="btn-ghost" onClick={openScheduleSettings}>Edit Jadwal</button>
@@ -171,67 +286,6 @@ const AdminDashboard = (): JSX.Element => {
             ))}
           </ul>
           <Link to="/admin/monitoring" className="muted-link">Lihat Log Lengkap →</Link>
-        </article>
-      </section>
-
-      <section className="section-grid two-col">
-        <article className="card vote-card">
-          <div className="card-header">
-            <div>
-              <h3>Grafik Suara per Kandidat</h3>
-              <span className="muted">Total suara: {voteTotal.toLocaleString('id-ID')}</span>
-            </div>
-            <div className="chart-toggle">
-              <button type="button" className={voteViewMode === 'bar' ? 'active' : ''} onClick={() => setVoteViewMode('bar')}>
-                Bar
-              </button>
-              <button type="button" className={voteViewMode === 'pie' ? 'active' : ''} onClick={() => setVoteViewMode('pie')}>
-                Pie
-              </button>
-            </div>
-          </div>
-          <div className={`vote-chart ${voteViewMode}`}>
-            {votes.map((candidate) => (
-              <div key={candidate.id} className={`vote-item ${candidate.id === topCandidateId?.id ? 'leader' : ''}`}>
-                <div className="vote-bar-wrapper">
-                  <div className="vote-bar" style={{ width: `${candidate.percentage}%` }} />
-                </div>
-                <div className="vote-info">
-                  <strong>
-                    {candidate.name} ({candidate.percentage}%)
-                  </strong>
-                  <span>{candidate.votes.toLocaleString('id-ID')} suara</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </article>
-
-        <article className="card faculty-card" id="partisipasi-fakultas">
-          <div className="card-header">
-            <div>
-              <h3>Partisipasi per Fakultas</h3>
-              <span className="muted">Filter: Semua Fakultas</span>
-            </div>
-          </div>
-          <ul className="faculty-list">
-            {facultyStats.map((faculty) => {
-              const percentage = Number(((faculty.voted / faculty.total) * 100).toFixed(0))
-              return (
-                <li key={faculty.faculty}>
-                  <div className="faculty-info">
-                    <strong>{faculty.faculty}</strong>
-                    <span>
-                      {faculty.voted}/{faculty.total} ({percentage}%)
-                    </span>
-                  </div>
-                  <div className="faculty-bar">
-                    <div style={{ width: `${percentage}%` }} />
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
         </article>
       </section>
 

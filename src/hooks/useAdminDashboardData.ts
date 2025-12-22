@@ -5,9 +5,15 @@ import type { CandidateAdmin } from '../types/candidateAdmin'
 import { useAdminAuth } from './useAdminAuth'
 import { fetchMonitoringLive, type MonitoringLiveResponse } from '../services/adminMonitoring'
 import { fetchAdminCandidates } from '../services/adminCandidates'
-import { fetchAdminElection, type AdminElectionResponse } from '../services/adminElection'
+import { fetchAdminElection, fetchAdminElectionSettings, type AdminElectionResponse, type ElectionPhase } from '../services/adminElection'
 import type { ApiError } from '../utils/apiClient'
 import { useActiveElection } from './useActiveElection'
+
+type TimelinePhase = {
+  label: string
+  start?: string | null
+  end?: string | null
+}
 
 const defaultTpsStatus: TPSStatusSummary = { total: 0, active: 0, issue: 0, closed: 0, detail: [] }
 
@@ -95,6 +101,49 @@ const mapCandidateVotes = (snapshot: MonitoringLiveResponse, candidates: Candida
     .sort((a, b) => b.votes - a.votes)
 }
 
+const phaseLabelMap: Record<string, string> = {
+  REGISTRATION: 'Pendaftaran',
+  VERIFICATION: 'Verifikasi Berkas',
+  CAMPAIGN: 'Masa Kampanye',
+  QUIET_PERIOD: 'Masa Tenang',
+  QUIET: 'Masa Tenang',
+  VOTING: 'Voting',
+  RECAP: 'Rekapitulasi',
+}
+
+const buildTimelineFromPhases = (phases?: ElectionPhase[] | { phases?: ElectionPhase[] }): TimelinePhase[] => {
+  const phaseArray = Array.isArray(phases) ? phases : (phases as any)?.phases ?? []
+  
+  if (phaseArray.length > 0) {
+    return phaseArray.map(p => ({
+      label: p.label || phaseLabelMap[p.key] || p.key,
+      start: p.start_at,
+      end: p.end_at,
+    }))
+  }
+
+  // Fallback jika phases kosong
+  return [
+    { label: 'Pendaftaran', start: null, end: null },
+    { label: 'Verifikasi Berkas', start: null, end: null },
+    { label: 'Masa Kampanye', start: null, end: null },
+    { label: 'Masa Tenang', start: null, end: null },
+    { label: 'Voting', start: null, end: null },
+    { label: 'Rekapitulasi', start: null, end: null },
+  ]
+}
+
+const buildTimelineFromElection = (election: AdminElectionResponse | null): TimelinePhase[] => {
+  return [
+    { label: 'Pendaftaran', start: election?.registration_start_at, end: election?.registration_end_at },
+    { label: 'Verifikasi Berkas', start: election?.verification_start_at, end: election?.verification_end_at },
+    { label: 'Masa Kampanye', start: election?.campaign_start_at, end: election?.campaign_end_at },
+    { label: 'Masa Tenang', start: election?.quiet_start_at, end: election?.quiet_end_at },
+    { label: 'Voting', start: election?.voting_start_at, end: election?.voting_end_at },
+    { label: 'Rekapitulasi', start: election?.recap_start_at, end: election?.recap_end_at },
+  ]
+}
+
 const buildOverview = (election: AdminElectionResponse | null, totalCandidates: number, totalVoters: number): AdminOverview => {
   const stage = mapStatusToStage(election?.status)
   const period =
@@ -137,6 +186,7 @@ export const useAdminDashboardData = () => {
   const [activeFilter, setActiveFilter] = useState<'all' | 'fakultas'>('all')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | undefined>(undefined)
+  const [timeline, setTimeline] = useState<TimelinePhase[]>([])
 
   useEffect(() => {
     if (!token || !activeElectionId) return
@@ -146,7 +196,7 @@ export const useAdminDashboardData = () => {
       setLoading(true)
       setError(undefined)
       try {
-        let targetElectionId = activeElectionId
+        const targetElectionId = activeElectionId
         const loadElection = async (): Promise<AdminElectionResponse> => {
           try {
             return await fetchAdminElection(token, targetElectionId)
@@ -169,9 +219,13 @@ export const useAdminDashboardData = () => {
           return fetched
         }
 
-        const [snapshot, candidateList] = await Promise.all([
+        // Fetch settings to get phases
+        const settingsPromise = fetchAdminElectionSettings(token, targetElectionId).catch(() => null)
+
+        const [snapshot, candidateList, settings] = await Promise.all([
           fetchMonitoringLive(token, targetElectionId),
           resolveCandidates(targetElectionId).catch(() => candidateCacheRef.current.get(targetElectionId) ?? []),
+          settingsPromise,
         ])
         if (!mounted) return
 
@@ -187,6 +241,14 @@ export const useAdminDashboardData = () => {
         setVotes(mappedVotes)
         setTpsStatus(mapTpsStatus(snapshot))
         setOverview(buildOverview(election, mappedVotes.length || candidateList.length, totalVoters))
+        
+        // Use phases from settings if available, otherwise fallback to election data
+        if (settings?.phases) {
+          setTimeline(buildTimelineFromPhases(settings.phases))
+        } else {
+          setTimeline(buildTimelineFromElection(election))
+        }
+        
         setLiveSystemInfo({
           serverStatus: 'normal',
           lastSync: new Date(snapshot.timestamp ?? Date.now()).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
@@ -240,6 +302,7 @@ export const useAdminDashboardData = () => {
     setActiveFilter,
     actions: quickActions,
     systemInfo: liveSystemInfo,
+    timeline,
     loading,
     error,
   }
