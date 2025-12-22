@@ -218,12 +218,12 @@ const AdminDPTList = (): JSX.Element => {
 
     const reason = await showPopup({
       title: 'Konfirmasi Blacklist',
-      message: `Blacklist pemilih "${voterName}"?\n\nPemilih yang di-blacklist tidak dapat login dan statusnya akan menjadi BLOCKED.`,
+      message: `Blacklist pemilih "${voterName}"?\n\n⚠️ PERINGATAN:\n• Pemilih tidak dapat login\n• Status menjadi BLOCKED\n• Suara akan DIBATALKAN jika sudah memilih\n• Data voting akan di-reset\n\nAksi ini tidak dapat dibatalkan!`,
       type: 'warning',
       confirmText: 'Ya, Blacklist',
       cancelText: 'Batal',
       requiresInput: true,
-      inputPlaceholder: 'Alasan blacklist (opsional)'
+      inputPlaceholder: 'Alasan blacklist (wajib)'
     })
     
     if (reason === null || reason === undefined) return
@@ -232,7 +232,7 @@ const AdminDPTList = (): JSX.Element => {
     try {
       await blacklistVoter(token, parseInt(voterId), reason || undefined, activeElectionId)
       await refresh()
-      showToast(`${voterName} berhasil di-blacklist`, 'success')
+      showToast(`${voterName} berhasil di-blacklist dan suaranya dibatalkan`, 'success')
     } catch (err) {
       console.error('Failed to blacklist voter', err)
       showToast('Gagal blacklist pemilih: ' + ((err as any)?.message || 'Unknown error'), 'error')
@@ -246,7 +246,7 @@ const AdminDPTList = (): JSX.Element => {
 
     const confirmed = await showPopup({
       title: 'Konfirmasi Unblacklist',
-      message: `Hapus blacklist untuk "${voterName}"?\n\nPemilih akan dapat login kembali dan statusnya akan diubah.`,
+      message: `Hapus blacklist untuk "${voterName}"?\n\nℹ️ Pemilih akan:\n• Dapat login kembali\n• Status diubah dari BLOCKED\n• Dapat memilih ulang (data voting sudah di-reset)`,
       type: 'info',
       confirmText: 'Ya, Hapus Blacklist',
       cancelText: 'Batal'
@@ -258,7 +258,7 @@ const AdminDPTList = (): JSX.Element => {
     try {
       await unblacklistVoter(token, parseInt(voterId), activeElectionId)
       await refresh()
-      showToast(`Blacklist ${voterName} berhasil dihapus`, 'success')
+      showToast(`Blacklist ${voterName} berhasil dihapus, pemilih dapat memilih ulang`, 'success')
     } catch (err) {
       console.error('Failed to unblacklist voter', err)
       showToast('Gagal hapus blacklist: ' + ((err as any)?.message || 'Unknown error'), 'error')
