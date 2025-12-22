@@ -218,7 +218,7 @@ const AdminDPTList = (): JSX.Element => {
 
     const reason = await showPopup({
       title: 'Konfirmasi Blacklist',
-      message: `Blacklist pemilih "${voterName}"?\n\n⚠️ PERINGATAN:\n• Pemilih tidak dapat login\n• Status menjadi BLOCKED\n• Suara akan DIBATALKAN jika sudah memilih\n• Data voting akan di-reset\n\nAksi ini tidak dapat dibatalkan!`,
+      message: `Blacklist pemilih "${voterName}"?\n\n⚠️ PERINGATAN:\n• Tidak dapat login\n• Status: BLOCKED\n• Suara DIBATALKAN\n• Data voting di-reset\n\nAksi tidak dapat dibatalkan!`,
       type: 'warning',
       confirmText: 'Ya, Blacklist',
       cancelText: 'Batal',
@@ -246,7 +246,7 @@ const AdminDPTList = (): JSX.Element => {
 
     const confirmed = await showPopup({
       title: 'Konfirmasi Unblacklist',
-      message: `Hapus blacklist untuk "${voterName}"?\n\nℹ️ Pemilih akan:\n• Dapat login kembali\n• Status diubah dari BLOCKED\n• Dapat memilih ulang (data voting sudah di-reset)`,
+      message: `Hapus blacklist "${voterName}"?\n\nℹ️ Efek:\n• Dapat login kembali\n• Status: aktif\n• Dapat memilih ulang`,
       type: 'info',
       confirmText: 'Ya, Hapus Blacklist',
       cancelText: 'Batal'
