@@ -23,6 +23,7 @@ type DptApiItem = {
   academic_status?: AcademicStatusAPI
   has_account?: boolean
   has_voted?: boolean
+  is_blacklisted?: boolean // ← BARU
   voter_type?: VoterType | string
   type?: string
   category?: string
@@ -135,6 +136,9 @@ const mapVotingMethod = (channel?: string | null): VotingMethod => {
 }
 
 const mapStatus = (item: DptApiItem): VoterStatus => {
+  // Check if blacklisted first
+  if (item.is_blacklisted === true) return 'blacklist'
+  
   // New API: check voted_at or status='VOTED' or top-level has_voted
   if (item.voted_at) return 'sudah'
   if (item.has_voted) return 'sudah'
@@ -328,6 +332,7 @@ const mapDptItems = (raw: DptApiItem[]): DPTEntry[] =>
       isEligible,
       hasAccount: item.has_account,
       hasVoted,
+      isBlacklisted: item.is_blacklisted ?? false, // ← BARU
       electionVoterStatus,
       checkedInAt: item.checked_in_at ?? undefined,
       votedAt: item.voted_at ?? undefined,
