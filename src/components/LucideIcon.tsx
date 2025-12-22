@@ -5,6 +5,7 @@ export type IconName =
   | 'arrowLeft'
   | 'arrowRight'
   | 'ballot'
+  | 'ban'
   | 'barChart'
   | 'bell'
   | 'briefcase'
@@ -77,6 +78,12 @@ const ICONS: Record<IconName, JSX.Element> = {
       <path d="M4 9h16v8a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3z" />
       <path d="M9 4h6l1 4H8z" />
       <path d="M10 13l2 2 4-4" />
+    </>
+  ),
+  ban: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <line x1="5" y1="19" x2="19" y2="5" />
     </>
   ),
   barChart: (
